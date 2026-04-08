@@ -14,6 +14,7 @@ interface StoredFile {
   filename: string;
   uploadDate: string;
   headers: string[];
+  totalRecords?: number;
 }
 
 interface LoadedData {
@@ -124,6 +125,7 @@ export default function SavedFiles() {
                   <div className="text-sm text-gray-500 mb-4 flex flex-col gap-1">
                     <span>Uploaded: {new Date(file.uploadDate).toLocaleString()}</span>
                     <span>Columns: {file.headers?.length || 0}</span>
+                    <span>Records: {file.totalRecords !== undefined ? file.totalRecords : "Unknown"}</span>
                   </div>
                 </div>
                 <Button 

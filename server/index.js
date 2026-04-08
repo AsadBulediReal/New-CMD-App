@@ -43,7 +43,17 @@ app.post("/api/files", async (req, res) => {
 // 2. Fetch all saved files metadata (No row data to keep response small)
 app.get("/api/files", async (req, res) => {
   try {
-    const files = await StoredFile.find({}, { filename: 1, uploadDate: 1, headers: 1 }).sort({ uploadDate: -1 });
+    const files = await StoredFile.aggregate([
+      {
+        $project: {
+          filename: 1,
+          uploadDate: 1,
+          headers: 1,
+          totalRecords: { $size: { $ifNull: ["$rows", []] } }
+        }
+      },
+      { $sort: { uploadDate: -1 } }
+    ]);
     res.status(200).json(files);
   } catch (error) {
     console.error("Error fetching files:", error);
