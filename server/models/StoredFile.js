@@ -17,6 +17,14 @@ const storedFileSchema = new mongoose.Schema({
     type: [mongoose.Schema.Types.Mixed],
     default: [],
   },
+  sheets: {
+    type: [{
+      name: String,
+      headers: [String],
+      rows: [mongoose.Schema.Types.Mixed]
+    }],
+    default: [],
+  }
 });
 
 module.exports = mongoose.model("StoredFile", storedFileSchema);

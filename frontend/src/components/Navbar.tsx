@@ -6,7 +6,7 @@ export default function Navbar() {
 
   const links = [
     { name: "Dashboard", href: "/" },
-    { name: "Upload", href: "/upload" },
+    { name: "Upload Excel", href: "/upload" },
     { name: "Saved Files", href: "/saved-files" },
   ];
 

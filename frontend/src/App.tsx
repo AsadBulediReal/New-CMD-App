@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router";
 import UploadeFile from "./Pages/UploadeFile";
+import UploadTxtFile from "./Pages/UploadTxtFile";
 import MainPage from "./Pages/MainPage";
 import SavedFiles from "./Pages/SavedFiles";
 import Navbar from "./components/Navbar";
@@ -12,6 +13,7 @@ function App() {
         <Routes>
           <Route path="/" element={<MainPage />} />
           <Route path="/upload" element={<UploadeFile />} />
+          <Route path="/upload-txt" element={<UploadTxtFile />} />
           <Route path="/saved-files" element={<SavedFiles />} />
           <Route path="/about" element={<div>About Page</div>} />
         </Routes>

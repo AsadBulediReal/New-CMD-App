@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../components/ui/dialog";
-import { DataTable } from "../components/data-table";
+import { MultiSheetViewer, type SheetData } from "../components/multi-sheet-viewer";
 
 interface StoredFile {
   _id: string;
@@ -19,8 +19,7 @@ interface StoredFile {
 
 interface LoadedData {
   filename: string;
-  headers: string[];
-  rows: Record<string, any>[];
+  sheets: SheetData[];
 }
 
 export default function SavedFiles() {
@@ -29,8 +28,11 @@ export default function SavedFiles() {
   const [search, setSearch] = useState("");
   const [loadingId, setLoadingId] = useState<string | null>(null);
   
-  // State for the modal
+  // State for the preview modal
   const [fileData, setFileData] = useState<LoadedData | null>(null);
+  
+  // State for delete modal
+  const [fileToDelete, setFileToDelete] = useState<{ id: string, filename: string } | null>(null);
 
   useEffect(() => {
     fetchFiles();
@@ -64,10 +66,27 @@ export default function SavedFiles() {
       const text = await res.text();
       const data = text ? JSON.parse(text) : null;
       if (data) {
+        let sheetsToLoad: SheetData[] = [];
+        
+        // Handle newer multi-sheet formats
+        if (data.sheets && data.sheets.length > 0) {
+           sheetsToLoad = data.sheets.map((s: any, idx: number) => ({
+             name: s.name || `Sheet ${idx + 1}`,
+             headers: s.headers || [],
+             rows: s.rows || []
+           }));
+        } else {
+           // Handle backwards compatibility for single-sheet data
+           sheetsToLoad = [{
+             name: "Sheet 1",
+             headers: data.headers || [],
+             rows: data.rows || []
+           }];
+        }
+
         setFileData({
           filename: data.filename || filename,
-          headers: data.headers || [],
-          rows: data.rows || []
+          sheets: sheetsToLoad
         });
       }
     } catch (error) {
@@ -75,6 +94,29 @@ export default function SavedFiles() {
       alert("Error loading file data from server. Ensure the backend server is running.");
     } finally {
       setLoadingId(null);
+    }
+  };
+
+  const handleDeleteButtonClick = (id: string, filename: string) => {
+    setFileToDelete({ id, filename });
+  };
+
+  const executeDelete = async () => {
+    if (!fileToDelete) return;
+    
+    try {
+      const res = await fetch(`/api/files/${fileToDelete.id}`, {
+        method: "DELETE"
+      });
+      if (!res.ok) {
+        throw new Error(`Failed to delete file`);
+      }
+      // Remove from UI state
+      setFiles(files.filter(f => f._id !== fileToDelete.id));
+      setFileToDelete(null); // Close modal
+    } catch (error) {
+      console.error("Failed to delete file:", error);
+      alert("Error deleting file. Ensure the backend server is running.");
     }
   };
 
@@ -124,18 +166,28 @@ export default function SavedFiles() {
                   </h3>
                   <div className="text-sm text-gray-500 mb-4 flex flex-col gap-1">
                     <span>Uploaded: {new Date(file.uploadDate).toLocaleString()}</span>
-                    <span>Columns: {file.headers?.length || 0}</span>
-                    <span>Records: {file.totalRecords !== undefined ? file.totalRecords : "Unknown"}</span>
+                    <span>Expected Columns: {file.headers?.length || 0}</span>
+                    <span>Expected Records: {file.totalRecords !== undefined ? file.totalRecords : "Unknown"}</span>
                   </div>
                 </div>
-                <Button 
-                  variant="outline" 
-                  className="w-full border-gray-300 text-gray-700 hover:bg-gray-50" 
-                  onClick={() => handleLoadFile(file._id, file.filename)}
-                  disabled={loadingId === file._id}
-                >
-                  {loadingId === file._id ? "Loading..." : "Preview Data"}
-                </Button>
+                <div className="flex gap-2 w-full mt-2">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-50" 
+                    onClick={() => handleLoadFile(file._id, file.filename)}
+                    disabled={loadingId === file._id}
+                  >
+                    {loadingId === file._id ? "Loading..." : "Preview Data"}
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    className="px-3 border-red-500 text-red-500 hover:bg-red-500 hover:text-white transition-colors"
+                    onClick={() => handleDeleteButtonClick(file._id, file.filename)}
+                    title="Delete permanently"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -149,16 +201,31 @@ export default function SavedFiles() {
                 {fileData?.filename}
               </DialogTitle>
             </DialogHeader>
-            <div className="flex-1 overflow-auto mt-4 px-1">
+            <div className="flex-1 overflow-auto mt-4 px-1 bg-gray-50 rounded-lg">
               {fileData && (
-                <DataTable 
-                  data={{ headers: fileData.headers, rows: fileData.rows }} 
-                  onDataUpdate={(newData) => {
-                    setFileData({ ...fileData, headers: newData.headers, rows: newData.rows });
-                  }} 
+                <MultiSheetViewer 
+                  sheets={fileData.sheets} 
                   readonly={true}
+                  downloadFilename={fileData.filename}
                 />
               )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Modal */}
+        <Dialog open={!!fileToDelete} onOpenChange={(open) => !open && setFileToDelete(null)}>
+          <DialogContent className="max-w-sm rounded-lg">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold text-gray-900 border-b pb-2">Delete File</DialogTitle>
+            </DialogHeader>
+            <div className="py-4 text-gray-700">
+              Are you sure you want to permanently delete <strong className="text-indigo-600 truncate block mt-1">{fileToDelete?.filename}</strong>
+              <div className="text-sm mt-3 text-red-600 font-medium">This action cannot be undone.</div>
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button variant="outline" onClick={() => setFileToDelete(null)}>Cancel</Button>
+              <Button variant="destructive" onClick={executeDelete} className="bg-red-600 hover:bg-red-700">Delete Permanently</Button>
             </div>
           </DialogContent>
         </Dialog>

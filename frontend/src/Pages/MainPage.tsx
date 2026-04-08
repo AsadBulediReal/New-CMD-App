@@ -6,13 +6,7 @@ const features = [
     title: "Convert TXT to JSON",
     description: "Convert bank statement TXT to JSON format.",
     script: "txt_to_json.py",
-    link: "#",
-  },
-  {
-    title: "Convert MIS Excel to JSON",
-    description: "Convert MIS Excel files to standard JSON format.",
-    script: "mis_excel_to_json.py",
-    link: "#",
+    link: "/upload-txt",
   },
   {
     title: "Reconcile BS vs MIS",
@@ -24,12 +18,6 @@ const features = [
     title: "JSON Summary to Excel",
     description: "Convert JSON summary data to Excel.",
     script: "bs_json_to_execl.py",
-    link: "#",
-  },
-  {
-    title: "JSON to Excel",
-    description: "Convert standard JSON to Excel.",
-    script: "json_to_execl.py",
     link: "#",
   },
   {

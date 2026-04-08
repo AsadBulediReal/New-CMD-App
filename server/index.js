@@ -17,19 +17,40 @@ mongoose
 
 // API Routes
 
+const { parse_txt_content_to_json } = require("./utils/txtToJsonParser");
+
 // 1. Save uploaded file data with a custom filename
 app.post("/api/files", async (req, res) => {
   try {
-    const { filename, headers, rows } = req.body;
+    const { filename, headers, rows, sheets } = req.body;
     
     if (!filename) {
       return res.status(400).json({ error: "Filename is required" });
     }
 
+    const existingFile = await StoredFile.findOne({ filename });
+    if (existingFile) {
+      return res.status(400).json({ error: "A file with this name already exists. Please choose a different name." });
+    }
+
+    let primaryHeaders = headers || [];
+    let primaryRows = rows || [];
+    
+    // Backfill top-level properties so aggregations still work perfectly
+    if (sheets && sheets.length > 0) {
+      if (primaryHeaders.length === 0) {
+        primaryHeaders = sheets[0].headers || [];
+      }
+      if (primaryRows.length === 0) {
+        primaryRows = sheets[0].rows || [];
+      }
+    }
+
     const newFile = new StoredFile({
       filename,
-      headers: headers || [],
-      rows: rows || []
+      headers: primaryHeaders,
+      rows: primaryRows,
+      sheets: sheets || []
     });
 
     await newFile.save();
@@ -37,6 +58,22 @@ app.post("/api/files", async (req, res) => {
   } catch (error) {
     console.error("Error saving file:", error);
     res.status(500).json({ error: "Failed to save file data" });
+  }
+});
+
+// 1.5 Parse TXT content string to JSON format
+app.post("/api/parse-txt", (req, res) => {
+  try {
+    const { textContent } = req.body;
+    if (!textContent) {
+      return res.status(400).json({ error: "Text content is required" });
+    }
+    
+    const parsedData = parse_txt_content_to_json(textContent);
+    res.status(200).json(parsedData);
+  } catch (error) {
+    console.error("Error parsing txt file:", error);
+    res.status(500).json({ error: "Failed to parse TXT file" });
   }
 });
 
@@ -48,8 +85,30 @@ app.get("/api/files", async (req, res) => {
         $project: {
           filename: 1,
           uploadDate: 1,
-          headers: 1,
-          totalRecords: { $size: { $ifNull: ["$rows", []] } }
+          headers: {
+            $cond: {
+              if: { $gt: [{ $size: { $ifNull: ["$headers", []] } }, 0] },
+              then: "$headers",
+              else: {
+                $let: {
+                  vars: { firstSheet: { $arrayElemAt: ["$sheets", 0] } },
+                  in: { $ifNull: ["$$firstSheet.headers", []] }
+                }
+              }
+            }
+          },
+          totalRecords: {
+            $cond: {
+              if: { $gt: [{ $size: { $ifNull: ["$rows", []] } }, 0] },
+              then: { $size: { $ifNull: ["$rows", []] } },
+              else: {
+                $let: {
+                  vars: { firstSheet: { $arrayElemAt: ["$sheets", 0] } },
+                  in: { $size: { $ifNull: ["$$firstSheet.rows", []] } }
+                }
+              }
+            }
+          }
         }
       },
       { $sort: { uploadDate: -1 } }
@@ -71,6 +130,20 @@ app.get("/api/files/:id", async (req, res) => {
   } catch (error) {
     console.error("Error fetching file details:", error);
     res.status(500).json({ error: "Failed to fetch file details" });
+  }
+});
+
+// 4. Delete a specific file by ID
+app.delete("/api/files/:id", async (req, res) => {
+  try {
+    const file = await StoredFile.findByIdAndDelete(req.params.id);
+    if (!file) {
+      return res.status(404).json({ error: "File not found" });
+    }
+    res.status(200).json({ message: "File successfully deleted" });
+  } catch (error) {
+    console.error("Error deleting file:", error);
+    res.status(500).json({ error: "Failed to delete file" });
   }
 });
 

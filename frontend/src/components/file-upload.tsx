@@ -5,20 +5,20 @@ import type React from "react"
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import type { TableData } from "./file-upload-editor"
+import type { SheetData } from "./multi-sheet-viewer"
 
 export function FileUpload({
   onFileUpload,
   onLoadingStart,
 }: {
-  onFileUpload: (data: TableData) => void
+  onFileUpload: (data: SheetData[]) => void
   onLoadingStart?: () => void
 }) {
   const [isDragging, setIsDragging] = useState(false)
   const [error, setError] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const parseCSV = (text: string): TableData => {
+  const parseCSV = (text: string): SheetData[] => {
     const lines = text.trim().split("\n")
     if (lines.length === 0) throw new Error("Empty file")
 
@@ -32,10 +32,10 @@ export function FileUpload({
       return row
     })
 
-    return { headers, rows }
+    return [{ name: "CSV Data", headers, rows }]
   }
 
-  const parseExcel = (file: File): Promise<TableData> => {
+  const parseExcel = (file: File): Promise<SheetData[]> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
 
@@ -47,72 +47,74 @@ export function FileUpload({
           }
 
           const XLSX = await import("xlsx")
-
           const workbook = XLSX.read(data, { type: "binary", raw: true, cellText: true })
-          const sheetName = workbook.SheetNames[0]
-          const sheet = workbook.Sheets[sheetName]
+          
+          const sheets: SheetData[] = []
 
-          // First, get the range to understand the dimensions
-          const range = XLSX.utils.decode_range(sheet["!ref"] || "A1")
+          // Loop over all sheet names
+          for (const sheetName of workbook.SheetNames) {
+            const sheet = workbook.Sheets[sheetName]
+            if (!sheet["!ref"]) continue; // Empty sheet
 
-          const headers: string[] = []
-          const rows: Record<string, any>[] = []
+            const range = XLSX.utils.decode_range(sheet["!ref"])
+            const headers: string[] = []
+            const rows: Record<string, any>[] = []
 
-          // Start by finding the first row with actual data
-          let headerRowIndex = 0
-          let dataStartRowIndex = 0
+            let headerRowIndex = 0
+            let dataStartRowIndex = 0
 
-          for (let row = range.s.r; row <= range.e.r; row++) {
-            let rowHasData = false
-            for (let col = range.s.c; col <= range.e.c; col++) {
-              const cellAddress = XLSX.utils.encode_cell({ r: row, c: col })
-              const cell = sheet[cellAddress]
-              if (cell && (cell.w || cell.v)) {
-                rowHasData = true
+            for (let row = range.s.r; row <= range.e.r; row++) {
+              let rowHasData = false
+              for (let col = range.s.c; col <= range.e.c; col++) {
+                const cellAddress = XLSX.utils.encode_cell({ r: row, c: col })
+                const cell = sheet[cellAddress]
+                if (cell && (cell.w || cell.v)) {
+                  rowHasData = true
+                  break
+                }
+              }
+              if (rowHasData) {
+                headerRowIndex = row
+                dataStartRowIndex = row + 1
                 break
               }
             }
-            if (rowHasData) {
-              headerRowIndex = row
-              dataStartRowIndex = row + 1
-              break
-            }
-          }
-
-          // Extract headers from the first data row
-          for (let col = range.s.c; col <= range.e.c; col++) {
-            const cellAddress = XLSX.utils.encode_cell({ r: headerRowIndex, c: col })
-            const cell = sheet[cellAddress]
-            const headerValue = cell ? cell.w || cell.v?.toString() || "" : ""
-            headers.push(headerValue || `Column ${col + 1}`)
-          }
-
-          // Extract data rows
-          for (let row = dataStartRowIndex; row <= range.e.r; row++) {
-            const rowData: Record<string, any> = {}
-            let hasAnyValue = false
 
             for (let col = range.s.c; col <= range.e.c; col++) {
-              const cellAddress = XLSX.utils.encode_cell({ r: row, c: col })
+              const cellAddress = XLSX.utils.encode_cell({ r: headerRowIndex, c: col })
               const cell = sheet[cellAddress]
-              const value = cell ? cell.w || cell.v?.toString() || "" : ""
-
-              rowData[headers[col]] = value
-              if (value) hasAnyValue = true
+              const headerValue = cell ? cell.w || cell.v?.toString() || "" : ""
+              headers.push(headerValue || `Column ${col + 1}`)
             }
 
-            // Only add rows that have at least some data
-            if (hasAnyValue) {
-              rows.push(rowData)
+            for (let row = dataStartRowIndex; row <= range.e.r; row++) {
+              const rowData: Record<string, any> = {}
+              let hasAnyValue = false
+
+              for (let col = range.s.c; col <= range.e.c; col++) {
+                const cellAddress = XLSX.utils.encode_cell({ r: row, c: col })
+                const cell = sheet[cellAddress]
+                const value = cell ? cell.w || cell.v?.toString() || "" : ""
+
+                rowData[headers[col]] = value
+                if (value) hasAnyValue = true
+              }
+
+              if (hasAnyValue) {
+                rows.push(rowData)
+              }
+            }
+
+            if (headers.length > 0) {
+               sheets.push({ name: sheetName, headers, rows })
             }
           }
 
-          if (headers.length === 0) {
-            throw new Error("No data found in Excel file")
+          if (sheets.length === 0) {
+            throw new Error("No valid data found in Excel file")
           }
 
-          console.log("[v0] File parsed successfully:", { headers, rowCount: rows.length })
-          resolve({ headers, rows })
+          resolve(sheets)
         } catch (err) {
           console.error("[v0] Excel parsing error:", err)
           reject(err instanceof Error ? err : new Error("Failed to parse Excel file"))
@@ -127,7 +129,7 @@ export function FileUpload({
     })
   }
 
-  const parseCSVFile = (file: File): Promise<TableData> => {
+  const parseCSVFile = (file: File): Promise<SheetData[]> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
 
@@ -161,7 +163,7 @@ export function FileUpload({
         throw new Error("Invalid file format. Please upload a CSV or Excel file.")
       }
 
-      let data: TableData
+      let data: SheetData[]
 
       if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls") || file.type.includes("spreadsheet")) {
         console.log("[v0] Parsing as Excel file")
