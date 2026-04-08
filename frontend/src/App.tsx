@@ -1,0 +1,23 @@
+import { Routes, Route } from "react-router";
+import UploadeFile from "./Pages/UploadeFile";
+import MainPage from "./Pages/MainPage";
+import SavedFiles from "./Pages/SavedFiles";
+import Navbar from "./components/Navbar";
+
+function App() {
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col">
+      <Navbar />
+      <div className="flex-1">
+        <Routes>
+          <Route path="/" element={<MainPage />} />
+          <Route path="/upload" element={<UploadeFile />} />
+          <Route path="/saved-files" element={<SavedFiles />} />
+          <Route path="/about" element={<div>About Page</div>} />
+        </Routes>
+      </div>
+    </div>
+  );
+}
+
+export default App;

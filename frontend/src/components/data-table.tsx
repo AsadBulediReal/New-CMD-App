@@ -11,9 +11,10 @@ interface DataTableProps {
   onDataUpdate: (data: TableData) => void
   isLoadingMore?: boolean
   onLoadingMore?: (loading: boolean) => void
+  readonly?: boolean
 }
 
-export function DataTable({ data, onDataUpdate, isLoadingMore = false, onLoadingMore }: DataTableProps) {
+export function DataTable({ data, onDataUpdate, isLoadingMore = false, onLoadingMore, readonly = false }: DataTableProps) {
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [editingHeader, setEditingHeader] = useState<string | null>(null)
@@ -190,41 +191,43 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, onLoading
           {totalFilteredRows} rows found (Total: {data.rows.length}) × {data.headers.length} columns
         </span>
         <div className="flex items-center gap-2 w-full sm:w-auto">
-             <HoverCard>
-                <HoverCardTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-indigo-600">
-                        <span className="sr-only">Help</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle-help"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
-                    </Button>
-                </HoverCardTrigger>
-                <HoverCardContent className="w-80">
-                    <div className="space-y-4">
-                        <h4 className="text-sm font-semibold">Page Features</h4>
-                        <div className="grid gap-3 text-sm">
-                            <div className="flex gap-2">
-                                <span className="font-bold text-indigo-600 min-w-[60px]">Search</span>
-                                <span className="text-gray-600">Type in the box to filter rows across all columns instantly.</span>
-                            </div>
-                            <div className="flex gap-2">
-                                <span className="font-bold text-indigo-600 min-w-[60px]">Sort</span>
-                                <span className="text-gray-600">Click any column header text to sort A-Z or Z-A.</span>
-                            </div>
-                            <div className="flex gap-2">
-                                <span className="font-bold text-indigo-600 min-w-[60px]">Edit</span>
-                                <span className="text-gray-600">Hover header and click <span className="inline-block">✎</span> to rename.</span>
-                            </div>
-                            <div className="flex gap-2">
-                                <span className="font-bold text-indigo-600 min-w-[60px]">Sticky</span>
-                                <span className="text-gray-600">Header & first column stay visible while scrolling.</span>
-                            </div>
-                            <div className="flex gap-2">
-                                <span className="font-bold text-indigo-600 min-w-[60px]">Delete</span>
-                                <span className="text-gray-600">Use <span className="text-red-500">✕</span> to remove specific columns or rows.</span>
-                            </div>
-                        </div>
-                    </div>
-                </HoverCardContent>
-             </HoverCard>
+             {!readonly && (
+               <HoverCard>
+                  <HoverCardTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-indigo-600">
+                          <span className="sr-only">Help</span>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle-help"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+                      </Button>
+                  </HoverCardTrigger>
+                  <HoverCardContent className="w-80">
+                      <div className="space-y-4">
+                          <h4 className="text-sm font-semibold">Page Features</h4>
+                          <div className="grid gap-3 text-sm">
+                              <div className="flex gap-2">
+                                  <span className="font-bold text-indigo-600 min-w-[60px]">Search</span>
+                                  <span className="text-gray-600">Type in the box to filter rows across all columns instantly.</span>
+                              </div>
+                              <div className="flex gap-2">
+                                  <span className="font-bold text-indigo-600 min-w-[60px]">Sort</span>
+                                  <span className="text-gray-600">Click any column header text to sort A-Z or Z-A.</span>
+                              </div>
+                              <div className="flex gap-2">
+                                  <span className="font-bold text-indigo-600 min-w-[60px]">Edit</span>
+                                  <span className="text-gray-600">Hover header and click <span className="inline-block">✎</span> to rename.</span>
+                              </div>
+                              <div className="flex gap-2">
+                                  <span className="font-bold text-indigo-600 min-w-[60px]">Sticky</span>
+                                  <span className="text-gray-600">Header & first column stay visible while scrolling.</span>
+                              </div>
+                              <div className="flex gap-2">
+                                  <span className="font-bold text-indigo-600 min-w-[60px]">Delete</span>
+                                  <span className="text-gray-600">Use <span className="text-red-500">✕</span> to remove specific columns or rows.</span>
+                              </div>
+                          </div>
+                      </div>
+                  </HoverCardContent>
+               </HoverCard>
+             )}
              <span className="sr-only">Search</span>
              <Input 
                 placeholder="Search all columns..." 
@@ -282,32 +285,34 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, onLoading
                         )}
                       </div>
                     )}
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                        {editingHeader !== header && (
-                            <Button
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                setEditingHeader(header)
-                                setEditingHeaderValue(header)
-                            }}
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 text-gray-300 hover:text-indigo-600 hover:bg-gray-100"
-                            title="Rename column"
-                            >
-                            ✎
-                            </Button>
-                        )}
-                        <Button
-                        onClick={(e) => { e.stopPropagation(); handleRemoveColumn(header); }}
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 text-gray-300 hover:text-red-600 hover:bg-red-50"
-                        title="Remove column"
-                        >
-                        ✕
-                        </Button>
-                    </div>
+                    {!readonly && (
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                          {editingHeader !== header && (
+                              <Button
+                              onClick={(e) => {
+                                  e.stopPropagation()
+                                  setEditingHeader(header)
+                                  setEditingHeaderValue(header)
+                              }}
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0 text-gray-300 hover:text-indigo-600 hover:bg-gray-100"
+                              title="Rename column"
+                              >
+                              ✎
+                              </Button>
+                          )}
+                          <Button
+                          onClick={(e) => { e.stopPropagation(); handleRemoveColumn(header); }}
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-gray-300 hover:text-red-600 hover:bg-red-50"
+                          title="Remove column"
+                          >
+                          ✕
+                          </Button>
+                      </div>
+                    )}
                   </div>
                 </th>
               ))}
@@ -351,15 +356,17 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, onLoading
                       <td className="px-4 py-3 text-sm text-gray-600 bg-gray-50 font-medium text-center border-r border-gray-200 sticky left-0 z-10 w-12 flex-shrink-0">
                         <div className="flex items-center justify-between gap-1">
                           <span>{displayIndex}</span>
-                          <Button
-                            onClick={() => handleRemoveRowByRef(row)}
-                            variant="ghost"
-                            size="sm"
-                            className="h-5 w-5 p-0 text-gray-300 hover:text-red-600 hover:bg-red-50"
-                            title="Remove row"
-                          >
-                            ✕
-                          </Button>
+                          {!readonly && (
+                            <Button
+                              onClick={() => handleRemoveRowByRef(row)}
+                              variant="ghost"
+                              size="sm"
+                              className="h-5 w-5 p-0 text-gray-300 hover:text-red-600 hover:bg-red-50"
+                              title="Remove row"
+                            >
+                              ✕
+                            </Button>
+                          )}
                         </div>
                       </td>
                       {data.headers.map((header) => (
