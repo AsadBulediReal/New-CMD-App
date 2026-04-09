@@ -139,7 +139,7 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, onLoading
   }
 
   const handleRemoveColumn = (columnName: string) => {
-    const newHeaders = data.headers.filter((h) => h !== columnName)
+    const newHeaders = data.headers.filter((h: string) => h !== columnName)
     const newRows = data.rows.map((row) => {
       const { [columnName]: _, ...rest } = row
       return rest
@@ -149,7 +149,7 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, onLoading
 
   // Re-implementing handleRemoveRow to work with object reference
   const handleRemoveRowByRef = (rowRef: Record<string, any>) => {
-      const newRows = data.rows.filter(r => r !== rowRef)
+      const newRows = data.rows.filter((r: any) => r !== rowRef)
       onDataUpdate({ headers: data.headers, rows: newRows })
   }
 
@@ -185,7 +185,7 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, onLoading
   const hasGap = totalFilteredRows > RECORDS_PER_PAGE + 5 && currentPage < maxPage
 
   return (
-    <div className="space-y-4">
+    <div className="flex-1 flex flex-col h-full space-y-4 overflow-hidden p-4">
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between text-sm text-gray-600 mb-4">
         <span>
           {totalFilteredRows} rows found (Total: {data.rows.length}) × {data.headers.length} columns
@@ -238,17 +238,17 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, onLoading
         </div>
       </div>
 
-      <div className="border border-gray-200 rounded-lg shadow-sm overflow-auto max-h-[600px] relative">
+      <div className="flex-1 border border-border rounded-xl shadow-inner overflow-auto relative bg-background/50 backdrop-blur-sm">
         <table className="border-collapse w-full">
           <thead>
-            <tr className="bg-indigo-50 border-b border-gray-200 sticky top-0 z-20 shadow-sm">
+            <tr className="bg-blue-500/5 dark:bg-blue-600/10 border-b border-border sticky top-0 z-20 shadow-sm">
               <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 bg-gray-100 border-r border-gray-200 sticky left-0 z-30 w-12 flex-shrink-0">
                 #
               </th>
               {data.headers.map((header) => (
                 <th
                   key={header}
-                  className="px-4 py-3 text-left text-sm font-semibold text-gray-900 bg-indigo-50 border-r border-gray-200 flex-shrink-0 cursor-pointer hover:bg-indigo-100 transition-colors"
+                  className="px-4 py-3 text-left text-sm font-bold text-foreground bg-blue-500/5 dark:bg-blue-600/5 border-r border-border flex-shrink-0 cursor-pointer hover:bg-blue-500/10 transition-colors"
                   style={{ minWidth: "150px" }}
                   onClick={() => handleSort(header)}
                 >
@@ -372,7 +372,7 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, onLoading
                       {data.headers.map((header) => (
                         <td
                           key={`${index}-${header}`}
-                          className="px-4 py-3 text-sm text-gray-700 border-r border-gray-200 break-words flex-shrink-0"
+                          className="px-4 py-3 text-sm text-foreground/80 border-r border-border break-words flex-shrink-0"
                           style={{ minWidth: "150px" }}
                         >
                           {formatCellValue(row[header], header)}

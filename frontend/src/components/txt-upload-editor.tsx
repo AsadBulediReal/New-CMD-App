@@ -53,7 +53,7 @@ export function TxtUploadEditor() {
 
           // 1. Transactions Sheet
           const txRows = Transactions || []
-          const txHeaders = txRows.length > 0 ? Object.keys(txRows[0]) : ["Date", "Value Date", "Particulars", "Debit", "Credit", "Balance", "Challan No.", "Remarks"]
+          const txHeaders = txRows.length > 0 ? Object.keys(txRows[0]) : ["Challan No.", "Date", "Value Date", "Particulars", "Debit", "Credit", "Balance", "Remarks"]
           newSheets.push({ name: "Transactions", headers: txHeaders, rows: txRows })
 
           // 2. Header Sheet

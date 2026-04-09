@@ -200,18 +200,18 @@ function parse_txt_content_to_json(content) {
         let dateIndex = columns.findIndex(c => date_re.test(c));
 
         // New transaction detection: enough columns and date found
-        if (dateIndex !== -1 && columns.length >= 7) {
+        if (dateIndex !== -1 && columns.length >= 6) {
             if (transaction) {
                 finalizeTransaction(transaction, transactions);
             }
             transaction = {
+                "Challan No.": 0,
                 "Date": columns[dateIndex],
                 "Value Date": columns[dateIndex + 1] || "",
                 "Particulars": columns[dateIndex + 2] || "",
-                "Debit": extractAmount(columns[dateIndex + 4]),
-                "Credit": extractAmount(columns[dateIndex + 5]),
-                "Balance": extractAmount(columns[dateIndex + 6]),
-                "Challan No.": 0,
+                "Debit": extractAmount(columns[dateIndex + 3]),
+                "Credit": extractAmount(columns[dateIndex + 4]),
+                "Balance": extractAmount(columns[dateIndex + 5]),
                 "Remarks": ""
             };
         } else if (transaction) {

@@ -59,7 +59,7 @@ export function MultiSheetViewer({
   const currentSheet = sheets[activeTab];
 
   return (
-    <div className="flex flex-col relative w-full">
+    <div className="flex flex-col relative w-full h-full">
       <div className="flex justify-between items-center border-b border-gray-200">
         <div className="flex overflow-x-auto hide-scrollbar flex-1">
           {sheets.map((sheet, index) => (
@@ -87,7 +87,7 @@ export function MultiSheetViewer({
         </button>
       </div>
       
-      <div className="pt-4">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {currentSheet && (
           <DataTable
             data={{ headers: currentSheet.headers, rows: currentSheet.rows }}
