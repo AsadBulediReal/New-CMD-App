@@ -1,4 +1,9 @@
 import { useState, useEffect } from "react";
+import { 
+  getAutoMapping, 
+  compressSheetData,
+  decompressSheetData 
+} from "../utils/dataProcessing";
 import { MultiSheetViewer, type SheetData } from "../components/multi-sheet-viewer";
 import { Button } from "../components/ui/button";
 import { Card } from "../components/ui/card";
@@ -31,27 +36,15 @@ interface StoredFile {
   uploadDate: string;
   headers: string[];
   totalRecords?: number;
+  sheets?: SheetData[];
 }
 
 type FieldMap = Record<string, string>;
 
-function buildInitialMapping(headers: string[]): { map: FieldMap; needsMapping: boolean } {
-  const map: FieldMap = {};
-  let needsMapping = false;
-  for (const f of REQUIRED_FIELDS) {
-    if (headers.includes(f.key)) {
-      map[f.key] = f.key;
-    } else {
-      map[f.key] = "";
-      needsMapping = true;
-    }
-  }
-  return { map, needsMapping };
-}
-
 export default function Analytics() {
   const [files, setFiles]           = useState<StoredFile[]>([]);
   const [selectedFileId, setSelectedFileId] = useState<string>("");
+  const [selectedSheetName, setSelectedSheetName] = useState<string>("");
   const [loadingFiles, setLoadingFiles]     = useState(true);
 
   // Field mapping
@@ -89,6 +82,7 @@ export default function Analytics() {
 
   const handleFileSelect = (fileId: string) => {
     setSelectedFileId(fileId);
+    setSelectedSheetName("");
     setSheets(null);
     setAnalyzeError("");
     setSaveMessage("");
@@ -100,10 +94,36 @@ export default function Analytics() {
     const file = files.find(f => f._id === fileId);
     if (!file) return;
 
-    const headers = file.headers || [];
-    const { map, needsMapping: needs } = buildInitialMapping(headers);
+    // If file only has one sheet (or legacy single-sheet), initialize mapping immediately
+    const sheetCount = file.sheets?.length || 0;
+    if (sheetCount <= 1) {
+      const headers = file.sheets?.[0]?.headers || file.headers || [];
+      const map = getAutoMapping(headers, REQUIRED_FIELDS.map(f => f.key));
+      setFieldMap(map);
+      setNeedsMapping(Object.values(map).some(v => !v));
+    }
+  };
+
+  const handleSheetSelect = (sheetName: string) => {
+    setSelectedSheetName(sheetName);
+    setAnalyzeError("");
+    setSaveMessage("");
+    
+    if (!sheetName) {
+      setFieldMap({});
+      setNeedsMapping(false);
+      return;
+    }
+
+    const file = files.find(f => f._id === selectedFileId);
+    if (!file) return;
+
+    const sheet = file.sheets?.find(s => s.name === sheetName);
+    const headers = sheet?.headers || file.headers || [];
+    
+    const map = getAutoMapping(headers, REQUIRED_FIELDS.map(f => f.key));
     setFieldMap(map);
-    setNeedsMapping(needs);
+    setNeedsMapping(Object.values(map).some(v => !v));
   };
 
   const openMappingModal = () => {
@@ -140,6 +160,7 @@ export default function Analytics() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fileId: selectedFileId,
+          sheetName: selectedSheetName,
           fieldMap: Object.keys(resolvedMap).length > 0 ? resolvedMap : undefined,
         }),
       });
@@ -171,11 +192,14 @@ export default function Analytics() {
     setIsModalOpen(false);
     setIsSaving(true);
     setSaveMessage("");
+    // COMPRESSION: Use the standard optimization helper
+    const compressedSheets = compressSheetData(sheets);
+
     try {
       const res = await fetch("/api/files", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename: newFilename.trim(), sheets }),
+        body: JSON.stringify({ filename: newFilename.trim(), sheets: compressedSheets }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -191,7 +215,14 @@ export default function Analytics() {
   };
 
   const selectedFile = files.find(f => f._id === selectedFileId);
-  const availableColumns = selectedFile?.headers || [];
+  const selectedSheet = selectedFile?.sheets?.find(s => s.name === selectedSheetName);
+  // Use the active sheet's headers when a specific sheet is selected;
+  // fall back to the file's top-level headers for single-sheet / legacy files.
+  const availableColumns =
+    selectedSheet?.headers ||
+    selectedFile?.sheets?.[0]?.headers ||
+    selectedFile?.headers ||
+    [];
 
   return (
     <main className="min-h-screen bg-background relative overflow-hidden transition-colors duration-300">
@@ -242,6 +273,26 @@ export default function Analytics() {
                     </option>
                   ))}
                 </select>
+
+                {selectedFileId && (files.find(f => f._id === selectedFileId)?.sheets?.length || 0) > 1 && (
+                    <div className="space-y-4 pt-2 animate-in fade-in slide-in-from-top-1">
+                      <div className="flex items-center gap-2 text-foreground font-bold text-sm uppercase tracking-widest opacity-60">
+                         <Database className="w-4 h-4 text-cyan-500" />
+                         Target Sheet Selection
+                      </div>
+                      <select
+                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500/50 transition-all cursor-pointer box-border"
+                        value={selectedSheetName}
+                        onChange={e => handleSheetSelect(e.target.value)}
+                        disabled={isAnalyzing}
+                      >
+                        <option value="">-- Choose target sheet --</option>
+                        {files.find(f => f._id === selectedFileId)?.sheets?.map(s => (
+                          <option key={s.name} value={s.name}>{s.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                )}
                 {!selectedFileId && (
                   <p className="text-xs text-muted-foreground font-medium italic">
                     Select a bank statement from the database to start analysis.
@@ -373,7 +424,7 @@ export default function Analytics() {
                     className="w-full md:w-auto px-6 rounded-xl font-bold bg-foreground text-background hover:opacity-90 gap-2 shadow-lg active:scale-95 transition-all"
                   >
                     {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    Store in Vault
+                    Save in Vault
                   </Button>
                 </div>
               </div>
@@ -446,26 +497,26 @@ export default function Analytics() {
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-md bg-background border-border shadow-2xl p-8 rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black text-foreground">Save Result Set</DialogTitle>
+            <DialogTitle className="text-2xl font-black text-foreground">Save to Vault</DialogTitle>
           </DialogHeader>
-          <div className="py-8 space-y-2">
-             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground ml-1">Archive Identity</label>
+          <div className="py-8 space-y-4">
+             <p className="text-sm text-muted-foreground mb-4 font-medium">Please provide a descriptive filename for the Vault.</p>
              <input
               type="text"
-              placeholder="Designate filename..."
+              placeholder="e.g. Document Name April 2026"
               value={newFilename}
               onChange={e => setNewFilename(e.target.value)}
               className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all box-border"
             />
           </div>
           <div className="flex justify-end gap-3 pt-4 border-t border-border">
-            <Button variant="ghost" className="font-bold rounded-xl" onClick={() => setIsModalOpen(false)}>Abort</Button>
+            <Button variant="ghost" className="font-bold rounded-xl" onClick={() => setIsModalOpen(false)}>Cancel</Button>
             <Button
               onClick={handleSubmit}
               disabled={!newFilename.trim()}
               className="bg-blue-600 hover:bg-blue-700 text-white font-black rounded-xl px-8 shadow-xl shadow-blue-500/20 active:scale-95 transition-all"
             >
-              Commit Save
+              Save in Vault
             </Button>
           </div>
         </DialogContent>

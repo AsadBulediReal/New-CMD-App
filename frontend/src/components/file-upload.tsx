@@ -203,16 +203,18 @@ export function FileUpload({
   }
 
   return (
-    <Card className="p-8 border-2 border-indigo-200 bg-white shadow-lg">
+    <Card className="p-8 border-2 border-indigo-200 dark:border-indigo-800 bg-white dark:bg-zinc-900 shadow-lg">
       <div className="text-center space-y-6">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Upload Your Data File</h2>
-          <p className="text-gray-600">Support for CSV and Excel files (.xlsx, .xls)</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Upload Your Data File</h2>
+          <p className="text-gray-600 dark:text-gray-400">Support for CSV and Excel files (.xlsx, .xls)</p>
         </div>
 
         <div
           className={`border-2 border-dashed rounded-lg p-12 transition-colors cursor-pointer ${
-            isDragging ? "border-indigo-500 bg-indigo-50" : "border-indigo-300 bg-indigo-50/50 hover:border-indigo-400"
+            isDragging
+              ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30"
+              : "border-indigo-300 dark:border-indigo-700 bg-indigo-50/50 dark:bg-indigo-900/10 hover:border-indigo-400 dark:hover:border-indigo-500"
           }`}
           onDragOver={(e) => {
             e.preventDefault()
@@ -229,12 +231,12 @@ export function FileUpload({
             <svg className="w-12 h-12 mx-auto text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            <p className="text-lg font-semibold text-gray-900">Drag and drop your file here</p>
-            <p className="text-sm text-gray-600">or click to select from your computer</p>
+            <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">Drag and drop your file here</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">or click to select from your computer</p>
           </div>
         </div>
 
-        {error && <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">{error}</div>}
+        {error && <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-400 text-sm">{error}</div>}
 
         <Button
           onClick={() => fileInputRef.current?.click()}

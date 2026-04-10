@@ -4,6 +4,7 @@ import UploadTxtFile from "./Pages/UploadTxtFile";
 import MainPage from "./Pages/MainPage";
 import SavedFiles from "./Pages/SavedFiles";
 import Analytics from "./Pages/Analytics";
+import Reconcile from "./Pages/Reconcile";
 import Navbar from "./components/Navbar";
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
           <Route path="/upload-txt" element={<UploadTxtFile />} />
           <Route path="/saved-files" element={<SavedFiles />} />
           <Route path="/analytics" element={<Analytics />} />
+          <Route path="/reconcile" element={<Reconcile />} />
           <Route path="/about" element={<div>About Page</div>} />
         </Routes>
       </div>

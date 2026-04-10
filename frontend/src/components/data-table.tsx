@@ -1,8 +1,12 @@
 "use client"
 
-import { useState } from "react"
-import type { TableData } from "./file-upload-editor"
+import { useState, Fragment } from "react"
 import { Button } from "@/components/ui/button"
+
+export interface TableData {
+  headers: string[]
+  rows: Record<string, unknown>[]
+}
 import { Input } from "@/components/ui/input"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 
@@ -14,7 +18,7 @@ interface DataTableProps {
   readonly?: boolean
 }
 
-export function DataTable({ data, onDataUpdate, isLoadingMore = false, onLoadingMore, readonly = false }: DataTableProps) {
+export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly = false }: DataTableProps) {
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [editingHeader, setEditingHeader] = useState<string | null>(null)
@@ -22,7 +26,7 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, onLoading
   const [currentPage, setCurrentPage] = useState(1)
   const RECORDS_PER_PAGE = 30
 
-  const formatCellValue = (value: any, header: string): string => {
+  const formatCellValue = (value: unknown, header: string): string => {
     if (value === null || value === undefined) return ""
 
     // Check if this is likely a date column
@@ -47,7 +51,7 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, onLoading
             day: "numeric",
           })
         }
-      } catch (e) {
+      } catch {
         // If parsing fails, return original value
       }
     }
@@ -141,15 +145,16 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, onLoading
   const handleRemoveColumn = (columnName: string) => {
     const newHeaders = data.headers.filter((h: string) => h !== columnName)
     const newRows = data.rows.map((row) => {
-      const { [columnName]: _, ...rest } = row
+      const rest = { ...row }
+      delete rest[columnName]
       return rest
     })
     onDataUpdate({ headers: newHeaders, rows: newRows })
   }
 
   // Re-implementing handleRemoveRow to work with object reference
-  const handleRemoveRowByRef = (rowRef: Record<string, any>) => {
-      const newRows = data.rows.filter((r: any) => r !== rowRef)
+  const handleRemoveRowByRef = (rowRef: Record<string, unknown>) => {
+      const newRows = data.rows.filter((r: unknown) => r !== rowRef)
       onDataUpdate({ headers: data.headers, rows: newRows })
   }
 
@@ -166,7 +171,7 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, onLoading
 
     const newHeaders = data.headers.map((h) => (h === oldName ? newName : h))
     const newRows = data.rows.map((row) => {
-      const newRow: Record<string, any> = {}
+      const newRow: Record<string, unknown> = {}
       Object.entries(row).forEach(([key, value]) => {
         newRow[key === oldName ? newName : key] = value
       })
@@ -276,7 +281,7 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, onLoading
                         </span>
                         {sortConfig?.key === header ? (
                             <span className="text-xs text-indigo-600 font-bold ml-1">
-                                {sortConfig.direction === "asc" ? "↑" : "↓"}
+                                {sortConfig?.direction === "asc" ? "↑" : "↓"}
                             </span>
                         ) : (
                             <span className="text-xs text-gray-300 font-bold ml-1 transition-opacity">
@@ -338,7 +343,7 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, onLoading
                 const isLastFiveStart = hasGap && index === RECORDS_PER_PAGE
 
                 return (
-                  <>
+                  <Fragment key={index}>
                     {isLastFiveStart && (
                       <tr className="bg-gray-100 hover:bg-gray-100">
                         <td
@@ -379,7 +384,7 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, onLoading
                         </td>
                       ))}
                     </tr>
-                  </>
+                  </Fragment>
                 )
               })
             )}

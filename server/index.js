@@ -19,6 +19,18 @@ mongoose
 
 const { parse_txt_content_to_json } = require("./utils/txtToJsonParser");
 const { analyze_transactions } = require("./utils/bsDataAnalytics");
+const { reconcile_bs_vs_mis } = require("./utils/reconcileHelper");
+
+// ... existing code ...
+
+const decompressRow = (row, headers) => {
+  if (!Array.isArray(row)) return row;
+  const obj = {};
+  headers.forEach((h, i) => {
+    obj[h] = row[i] ?? "";
+  });
+  return obj;
+};
 
 // 1. Save uploaded file data with a custom filename
 app.post("/api/files", async (req, res) => {
@@ -36,22 +48,25 @@ app.post("/api/files", async (req, res) => {
 
     let primaryHeaders = headers || [];
     let primaryRows = rows || [];
+    let finalSheets = (sheets && sheets.length > 0) ? sheets : [];
     
-    // Backfill top-level properties so aggregations still work perfectly
-    if (sheets && sheets.length > 0) {
-      if (primaryHeaders.length === 0) {
-        primaryHeaders = sheets[0].headers || [];
-      }
-      if (primaryRows.length === 0) {
-        primaryRows = sheets[0].rows || [];
-      }
+    // Normalize: Ensure sheets always has at least one entry for consistency
+    if (finalSheets.length > 0) {
+      if (primaryHeaders.length === 0) primaryHeaders = finalSheets[0].headers || [];
+      if (primaryRows.length === 0) primaryRows = finalSheets[0].rows || [];
+    } else if (primaryRows.length > 0) {
+      finalSheets = [{
+        name: "Transactions",
+        headers: primaryHeaders,
+        rows: primaryRows
+      }];
     }
 
     const newFile = new StoredFile({
-      filename,
+      filename: filename.trim(),
       headers: primaryHeaders,
       rows: primaryRows,
-      sheets: sheets || []
+      sheets: finalSheets
     });
 
     await newFile.save();
@@ -86,6 +101,16 @@ app.get("/api/files", async (req, res) => {
         $project: {
           filename: 1,
           uploadDate: 1,
+          sheets: {
+            $map: {
+              input: { $ifNull: ["$sheets", []] },
+              as: "sheet",
+              in: {
+                name: "$$sheet.name",
+                headers: "$$sheet.headers"
+              }
+            }
+          },
           headers: {
             $cond: {
               if: { $gt: [{ $size: { $ifNull: ["$headers", []] } }, 0] },
@@ -151,7 +176,7 @@ app.delete("/api/files/:id", async (req, res) => {
 // 5. Analyze a saved file (with optional field mapping)
 app.post("/api/analyze-saved-file", async (req, res) => {
   try {
-    const { fileId, fieldMap } = req.body;
+    const { fileId, fieldMap, sheetName } = req.body;
     if (!fileId) {
       return res.status(400).json({ error: "fileId is required" });
     }
@@ -163,13 +188,24 @@ app.post("/api/analyze-saved-file", async (req, res) => {
 
     // Extract sheets
     const allSheets = file.sheets || [];
-    let transactionsSheet = allSheets.find(s => s.name === "Transactions");
+    
+    // Select transaction sheet: either use explicitly requested sheetName, or find 'Transactions', 
+    // or fallback to '1Bill Records'/'Auto Records' if specifically present.
+    let transactionsSheet;
+    if (sheetName) {
+      transactionsSheet = allSheets.find(s => s.name === sheetName);
+    } else {
+      transactionsSheet = allSheets.find(s => s.name === "Transactions");
+    }
+
     const summarySheet   = allSheets.find(s => s.name === "Summary Details");
     const headerSheet    = allSheets.find(s => s.name === "Header Details");
 
     if (!transactionsSheet) {
-      // Fallback: legacy single-sheet files
-      if (file.rows && file.rows.length > 0) {
+      // Fallback: legacy single-sheet files or first sheet if none matched
+      if (allSheets.length > 0) {
+          transactionsSheet = allSheets[0];
+      } else if (file.rows && file.rows.length > 0) {
         transactionsSheet = { name: "Transactions", headers: file.headers || [], rows: file.rows };
       } else {
         return res.status(400).json({ error: "No transaction data found in this file." });
@@ -177,21 +213,22 @@ app.post("/api/analyze-saved-file", async (req, res) => {
     }
 
     // ── Apply field mapping (renames columns to expected names) ──────────────
-    // fieldMap shape: { "Particulars": "Description", "Challan No.": "Consumer No.", ... }
-    const applyFieldMap = (rows, map) => {
-      if (!map || Object.keys(map).length === 0) return rows;
-      return rows.map(row => {
-        const out = { ...row }; // keep all original fields
+    const applyFieldMap = (rows, map, headers) => {
+      if (!rows) return [];
+      return rows.map(r => {
+        const row = decompressRow(r, headers);
+        if (!map || Object.keys(map).length === 0) return row;
+        const out = { ...row }; 
         for (const [requiredField, sourceField] of Object.entries(map)) {
           if (sourceField && sourceField !== requiredField) {
-            out[requiredField] = row[sourceField]; // copy with required name
+            out[requiredField] = row[sourceField]; 
           }
         }
         return out;
       });
     };
 
-    const mappedRows = applyFieldMap(transactionsSheet.rows, fieldMap);
+    const mappedRows = applyFieldMap(transactionsSheet.rows, fieldMap, transactionsSheet.headers);
 
     // ── Opening / Closing Balance from Summary sheet ─────────────────────────
     let openingBalance = "";
@@ -253,6 +290,94 @@ app.post("/api/analyze-saved-file", async (req, res) => {
   } catch (error) {
     console.error("Error analyzing file:", error);
     res.status(500).json({ error: "Failed to analyze file" });
+  }
+});
+
+// 6. Reconcile BS vs MIS
+app.post("/api/reconcile-bs-mis", async (req, res) => {
+  try {
+    const { bsFileId, misFileId, bsMapping = {}, misMapping = {}, misSheetName, bsSheetName } = req.body;
+    
+    if (!bsFileId || !misFileId) {
+      return res.status(400).json({ error: "Both bsFileId and misFileId are required" });
+    }
+
+    const [bsFile, misFile] = await Promise.all([
+      StoredFile.findById(bsFileId).lean(),
+      StoredFile.findById(misFileId).lean()
+    ]);
+
+    if (!bsFile || !misFile) {
+      return res.status(404).json({ error: "One or both files not found" });
+    }
+
+    // Extract transaction data from BS (usually the first sheet or legacy rows)
+    let bsTransactions = [];
+    let bsHeaders = bsFile.headers || [];
+    if (bsFile.sheets && bsFile.sheets.length > 0) {
+      let ts;
+      if (bsSheetName) {
+        ts = bsFile.sheets.find(s => s.name === bsSheetName);
+      }
+      if (!ts) {
+        ts = bsFile.sheets.find(s => s.name === "Transactions") || bsFile.sheets[0];
+      }
+      bsHeaders = ts.headers || bsFile.headers || [];
+      bsTransactions = (ts.rows || []).map(r => decompressRow(r, bsHeaders));
+    } else {
+      bsTransactions = (bsFile.rows || []).map(r => decompressRow(r, bsHeaders));
+    }
+
+    // Extract transaction data from MIS (usually the first sheet or legacy rows)
+    let misTransactions = [];
+    let misHeaders = misFile.headers || [];
+    if (misFile.sheets && misFile.sheets.length > 0) {
+      let ts;
+      if (misSheetName) {
+        ts = misFile.sheets.find(s => s.name === misSheetName);
+      }
+      if (!ts) {
+        ts = misFile.sheets.find(s => s.name === "Transactions") || misFile.sheets[0];
+      }
+      misHeaders = ts.headers || misFile.headers || [];
+      misTransactions = (ts.rows || []).map(r => decompressRow(r, misHeaders));
+    } else {
+      misTransactions = (misFile.rows || []).map(r => decompressRow(r, misHeaders));
+    }
+
+    // Run reconciliation
+    const {
+      verified_mis,
+      not_verified_bs,
+      not_verified_mis,
+      summary
+    } = reconcile_bs_vs_mis(bsTransactions, misTransactions, bsMapping, misMapping);
+
+    // Build output sheets
+    const resultingSheets = [
+      { name: "Verified MIS", headers: misHeaders, rows: verified_mis },
+      { name: "Not Verified BS", headers: bsHeaders, rows: not_verified_bs },
+      { name: "Not Verified MIS", headers: misHeaders, rows: not_verified_mis },
+    ];
+
+    // Summary sheet
+    const summRows = [
+      { Metric: "Verified MIS Records", Value: summary.verified_mis_count },
+      { Metric: "Not Verified BS Records", Value: summary.not_verified_bs_count },
+      { Metric: "Not Verified MIS Records", Value: summary.not_verified_mis_count },
+      { Metric: "Total Verified Amount", Value: summary.verified_total_amount.toFixed(2) },
+      { Metric: "Total Unverified (BS) Amount", Value: summary.unverified_bs_total.toFixed(2) },
+      { Metric: "Total Unverified (MIS) Amount", Value: summary.unverified_mis_total.toFixed(2) },
+    ];
+    resultingSheets.push({ name: "Summary", headers: ["Metric", "Value"], rows: summRows });
+
+    res.status(200).json({ 
+      filename: `Reconciliation-${bsFile.filename}-vs-${misFile.filename}`, 
+      sheets: resultingSheets 
+    });
+  } catch (error) {
+    console.error("Error in reconciliation:", error);
+    res.status(500).json({ error: "Failed to perform reconciliation" });
   }
 });
 

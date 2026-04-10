@@ -2,8 +2,11 @@
 
 import { useState, useRef } from "react"
 import { MultiSheetViewer, type SheetData } from "./multi-sheet-viewer"
+import { compressSheetData } from "../utils/dataProcessing"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Loader2, Save, FileText, RefreshCcw } from "lucide-react"
 
 export function TxtUploadEditor() {
   const [sheets, setSheets] = useState<SheetData[] | null>(null)
@@ -94,6 +97,12 @@ export function TxtUploadEditor() {
         throw new Error("Invalid file format. Please upload a plain text (.txt) bank statement file.")
       }
 
+      // Check if file is excessively large (e.g., > 30MB)
+      const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30MB
+      if (file.size > MAX_FILE_SIZE) {
+        throw new Error(`File is too large (${(file.size / (1024 * 1024)).toFixed(2)} MB). Please upload a file smaller than 30MB.`);
+      }
+
       console.log("[v0] Parsing as TXT file")
       const parsedSheets = await parseTxtFile(file)
       
@@ -152,6 +161,8 @@ export function TxtUploadEditor() {
         setSubmissionProgress((prev) => (prev < 85 ? prev + Math.random() * 12 : prev))
       }, 150)
 
+      const compressedSheets = compressSheetData(sheets)
+
       const response = await fetch("/api/files", {
         method: "POST",
         headers: {
@@ -159,7 +170,7 @@ export function TxtUploadEditor() {
         },
         body: JSON.stringify({
           filename: filename.trim(),
-          sheets: sheets // Pass the multi-sheet data directly
+          sheets: compressedSheets // Pass the compressed multi-sheet data
         }),
       })
 
@@ -193,43 +204,26 @@ export function TxtUploadEditor() {
 
   return (
     <div className="space-y-6">
-      {isSubmitting && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="p-8 bg-white rounded-lg shadow-lg max-w-md w-full mx-4">
-             <div className="flex flex-col items-center gap-4">
-               <div className="animate-spin text-indigo-600">
-                  <svg className="w-12 h-12" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-               </div>
-               <p className="text-lg font-semibold text-gray-900">Saving multisheet data...</p>
-               <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden mt-2">
-                 <div className="bg-indigo-600 h-full transition-all duration-300" style={{ width: `${submissionProgress}%` }}></div>
-               </div>
-             </div>
-          </Card>
-        </div>
-      )}
+
 
       {isLoading && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="p-8 bg-white rounded-lg shadow-lg">
-             <p className="text-lg font-semibold text-gray-900">Processing file via API...</p>
+          <Card className="p-8 bg-white dark:bg-zinc-900 rounded-lg shadow-lg">
+             <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">Processing file via API...</p>
           </Card>
         </div>
       )}
 
       {!sheets ? (
-        <Card className="p-8 border-2 border-indigo-200 bg-white shadow-lg">
+        <Card className="p-8 border-2 border-indigo-200 dark:border-indigo-800 bg-white dark:bg-zinc-900 shadow-lg">
           <div className="text-center space-y-6">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Upload Bank Statement (TXT)</h2>
-              <p className="text-gray-600">Only plain text (.txt) files are supported here</p>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Upload Bank Statement (TXT)</h2>
+              <p className="text-gray-600 dark:text-gray-400">Only plain text (.txt) files are supported here</p>
             </div>
 
             <div
-              className={`border-2 border-dashed rounded-lg p-12 cursor-pointer ${isDragging ? "border-indigo-500 bg-indigo-50" : "border-indigo-300 bg-indigo-50/50"}`}
+              className={`border-2 border-dashed rounded-lg p-12 cursor-pointer ${isDragging ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30" : "border-indigo-300 dark:border-indigo-700 bg-indigo-50/50 dark:bg-indigo-900/10"}`}
               onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
               onDragLeave={() => setIsDragging(false)}
               onDrop={handleDrop}
@@ -237,51 +231,96 @@ export function TxtUploadEditor() {
             >
               <input ref={fileInputRef} type="file" accept=".txt" onChange={handleChange} className="hidden" />
               <div className="space-y-2">
-                <p className="text-lg font-semibold text-gray-900">Drag and drop your file</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">Drag and drop your file</p>
               </div>
             </div>
 
-            {error && <div className="bg-red-50 p-4 text-red-700">{error}</div>}
+            {error && <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-400 text-sm">{error}</div>}
           </div>
         </Card>
       ) : (
         <>
-          <Card className="p-0 border-2 border-indigo-200 overflow-hidden bg-white">
-            <div className="flex justify-between items-center p-6 border-b border-gray-100">
-              <h2 className="text-xl font-bold text-gray-900">Document Preview</h2>
-              <Button variant="outline" onClick={resetUploader}>Upload New</Button>
+          <Card className="border-border bg-card/40 backdrop-blur-xl shadow-2xl overflow-hidden rounded-3xl">
+            <div className="flex flex-col md:flex-row justify-between items-center p-6 border-b border-border gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600">
+                  <FileText className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-black text-foreground">Document Preview</h2>
+                  <p className="text-xs font-bold text-muted-foreground truncate max-w-[200px] md:max-w-none">{sheets?.length} Sheet(s) extracted</p>
+                </div>
+              </div>
+              
+              <div className="flex flex-wrap justify-end items-center gap-4 w-full md:w-auto">
+                {submitMessage && (
+                   <span className={`text-sm font-bold mr-2 ${submitMessage.includes("✓") ? "text-emerald-500" : "text-red-500"}`}>
+                     {submitMessage}
+                   </span>
+                )}
+                <Button 
+                  variant="outline" 
+                  onClick={resetUploader}
+                  className="rounded-xl font-bold border-border hover:bg-muted gap-2"
+                >
+                  <RefreshCcw className="w-4 h-4" />
+                  Upload New
+                </Button>
+                <Button 
+                  onClick={handleOpenSubmitModal} 
+                  disabled={isSubmitting} 
+                  className="w-full md:w-auto px-6 rounded-xl font-bold bg-foreground text-background hover:opacity-90 gap-2 shadow-lg active:scale-95 transition-all"
+                >
+                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Save in Vault
+                </Button>
+              </div>
             </div>
             
-            <div className="bg-gray-50 p-6">
+            <div className="p-1 bg-muted/20 overflow-hidden">
                <MultiSheetViewer sheets={sheets} onDataUpdate={handleDataUpdate} />
             </div>
           </Card>
 
-          <div className="flex gap-3 justify-end items-center">
-            {submitMessage && (
-               <div className={`text-sm font-medium ${submitMessage.includes("✓") ? "text-green-600" : "text-red-600"}`}>
-                 {submitMessage}
-               </div>
-            )}
-            <Button onClick={handleOpenSubmitModal} disabled={isSubmitting} className="bg-indigo-600 text-white hover:bg-indigo-700">
-              {isSubmitting ? "Saving..." : "Save Document to Database"}
-            </Button>
-          </div>
+
         </>
       )}
 
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="p-8 bg-white rounded-lg shadow-lg max-w-sm w-full mx-4">
-            <h3 className="text-xl font-bold mb-4">Save Statement</h3>
-            <input type="text" placeholder="Filename" value={filename} onChange={(e) => setFilename(e.target.value)} className="w-full border rounded px-3 py-2 mb-4" />
-            <div className="flex justify-end gap-3">
-               <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-               <Button onClick={handleSubmit} disabled={!filename.trim()} className="bg-indigo-600 text-white">Save Database</Button>
-            </div>
-          </Card>
-        </div>
-      )}
+      {/* Filename Prompt Modal */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-md bg-background border-border shadow-2xl p-8 rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black text-foreground">Save to Vault</DialogTitle>
+          </DialogHeader>
+          <div className="py-8 space-y-4">
+            <p className="text-sm text-muted-foreground mb-4 font-medium">Please provide a descriptive filename for the Vault.</p>
+            <input
+              type="text"
+              placeholder="e.g. Document Name April 2026"
+              className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all box-border"
+              value={filename}
+              onChange={(e) => setFilename(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t border-border">
+            <Button
+              variant="ghost"
+              onClick={() => setIsModalOpen(false)}
+              className="font-bold rounded-xl hover:bg-muted"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={!filename.trim() || isSubmitting}
+              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-8 font-black shadow-xl shadow-blue-500/20 active:scale-95 transition-all"
+            >
+              Save in Vault
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

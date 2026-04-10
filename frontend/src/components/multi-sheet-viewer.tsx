@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import * as XLSX from "xlsx";
 import { DataTable } from "./data-table";
+import { decompressSheetData } from "../utils/dataProcessing";
 
 export interface SheetData {
   name: string;
   headers: string[];
-  rows: Record<string, any>[];
+  rows: any[]; // Can be Record<string, any>[] or any[][]
 }
 
 interface MultiSheetViewerProps {
@@ -18,7 +19,7 @@ interface MultiSheetViewerProps {
 }
 
 export function MultiSheetViewer({
-  sheets,
+  sheets: rawSheets,
   onDataUpdate,
   isLoadingMore,
   onLoadingMore,
@@ -27,6 +28,9 @@ export function MultiSheetViewer({
 }: MultiSheetViewerProps) {
   const [activeTab, setActiveTab] = useState(0);
 
+  // DECOMPRESSION: Ensure data is in object format for DataTable and Export
+  const sheets = useMemo(() => decompressSheetData(rawSheets), [rawSheets]);
+
   const handleDownload = () => {
     if (!sheets || sheets.length === 0) return;
 
@@ -34,12 +38,9 @@ export function MultiSheetViewer({
       const wb = XLSX.utils.book_new();
       
       sheets.forEach((sheet, idx) => {
-        // Enforce max 31 characters for Excel sheet names and sanitize
         let safeName = (sheet.name || `Sheet ${idx + 1}`).substring(0, 31).replace(/[\][*?:\/\\]/g, "");
         if (!safeName) safeName = `Sheet ${idx + 1}`;
         
-        // Ensure rows populate correctly mapping exactly to the custom headers first if preferred,
-        // but json_to_sheet is very robust natively.
         const ws = XLSX.utils.json_to_sheet(sheet.rows);
         XLSX.utils.book_append_sheet(wb, ws, safeName);
       });

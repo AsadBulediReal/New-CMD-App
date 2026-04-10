@@ -22,8 +22,8 @@ const features = [
   {
     title: "Reconcile BS vs MIS",
     description: "Run primary reconciliation between Bank Statements and MIS data to identify discrepancies.",
-    link: "#",
-    status: "soon",
+    link: "/reconcile",
+    status: "live",
     gradient: "from-sky-500 to-blue-600",
     glow: "rgba(14,165,233,0.30)",
     icon: (

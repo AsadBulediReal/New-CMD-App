@@ -242,18 +242,27 @@ function parse_txt_content_to_json(content) {
         };
     }
 
-    // Recalculate credit metrics manually
+    // Recalculate credit and debit metrics manually
     if (transactions.length > 0) {
         let totalCreditCount = 0;
         let totalCreditAmount = 0.0;
+        let totalDebitCount = 0;
+        let totalDebitAmount = 0.0;
+
         for (const tx of transactions) {
             if (tx.Credit > 0) {
                 totalCreditCount++;
                 totalCreditAmount += tx.Credit;
             }
+            if (tx.Debit > 0) {
+                totalDebitCount++;
+                totalDebitAmount += tx.Debit;
+            }
         }
         summary["Total Credit Transactions"] = totalCreditCount;
         summary["Total Amount Credited"] = totalCreditAmount;
+        summary["Total Debit Transactions"] = totalDebitCount;
+        summary["Total Amount Debited"] = totalDebitAmount;
     }
 
     return {
