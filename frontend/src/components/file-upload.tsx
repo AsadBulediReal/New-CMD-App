@@ -207,7 +207,7 @@ export function FileUpload({
       <div className="text-center space-y-6">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Upload Your Data File</h2>
-          <p className="text-gray-600 dark:text-gray-400">Support for CSV and Excel files (.xlsx, .xls)</p>
+          <p className="text-muted-foreground">Support for CSV and Excel files (.xlsx, .xls)</p>
         </div>
 
         <div

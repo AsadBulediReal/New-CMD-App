@@ -14,7 +14,6 @@ export function FileUploadEditor() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitMessage, setSubmitMessage] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [submissionProgress, setSubmissionProgress] = useState(0)
   
   // Separation Workflow states
   const [pendingData, setPendingData] = useState<SheetData[] | null>(null)
@@ -77,14 +76,9 @@ export function FileUploadEditor() {
     setIsModalOpen(false)
     setIsSubmitting(true)
     setSubmitMessage("")
-    setSubmissionProgress(0)
 
     try {
-      const progressInterval = setInterval(() => {
-        setSubmissionProgress((prev) => (prev < 85 ? prev + Math.random() * 12 : prev))
-      }, 150)
 
-      // COMPRESSION: Convert to array-based storage to fit in 16MB MongoDB limit
       const compressedSheets = compressSheetData(sheets);
 
       const response = await fetch("/api/files", {
@@ -98,24 +92,19 @@ export function FileUploadEditor() {
         }),
       })
 
-      clearInterval(progressInterval)
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || `HTTP ${response.status}`)
       }
 
       await response.json()
-      setSubmissionProgress(100)
       setSubmitMessage(`✓ Document exported properly via sheets!`)
 
       setTimeout(() => {
-        setSubmissionProgress(0)
         setIsSubmitting(false)
         setSheets(null)
       }, 2000)
     } catch (error) {
-      setSubmissionProgress(0)
       const errorMessage = error instanceof Error ? error.message : "Unknown error"
       setSubmitMessage(`✗ Failed to submit: ${errorMessage}`)
       setIsSubmitting(false)
@@ -127,9 +116,9 @@ export function FileUploadEditor() {
 
 
       {isLoading && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="p-8 bg-white rounded-lg shadow-lg">
-             <p className="text-lg font-semibold text-gray-900">Processing file via API...</p>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <Card className="p-8 bg-background border-border rounded-lg shadow-xl">
+             <p className="text-lg font-semibold text-foreground">Processing file via API...</p>
           </Card>
         </div>
       )}

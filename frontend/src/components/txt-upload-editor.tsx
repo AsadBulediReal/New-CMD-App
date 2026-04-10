@@ -14,7 +14,6 @@ export function TxtUploadEditor() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitMessage, setSubmitMessage] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [submissionProgress, setSubmissionProgress] = useState(0)
   
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -154,12 +153,8 @@ export function TxtUploadEditor() {
     setIsModalOpen(false)
     setIsSubmitting(true)
     setSubmitMessage("")
-    setSubmissionProgress(0)
 
     try {
-      const progressInterval = setInterval(() => {
-        setSubmissionProgress((prev) => (prev < 85 ? prev + Math.random() * 12 : prev))
-      }, 150)
 
       const compressedSheets = compressSheetData(sheets)
 
@@ -174,24 +169,19 @@ export function TxtUploadEditor() {
         }),
       })
 
-      clearInterval(progressInterval)
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || `HTTP ${response.status}`)
       }
 
       await response.json()
-      setSubmissionProgress(100)
       setSubmitMessage(`✓ All sheets saved successfully!`)
 
       setTimeout(() => {
-        setSubmissionProgress(0)
         setIsSubmitting(false)
         setSheets(null)
       }, 2000)
     } catch (error) {
-      setSubmissionProgress(0)
       const errorMessage = error instanceof Error ? error.message : "Unknown error"
       setSubmitMessage(`✗ Failed to submit: ${errorMessage}`)
       setIsSubmitting(false)
@@ -207,9 +197,9 @@ export function TxtUploadEditor() {
 
 
       {isLoading && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="p-8 bg-white dark:bg-zinc-900 rounded-lg shadow-lg">
-             <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">Processing file via API...</p>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <Card className="p-8 bg-background border-border rounded-lg shadow-xl">
+             <p className="text-lg font-semibold text-foreground">Processing file via API...</p>
           </Card>
         </div>
       )}

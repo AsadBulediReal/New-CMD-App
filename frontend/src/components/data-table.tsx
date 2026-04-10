@@ -191,7 +191,7 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
 
   return (
     <div className="flex-1 flex flex-col h-full space-y-4 overflow-hidden p-4">
-      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between text-sm text-gray-600 mb-4">
+      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between text-sm text-muted-foreground mb-4">
         <span>
           {totalFilteredRows} rows found (Total: {data.rows.length}) × {data.headers.length} columns
         </span>
@@ -199,7 +199,7 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
              {!readonly && (
                <HoverCard>
                   <HoverCardTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-indigo-600">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-indigo-600">
                           <span className="sr-only">Help</span>
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle-help"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
                       </Button>
@@ -210,23 +210,23 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
                           <div className="grid gap-3 text-sm">
                               <div className="flex gap-2">
                                   <span className="font-bold text-indigo-600 min-w-[60px]">Search</span>
-                                  <span className="text-gray-600">Type in the box to filter rows across all columns instantly.</span>
+                                  <span className="text-muted-foreground">Type in the box to filter rows across all columns instantly.</span>
                               </div>
                               <div className="flex gap-2">
                                   <span className="font-bold text-indigo-600 min-w-[60px]">Sort</span>
-                                  <span className="text-gray-600">Click any column header text to sort A-Z or Z-A.</span>
+                                  <span className="text-muted-foreground">Click any column header text to sort A-Z or Z-A.</span>
                               </div>
                               <div className="flex gap-2">
                                   <span className="font-bold text-indigo-600 min-w-[60px]">Edit</span>
-                                  <span className="text-gray-600">Hover header and click <span className="inline-block">✎</span> to rename.</span>
+                                  <span className="text-muted-foreground">Hover header and click <span className="inline-block">✎</span> to rename.</span>
                               </div>
                               <div className="flex gap-2">
                                   <span className="font-bold text-indigo-600 min-w-[60px]">Sticky</span>
-                                  <span className="text-gray-600">Header & first column stay visible while scrolling.</span>
+                                  <span className="text-muted-foreground">Header & first column stay visible while scrolling.</span>
                               </div>
                               <div className="flex gap-2">
                                   <span className="font-bold text-indigo-600 min-w-[60px]">Delete</span>
-                                  <span className="text-gray-600">Use <span className="text-red-500">✕</span> to remove specific columns or rows.</span>
+                                  <span className="text-muted-foreground">Use <span className="text-red-500">✕</span> to remove specific columns or rows.</span>
                               </div>
                           </div>
                       </div>
@@ -246,14 +246,14 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
       <div className="flex-1 border border-border rounded-xl shadow-inner overflow-auto relative bg-background/50 backdrop-blur-sm">
         <table className="border-collapse w-full">
           <thead>
-            <tr className="bg-blue-500/5 dark:bg-blue-600/10 border-b border-border sticky top-0 z-20 shadow-sm">
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 bg-gray-100 border-r border-gray-200 sticky left-0 z-30 w-12 flex-shrink-0">
+            <tr className="bg-muted/50 border-b border-border sticky top-0 z-20 shadow-sm">
+              <th className="px-4 py-3 text-left text-sm font-semibold text-foreground bg-muted border-r border-border sticky left-0 z-30 w-12 flex-shrink-0">
                 #
               </th>
               {data.headers.map((header) => (
                 <th
                   key={header}
-                  className="px-4 py-3 text-left text-sm font-bold text-foreground bg-blue-500/5 dark:bg-blue-600/5 border-r border-border flex-shrink-0 cursor-pointer hover:bg-blue-500/10 transition-colors"
+                  className="px-4 py-3 text-left text-sm font-bold text-foreground bg-muted/30 border-r border-border flex-shrink-0 cursor-pointer hover:bg-muted/50 transition-colors"
                   style={{ minWidth: "150px" }}
                   onClick={() => handleSort(header)}
                 >
@@ -284,7 +284,7 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
                                 {sortConfig?.direction === "asc" ? "↑" : "↓"}
                             </span>
                         ) : (
-                            <span className="text-xs text-gray-300 font-bold ml-1 transition-opacity">
+                            <span className="text-xs text-muted-foreground/30 font-bold ml-1 transition-opacity">
                                 ↕
                             </span>
                         )}
@@ -301,7 +301,7 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
                               }}
                               variant="ghost"
                               size="sm"
-                              className="h-6 w-6 p-0 text-gray-300 hover:text-indigo-600 hover:bg-gray-100"
+                              className="h-6 w-6 p-0 text-muted-foreground/50 hover:text-indigo-600 hover:bg-muted"
                               title="Rename column"
                               >
                               ✎
@@ -311,7 +311,7 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
                           onClick={(e) => { e.stopPropagation(); handleRemoveColumn(header); }}
                           variant="ghost"
                           size="sm"
-                          className="h-6 w-6 p-0 text-gray-300 hover:text-red-600 hover:bg-red-50"
+                          className="h-6 w-6 p-0 text-muted-foreground/50 hover:text-red-600 hover:bg-destructive/10"
                           title="Remove column"
                           >
                           ✕
@@ -326,7 +326,7 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
           <tbody>
             {paginatedRows.length === 0 ? (
               <tr>
-                <td colSpan={data.headers.length + 1} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={data.headers.length + 1} className="px-4 py-8 text-center text-muted-foreground">
                   No data matches your search
                 </td>
               </tr>
@@ -345,10 +345,10 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
                 return (
                   <Fragment key={index}>
                     {isLastFiveStart && (
-                      <tr className="bg-gray-100 hover:bg-gray-100">
+                      <tr className="bg-muted/30 hover:bg-muted/30">
                         <td
                           colSpan={data.headers.length + 1}
-                          className="px-4 py-2 text-xs text-gray-500 font-semibold bg-gray-100"
+                          className="px-4 py-2 text-xs text-muted-foreground font-semibold bg-muted/30"
                         >
                           <div className="sticky left-1/2 -translate-x-1/2 w-fit">
                             ... {totalFilteredRows - RECORDS_PER_PAGE - 5} more records ...
@@ -357,8 +357,8 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
                       </tr>
                     )}
                     {/* Using a composite key or object reference if available would be better, but index is okay for display-only mostly */}
-                    <tr key={index} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 text-sm text-gray-600 bg-gray-50 font-medium text-center border-r border-gray-200 sticky left-0 z-10 w-12 flex-shrink-0">
+                    <tr key={index} className="border-b border-border hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-3 text-sm text-muted-foreground bg-muted/20 font-medium text-center border-r border-border sticky left-0 z-10 w-12 flex-shrink-0">
                         <div className="flex items-center justify-between gap-1">
                           <span>{displayIndex}</span>
                           {!readonly && (
@@ -366,7 +366,7 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
                               onClick={() => handleRemoveRowByRef(row)}
                               variant="ghost"
                               size="sm"
-                              className="h-5 w-5 p-0 text-gray-300 hover:text-red-600 hover:bg-red-50"
+                              className="h-5 w-5 p-0 text-muted-foreground/50 hover:text-red-600 hover:bg-destructive/10"
                               title="Remove row"
                             >
                               ✕
@@ -393,8 +393,8 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
       </div>
 
       {totalFilteredRows > RECORDS_PER_PAGE && (
-        <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-          <div className="text-sm text-gray-600">
+        <div className="flex items-center justify-between pt-4 border-t border-border">
+          <div className="text-sm text-muted-foreground">
             Page <span className="font-semibold">{currentPage}</span> of{" "}
             <span className="font-semibold">{maxPage}</span>
             {" | "}
@@ -438,7 +438,7 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
                     onClick={() => setCurrentPage(pageNum)}
                     variant={currentPage === pageNum ? "default" : "outline"}
                     className={`w-8 h-8 p-0 ${
-                      currentPage === pageNum ? "bg-indigo-600 text-white" : "bg-white text-gray-700 border-gray-200"
+                      currentPage === pageNum ? "bg-indigo-600 text-white" : "bg-background text-foreground border-border"
                     }`}
                     disabled={isLoadingMore}
                   >

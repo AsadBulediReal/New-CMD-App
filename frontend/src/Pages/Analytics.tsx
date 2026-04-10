@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { 
   getAutoMapping, 
-  compressSheetData,
-  decompressSheetData 
+  compressSheetData
 } from "../utils/dataProcessing";
 import { MultiSheetViewer, type SheetData } from "../components/multi-sheet-viewer";
 import { Button } from "../components/ui/button";
@@ -12,7 +11,6 @@ import {
   BarChart3, 
   FileCheck2, 
   Map as MapIcon, 
-  ChevronRight, 
   Database, 
   CheckCircle2, 
   AlertCircle, 
