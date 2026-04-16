@@ -8,6 +8,7 @@ export default function Navbar() {
     { name: "Dashboard", href: "/" },
     { name: "Upload Excel", href: "/upload" },
     { name: "Saved Files", href: "/saved-files" },
+    { name: "Audit Tools", href: "/audit" },
   ];
 
   return (

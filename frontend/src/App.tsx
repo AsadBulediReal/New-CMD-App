@@ -5,6 +5,7 @@ import MainPage from "./Pages/MainPage";
 import SavedFiles from "./Pages/SavedFiles";
 import Analytics from "./Pages/Analytics";
 import Reconcile from "./Pages/Reconcile";
+import AuditTool from "./Pages/AuditTool";
 import Navbar from "./components/Navbar";
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
           <Route path="/saved-files" element={<SavedFiles />} />
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/reconcile" element={<Reconcile />} />
+          <Route path="/audit" element={<AuditTool />} />
           <Route path="/about" element={<div>About Page</div>} />
         </Routes>
       </div>

@@ -20,6 +20,7 @@ mongoose
 const { parse_txt_content_to_json } = require("./utils/txtToJsonParser");
 const { analyze_transactions } = require("./utils/bsDataAnalytics");
 const { reconcile_bs_vs_mis } = require("./utils/reconcileHelper");
+const { audit_transactions, auditCategories } = require("./utils/auditHelper");
 
 // ... existing code ...
 
@@ -378,6 +379,115 @@ app.post("/api/reconcile-bs-mis", async (req, res) => {
   } catch (error) {
     console.error("Error in reconciliation:", error);
     res.status(500).json({ error: "Failed to perform reconciliation" });
+  }
+});
+// 7. Audit specific categories using TYPE_CODE
+app.post("/api/audit-saved-file", async (req, res) => {
+  try {
+    const { fileId, sheetName, fieldMap, categories, validationMode } = req.body;
+    
+    if (!fileId) {
+      return res.status(400).json({ error: "fileId is required" });
+    }
+
+    const file = await StoredFile.findById(fileId).lean();
+    if (!file) {
+      return res.status(404).json({ error: "File not found" });
+    }
+
+    // Extract sheet
+    const allSheets = file.sheets || [];
+    let targetSheet;
+    if (sheetName) {
+      targetSheet = allSheets.find(s => s.name === sheetName);
+    } else {
+      targetSheet = allSheets.find(s => s.name === "Transactions") || allSheets[0];
+    }
+
+    if (!targetSheet && (!file.rows || file.rows.length === 0)) {
+       return res.status(400).json({ error: "No data found to audit." });
+    }
+
+    const rowsData = targetSheet ? targetSheet.rows : file.rows;
+    const headersData = targetSheet ? targetSheet.headers : file.headers;
+
+    // Apply field map
+    const applyFieldMap = (rows, map, headers) => {
+      if (!rows) return [];
+      return rows.map(r => {
+        const row = decompressRow(r, headers);
+        if (!map || Object.keys(map).length === 0) return row;
+        for (const [requiredField, sourceField] of Object.entries(map)) {
+          if (sourceField && sourceField !== requiredField) {
+            row[requiredField] = row[sourceField]; 
+          }
+        }
+        return row;
+      });
+    };
+
+    const mappedRows = applyFieldMap(rowsData, fieldMap, headersData);
+
+    // Free the raw massive payload from DB
+    if (file) {
+       file.rows = null;
+       file.sheets = null;
+    }
+
+    const {
+      categoryData,
+      nullData,
+      summaryRows
+    } = audit_transactions(mappedRows, categories || [], validationMode || "strict");
+
+    const resultingSheets = [];
+    
+    // Add Summary sheet first
+    if (summaryRows.length > 0) {
+      resultingSheets.push({
+        name: "Summary",
+        headers: ["Category", "Records Count", "Total Amount"],
+        rows: summaryRows
+      });
+    }
+
+    // Filter and add category sheets that have data
+    for (const [catName, catRows] of Object.entries(categoryData)) {
+      if (catRows && catRows.length > 0) {
+        // Collect all unique keys for headers, appending to standard ones
+        const keys = new Set();
+        catRows.forEach(r => Object.keys(r).forEach(k => keys.add(k)));
+        const catHeaders = Array.from(keys);
+        
+        resultingSheets.push({
+          name: catName,
+          headers: catHeaders.length > 0 ? catHeaders : headersData,
+          rows: catRows
+        });
+      }
+    }
+
+    // Add nullData sheet if unmapped/invalid TYPE_CODE records exist
+    if (nullData.length > 0) {
+       const keys = new Set();
+       nullData.forEach(r => Object.keys(r).forEach(k => keys.add(k)));
+       const nullHeaders = Array.from(keys);
+
+       resultingSheets.push({
+         name: "nullData",
+         headers: nullHeaders.length > 0 ? nullHeaders : headersData,
+         rows: nullData
+       });
+    }
+
+    res.status(200).json({
+      filename: `Audit-${file.filename}`,
+      sheets: resultingSheets
+    });
+
+  } catch (error) {
+    console.error("Error in audit:", error);
+    res.status(500).json({ error: "Failed to perform audit" });
   }
 });
 
