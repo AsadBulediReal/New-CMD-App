@@ -217,7 +217,7 @@ export default function MergeJson() {
           <div className="space-y-1">
             <h1 className="text-4xl font-extrabold tracking-tight text-foreground flex items-center gap-3">
               <Combine className="w-10 h-10 text-cyan-500" />
-              Merge JSON <span className="text-transparent bg-clip-text bg-linear-to-r from-cyan-500 to-sky-600">Reports</span>
+              Merge Excel <span className="text-transparent bg-clip-text bg-linear-to-r from-cyan-500 to-sky-600">Reports</span>
             </h1>
             <p className="text-muted-foreground font-medium">Consolidate multiple files and map matching sheets.</p>
           </div>

@@ -49,8 +49,8 @@ const features = [
     ),
   },
   {
-    title: "Merge JSON Reports",
-    description: "Combine multiple JSON report files into a single unified document for consolidated analysis.",
+    title: "Merge Excel Reports",
+    description: "Combine multiple Excel report files into a single unified document for consolidated analysis.",
     link: "/merge-json",
     status: "live",
     gradient: "from-cyan-500 to-sky-600",

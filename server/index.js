@@ -34,6 +34,103 @@ const decompressRow = (row, headers) => {
   return obj;
 };
 
+// Shared: parse a cell value that might be a date string, return Date or null
+const MONTH_MAP = { jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11 };
+function parseDateFromCell(val) {
+  if (!val) return null;
+  let dVal = String(val).trim();
+  // "02Jan25"  or "02-Jan-25" or "02 Jan 25"
+  const compact = dVal.match(/^(\d{1,2})[-\s]?([A-Za-z]{3})[-\s]?(\d{2,4})$/);
+  if (compact) {
+    const day = parseInt(compact[1], 10);
+    const mon = MONTH_MAP[compact[2].toLowerCase()];
+    let yr = parseInt(compact[3], 10);
+    if (yr < 100) yr += 2000;
+    if (mon !== undefined) return new Date(yr, mon, day);
+  }
+  // ISO or locale date strings
+  const parsed = new Date(dVal);
+  if (!isNaN(parsed.getTime())) return parsed;
+  return null;
+}
+
+// Extract the min/max date from an array of sheets (rows may be compressed or objects)
+function extractDateRange(sheets) {
+  let minDate = null;
+  let maxDate = null;
+  for (const sheet of sheets) {
+    const hdrs = sheet.headers || [];
+    for (const r of sheet.rows || []) {
+      const rowObj = decompressRow(r, hdrs);
+      for (const [key, val] of Object.entries(rowObj)) {
+        if (!key || !val) continue;
+        if (!String(key).match(/date/i)) continue;
+        const d = parseDateFromCell(val);
+        if (d) {
+          if (!minDate || d < minDate) minDate = d;
+          if (!maxDate || d > maxDate) maxDate = d;
+        }
+      }
+    }
+  }
+  return { start: minDate, end: maxDate };
+}
+
+// Extract rich metadata from sheets
+function extractMetadata(sheets) {
+  let totalRecords = 0;
+  let columnCount = 0;
+  let sheetCount = sheets.length;
+  const sheetMeta = [];
+
+  let totalDebit = 0, totalCredit = 0, debitCount = 0, creditCount = 0;
+  let hasFinancialData = false;
+
+  for (let i = 0; i < sheets.length; i++) {
+    const sheet = sheets[i];
+    const hdrs = sheet.headers || [];
+    const rows = sheet.rows || [];
+    const recCount = rows.length;
+    totalRecords += recCount;
+    if (i === 0) columnCount = hdrs.length;
+
+    sheetMeta.push({ name: sheet.name || `Sheet ${i+1}`, recordCount: recCount, columnCount: hdrs.length });
+
+    // Detect debit / credit columns (case-insensitive)
+    const debitCol  = hdrs.find(h => /^debit$/i.test(h.trim()));
+    const creditCol = hdrs.find(h => /^credit$/i.test(h.trim()));
+
+    if (debitCol || creditCol) {
+      hasFinancialData = true;
+      for (const r of rows) {
+        const row = decompressRow(r, hdrs);
+        if (debitCol) {
+          const v = parseFloat(String(row[debitCol] || "0").replace(/,/g, "")) || 0;
+          totalDebit += v;
+          if (v > 0) debitCount++;
+        }
+        if (creditCol) {
+          const v = parseFloat(String(row[creditCol] || "0").replace(/,/g, "")) || 0;
+          totalCredit += v;
+          if (v > 0) creditCount++;
+        }
+      }
+    }
+  }
+
+  const financialSummary = hasFinancialData ? {
+    totalDebit:  Math.round(totalDebit  * 100) / 100,
+    totalCredit: Math.round(totalCredit * 100) / 100,
+    netFlow:     Math.round((totalCredit - totalDebit) * 100) / 100,
+    debitCount,
+    creditCount,
+    hasFinancialData: true,
+  } : { hasFinancialData: false };
+
+  return { totalRecords, columnCount, sheetCount, sheetMeta, financialSummary };
+}
+
+
 // ── Chunking helper
 async function getFileWithChunks(id) {
   const file = await StoredFile.findById(id).lean();
@@ -92,10 +189,22 @@ app.post("/api/files", async (req, res) => {
       }];
     }
 
+    // Extract Date Range from records using shared helper
+    const { start: minDate, end: maxDate } = extractDateRange(finalSheets);
+
+    // Extract rich metadata
+    const { totalRecords, columnCount, sheetCount, sheetMeta, financialSummary } = extractMetadata(finalSheets);
+
     const newFile = new StoredFile({
       filename: filename.trim(),
       headers: primaryHeaders,
-      hasChunks: true, // all new files will use chunking naturally
+      hasChunks: true,
+      recordDateRange: { start: minDate, end: maxDate },
+      totalRecords,
+      columnCount,
+      sheetCount,
+      sheetMeta,
+      financialSummary,
       rows: [],
       sheets: finalSheets.map(s => ({
         name: s.name,
@@ -105,6 +214,7 @@ app.post("/api/files", async (req, res) => {
     });
 
     await newFile.save();
+
 
     const CHUNK_SIZE = 5000;
     const chunkPromises = [];
@@ -154,6 +264,47 @@ app.get("/api/files", async (req, res) => {
         $project: {
           filename: 1,
           uploadDate: 1,
+          recordDateRange: 1,
+          sheetMeta: 1,
+          financialSummary: 1,
+          totalRecords: {
+            $cond: {
+              if: { $isNumber: "$totalRecords" },
+              then: "$totalRecords",
+              else: {
+                $cond: {
+                  if: { $gt: [{ $size: { $ifNull: ["$rows", []] } }, 0] },
+                  then: { $size: { $ifNull: ["$rows", []] } },
+                  else: {
+                    $let: {
+                      vars: { firstSheet: { $arrayElemAt: ["$sheets", 0] } },
+                      in: { $size: { $ifNull: ["$$firstSheet.rows", []] } }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          columnCount: {
+            $cond: {
+              if: { $isNumber: "$columnCount" },
+              then: "$columnCount",
+              else: { $size: { $ifNull: ["$headers", []] } }
+            }
+          },
+          sheetCount: {
+            $cond: {
+              if: { $isNumber: "$sheetCount" },
+              then: "$sheetCount",
+              else: {
+                $cond: {
+                  if: { $gt: [{ $size: { $ifNull: ["$sheets", []] } }, 0] },
+                  then: { $size: { $ifNull: ["$sheets", []] } },
+                  else: 1
+                }
+              }
+            }
+          },
           sheets: {
             $map: {
               input: { $ifNull: ["$sheets", []] },
@@ -172,18 +323,6 @@ app.get("/api/files", async (req, res) => {
                 $let: {
                   vars: { firstSheet: { $arrayElemAt: ["$sheets", 0] } },
                   in: { $ifNull: ["$$firstSheet.headers", []] }
-                }
-              }
-            }
-          },
-          totalRecords: {
-            $cond: {
-              if: { $gt: [{ $size: { $ifNull: ["$rows", []] } }, 0] },
-              then: { $size: { $ifNull: ["$rows", []] } },
-              else: {
-                $let: {
-                  vars: { firstSheet: { $arrayElemAt: ["$sheets", 0] } },
-                  in: { $size: { $ifNull: ["$$firstSheet.rows", []] } }
                 }
               }
             }
@@ -224,6 +363,80 @@ app.delete("/api/files/:id", async (req, res) => {
   } catch (error) {
     console.error("Error deleting file:", error);
     res.status(500).json({ error: "Failed to delete file" });
+  }
+});
+
+// 4.5 Bulk Delete files
+app.post("/api/files/bulk-delete", async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: "No IDs provided" });
+    }
+    await StoredFile.deleteMany({ _id: { $in: ids } });
+    await FileChunk.deleteMany({ fileId: { $in: ids } });
+    res.status(200).json({ message: "Files successfully deleted" });
+  } catch (error) {
+    console.error("Error in bulk delete:", error);
+    res.status(500).json({ error: "Failed to delete files" });
+  }
+});
+
+// 4.6 Recompute meta for all files (migration endpoint)
+app.post("/api/files/recompute-meta", async (req, res) => {
+  try {
+    // Optionally target only files missing the start date, or all files
+    const { all = false } = req.body;
+    const query = all ? {} : {
+      $or: [
+        { "recordDateRange.start": null },
+        { "recordDateRange.start": { $exists: false } },
+        { "totalRecords": null },
+        { "totalRecords": { $exists: false } },
+        { "totalRecords": 0 }
+      ]
+    };
+    const fileMetas = await StoredFile.find(query, "_id filename").lean();
+    let updated = 0;
+    let failed = 0;
+
+    for (const meta of fileMetas) {
+      try {
+        const file = await getFileWithChunks(meta._id.toString());
+        if (!file) continue;
+        const sheets = file.sheets && file.sheets.length > 0 ? file.sheets : (
+          file.rows && file.rows.length > 0
+            ? [{ name: "Sheet1", headers: file.headers || [], rows: file.rows }]
+            : []
+        );
+        if (sheets.length === 0) continue;
+        const { start, end } = extractDateRange(sheets);
+        const { totalRecords, columnCount, sheetCount, sheetMeta, financialSummary } = extractMetadata(sheets);
+        
+        await StoredFile.updateOne(
+          { _id: meta._id },
+          { $set: { 
+            recordDateRange: { start, end },
+            totalRecords,
+            columnCount,
+            sheetCount,
+            sheetMeta,
+            financialSummary
+          } }
+        );
+        updated++;
+      } catch (e) {
+        console.error(`Failed to recompute meta for ${meta.filename}:`, e.message);
+        failed++;
+      }
+    }
+
+    res.status(200).json({
+      message: `Recomputed metadata. Updated: ${updated}, Failed: ${failed}, Total scanned: ${fileMetas.length}`
+    });
+  } catch (error) {
+    console.error("Error in recompute-meta:", error);
+    res.status(500).json({ error: "Failed to recompute metadata" });
   }
 });
 
