@@ -35,6 +35,8 @@ function is_junk_line(line) {
         "Opening balance",
         "BROUGHT FORWARD",
         "CARRIED FORWARD",
+        "This is a system generated",
+        "DATE VALUE PARTICULARS",
         "^\\s*$" // empty line
     ];
     
@@ -65,6 +67,8 @@ function clean_particulars_field(text) {
     // 4. Remove "BROUGHT FORWARD" continuations
     cleaned = cleaned.replace(/BROUGHT FORWARD/gi, '');
     cleaned = cleaned.replace(/CARRIED FORWARD/gi, '');
+    cleaned = cleaned.replace(/This is a system generated account statement and does not require a signature\.?/gi, '');
+    cleaned = cleaned.replace(/DATE VALUE PARTICULARS DEBIT CREDIT BALANCE/gi, '');
     // 5. Collapse multiple spaces to single space
     cleaned = cleaned.replace(/\s{2,}/g, ' ');
     // 6. Strip leading/trailing whitespace

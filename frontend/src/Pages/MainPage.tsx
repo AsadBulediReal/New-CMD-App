@@ -147,7 +147,7 @@ export default function MainPage() {
           <div className="flex justify-center gap-12 mt-10">
             {[
               { label: "Tools", value: "5" },
-              { label: "Ready", value: "2" },
+              { label: "Ready", value: "5" },
               { label: "Formats", value: "4+" },
             ].map((s) => (
               <div key={s.label} className="text-center group">
