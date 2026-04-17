@@ -9,6 +9,10 @@ const storedFileSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  hasChunks: {
+    type: Boolean,
+    default: false,
+  },
   headers: {
     type: [String],
     default: [],

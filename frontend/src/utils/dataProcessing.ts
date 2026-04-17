@@ -117,10 +117,28 @@ export function compressSheetData(sheets: SheetData[]): SheetData[] {
   return sheets.map(sheet => {
     const headers = sheet.headers || [];
     const rows = (sheet.rows || []).map(row => {
-      // If already an array, skip
-      if (Array.isArray(row)) return row;
-      // Convert object to array based on header order
-      return headers.map(h => row[h] ?? "");
+      let r: any[];
+
+      if (Array.isArray(row)) {
+        r = [...row];
+        // Convert empty strings to null for BSON optimization
+        for (let i = 0; i < r.length; i++) {
+          if (r[i] === "") r[i] = null;
+        }
+      } else {
+        // Convert object to array based on header order
+        r = headers.map(h => {
+          const val = row[h];
+          return (val === "" || val == null) ? null : val;
+        });
+      }
+
+      // Trim trailing nulls to minimize array size in BSON
+      while (r.length > 0 && r[r.length - 1] === null) {
+        r.pop();
+      }
+
+      return r;
     });
     return { ...sheet, rows };
   });

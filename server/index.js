@@ -3,11 +3,12 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const StoredFile = require("./models/StoredFile");
+const FileChunk = require("./models/FileChunk");
 
 const app = express();
 
 app.use(cors());
-app.use(express.json({ limit: '50mb' })); // Increase limit for potentially large excel JSON conversions
+app.use(express.json({ limit: '500mb' })); // Increase limit for massive payloads since DB chunks resolve 16MB BSON barrier
 
 // Connect to MongoDB
 mongoose
@@ -32,6 +33,34 @@ const decompressRow = (row, headers) => {
   });
   return obj;
 };
+
+// ── Chunking helper
+async function getFileWithChunks(id) {
+  const file = await StoredFile.findById(id).lean();
+  if (!file) return null;
+  
+  if (file.hasChunks) {
+    const chunks = await FileChunk.find({ fileId: id }).sort('chunkIndex').lean();
+    
+    if (!file.sheets) file.sheets = [];
+    if (!file.rows) file.rows = [];
+
+    for (const chunk of chunks) {
+      if (chunk.sheetName) {
+        let sheet = file.sheets.find(s => s.name === chunk.sheetName);
+        if (!sheet) {
+          sheet = { name: chunk.sheetName, headers: [], rows: [] };
+          file.sheets.push(sheet);
+        }
+        if (!sheet.rows) sheet.rows = [];
+        sheet.rows.push(...chunk.rows);
+      } else {
+        file.rows.push(...chunk.rows);
+      }
+    }
+  }
+  return file;
+}
 
 // 1. Save uploaded file data with a custom filename
 app.post("/api/files", async (req, res) => {
@@ -66,11 +95,34 @@ app.post("/api/files", async (req, res) => {
     const newFile = new StoredFile({
       filename: filename.trim(),
       headers: primaryHeaders,
-      rows: primaryRows,
-      sheets: finalSheets
+      hasChunks: true, // all new files will use chunking naturally
+      rows: [],
+      sheets: finalSheets.map(s => ({
+        name: s.name,
+        headers: s.headers,
+        rows: []
+      }))
     });
 
     await newFile.save();
+
+    const CHUNK_SIZE = 5000;
+    const chunkPromises = [];
+    let chunkIndex = 0;
+
+    for (const sheet of finalSheets) {
+      const rows = sheet.rows || [];
+      for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
+        chunkPromises.push(new FileChunk({
+          fileId: newFile._id,
+          sheetName: sheet.name,
+          chunkIndex: chunkIndex++,
+          rows: rows.slice(i, i + CHUNK_SIZE)
+        }).save());
+      }
+    }
+
+    await Promise.all(chunkPromises);
     res.status(201).json({ message: "File saved successfully", fileId: newFile._id });
   } catch (error) {
     console.error("Error saving file:", error);
@@ -150,7 +202,7 @@ app.get("/api/files", async (req, res) => {
 // 3. Fetch a specific file by ID (includes row data)
 app.get("/api/files/:id", async (req, res) => {
   try {
-    const file = await StoredFile.findById(req.params.id);
+    const file = await getFileWithChunks(req.params.id);
     if (!file) return res.status(404).json({ error: "File not found" });
     
     res.status(200).json(file);
@@ -167,6 +219,7 @@ app.delete("/api/files/:id", async (req, res) => {
     if (!file) {
       return res.status(404).json({ error: "File not found" });
     }
+    await FileChunk.deleteMany({ fileId: req.params.id });
     res.status(200).json({ message: "File successfully deleted" });
   } catch (error) {
     console.error("Error deleting file:", error);
@@ -182,7 +235,7 @@ app.post("/api/analyze-saved-file", async (req, res) => {
       return res.status(400).json({ error: "fileId is required" });
     }
 
-    const file = await StoredFile.findById(fileId).lean();
+    const file = await getFileWithChunks(fileId);
     if (!file) {
       return res.status(404).json({ error: "File not found" });
     }
@@ -304,8 +357,8 @@ app.post("/api/reconcile-bs-mis", async (req, res) => {
     }
 
     const [bsFile, misFile] = await Promise.all([
-      StoredFile.findById(bsFileId).lean(),
-      StoredFile.findById(misFileId).lean()
+      getFileWithChunks(bsFileId),
+      getFileWithChunks(misFileId)
     ]);
 
     if (!bsFile || !misFile) {
@@ -390,7 +443,7 @@ app.post("/api/audit-saved-file", async (req, res) => {
       return res.status(400).json({ error: "fileId is required" });
     }
 
-    const file = await StoredFile.findById(fileId).lean();
+    const file = await getFileWithChunks(fileId);
     if (!file) {
       return res.status(404).json({ error: "File not found" });
     }
@@ -488,6 +541,90 @@ app.post("/api/audit-saved-file", async (req, res) => {
   } catch (error) {
     console.error("Error in audit:", error);
     res.status(500).json({ error: "Failed to perform audit" });
+  }
+});
+
+// 8. Merge multiple JSON Reports (Files) into one
+app.post("/api/merge-files", async (req, res) => {
+  try {
+    const { mappings } = req.body;
+    // mappings format:
+    // [
+    //   {
+    //     outputSheetName: "Merged Transactions",
+    //     sources: [ { fileId: "id1", sheetName: "Sheet1" }, { fileId: "id2", sheetName: "Trans" } ]
+    //   }
+    // ]
+
+    if (!mappings || !Array.isArray(mappings) || mappings.length === 0) {
+      return res.status(400).json({ error: "Mappings are required" });
+    }
+
+    // Collect all unique fileIds requested
+    const fileIds = new Set();
+    mappings.forEach(m => {
+      m.sources.forEach(s => {
+        if (s.fileId) fileIds.add(s.fileId);
+      });
+    });
+
+    // Fetch all files
+    const filesMap = new Map();
+    for (const id of Array.from(fileIds)) {
+      const file = await getFileWithChunks(id);
+      if (file) filesMap.set(id, file);
+    }
+
+    const resultingSheets = [];
+
+    for (const mapping of mappings) {
+      const targetName = mapping.outputSheetName || "Merged Sheet";
+      let mergedRows = [];
+      const mergedHeadersSet = new Set();
+
+      for (const source of mapping.sources) {
+        if (!source.fileId) continue;
+        const file = filesMap.get(source.fileId);
+        if (!file) continue;
+
+        let targetSheet;
+        const allSheets = file.sheets || [];
+        if (source.sheetName) {
+          targetSheet = allSheets.find(s => s.name === source.sheetName);
+        } else {
+          targetSheet = allSheets[0]; // fallback
+        }
+
+        const headers = targetSheet ? targetSheet.headers : file.headers;
+        const rows = targetSheet ? targetSheet.rows : file.rows;
+
+        if (headers) {
+          headers.forEach(h => mergedHeadersSet.add(h));
+        }
+
+        if (rows && rows.length > 0) {
+          rows.forEach(r => {
+            const decompressed = decompressRow(r, headers);
+            // Optionally, we could tag the row with source filename: decompressed["_SourceFile"] = file.filename;
+            mergedRows.push(decompressed);
+          });
+        }
+      }
+
+      resultingSheets.push({
+        name: targetName,
+        headers: Array.from(mergedHeadersSet),
+        rows: mergedRows
+      });
+    }
+
+    res.status(200).json({
+      filename: `Merged-Report-${new Date().getTime()}`,
+      sheets: resultingSheets
+    });
+  } catch (error) {
+    console.error("Error merging files:", error);
+    res.status(500).json({ error: "Failed to merge files" });
   }
 });
 

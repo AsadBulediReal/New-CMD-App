@@ -51,8 +51,8 @@ const features = [
   {
     title: "Merge JSON Reports",
     description: "Combine multiple JSON report files into a single unified document for consolidated analysis.",
-    link: "#",
-    status: "soon",
+    link: "/merge-json",
+    status: "live",
     gradient: "from-cyan-500 to-sky-600",
     glow: "rgba(6,182,212,0.30)",
     icon: (

@@ -6,6 +6,7 @@ import SavedFiles from "./Pages/SavedFiles";
 import Analytics from "./Pages/Analytics";
 import Reconcile from "./Pages/Reconcile";
 import AuditTool from "./Pages/AuditTool";
+import MergeJson from "./Pages/MergeJson";
 import Navbar from "./components/Navbar";
 
 function App() {
@@ -21,6 +22,7 @@ function App() {
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/reconcile" element={<Reconcile />} />
           <Route path="/audit" element={<AuditTool />} />
+          <Route path="/merge-json" element={<MergeJson />} />
           <Route path="/about" element={<div>About Page</div>} />
         </Routes>
       </div>

@@ -96,12 +96,6 @@ export function TxtUploadEditor() {
         throw new Error("Invalid file format. Please upload a plain text (.txt) bank statement file.")
       }
 
-      // Check if file is excessively large (e.g., > 30MB)
-      const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30MB
-      if (file.size > MAX_FILE_SIZE) {
-        throw new Error(`File is too large (${(file.size / (1024 * 1024)).toFixed(2)} MB). Please upload a file smaller than 30MB.`);
-      }
-
       console.log("[v0] Parsing as TXT file")
       const parsedSheets = await parseTxtFile(file)
       
