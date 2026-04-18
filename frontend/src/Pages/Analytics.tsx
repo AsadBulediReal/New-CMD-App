@@ -14,11 +14,15 @@ import {
   Database, 
   CheckCircle2, 
   AlertCircle, 
-  Loader2,
-  Save,
-  ArrowLeft
+  ArrowLeft,
+  HelpCircle,
+  Zap,
+  Repeat,
+  TrendingDown,
+  LineChart
 } from "lucide-react";
 import { Link } from "react-router";
+import { HelpDialog } from "../components/shared/help-dialog";
 
 // ── Required analytics fields ──────────────────────────────────────────────
 const REQUIRED_FIELDS: { key: string; label: string; description: string }[] = [
@@ -40,6 +44,30 @@ interface StoredFile {
 type FieldMap = Record<string, string>;
 
 export default function Analytics() {
+  const [showHelp, setShowHelp] = useState(false);
+
+  const features = [
+    {
+      icon: <Zap className="w-5 h-5 text-blue-500" />,
+      title: "Bulk Detection",
+      desc: "Scans descriptions for markers like 'txn' or 'batch' to identify and group bulk payment distributions."
+    },
+    {
+      icon: <Repeat className="w-5 h-5 text-indigo-500" />,
+      title: "Reversal Engine",
+      desc: "Automatically pairs matching Debit and Credit entries with identical Challans to filter out internal reversals."
+    },
+    {
+      icon: <TrendingDown className="w-5 h-5 text-cyan-500" />,
+      title: "Flow Analysis",
+      desc: "Isolates total incoming vs outgoing volume to highlight net positions across specific periods."
+    },
+    {
+      icon: <LineChart className="w-5 h-5 text-purple-500" />,
+      title: "Sheet Summaries",
+      desc: "Generates high-level statistical overviews including total credit/debit volume and unique challan counts."
+    }
+  ];
   const [files, setFiles]           = useState<StoredFile[]>([]);
   const [selectedFileId, setSelectedFileId] = useState<string>("");
   const [selectedSheetName, setSelectedSheetName] = useState<string>("");
@@ -239,12 +267,30 @@ export default function Analytics() {
             </h1>
             <p className="text-muted-foreground font-medium">Perform high-level financial reconciliation and mapping.</p>
           </div>
-          <Button asChild variant="ghost" className="text-muted-foreground hover:text-foreground">
-             <Link to="/" className="flex items-center gap-2">
-               <ArrowLeft className="w-4 h-4" /> Back to Tools
-             </Link>
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowHelp(true)}
+              className="border-blue-500/30 text-blue-600 hover:bg-blue-500/10 dark:text-blue-400 gap-2 h-10 px-4 rounded-xl font-bold"
+            >
+              <HelpCircle className="w-4 h-4" />
+              Features & Tips
+            </Button>
+            <Button asChild variant="ghost" className="text-muted-foreground hover:text-foreground h-10 rounded-xl">
+               <Link to="/" className="flex items-center gap-2">
+                 <ArrowLeft className="w-4 h-4" /> Back to Tools
+               </Link>
+            </Button>
+          </div>
         </div>
+
+        <HelpDialog 
+          isOpen={showHelp}
+          onOpenChange={setShowHelp}
+          title="Analytics Guidelines"
+          subtitle="Advanced financial pattern detection and data cleaning."
+          features={features}
+        />
 
         {/* Configuration Card */}
         <Card className="p-8 border-border bg-card/40 backdrop-blur-xl shadow-2xl relative overflow-hidden group">

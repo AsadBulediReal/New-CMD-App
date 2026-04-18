@@ -13,9 +13,14 @@ import {
   Save,
   ArrowLeft,
   FileText,
-  FileSpreadsheet
+  FileSpreadsheet,
+  HelpCircle,
+  Link as LinkIcon,
+  Search,
+  Database
 } from "lucide-react";
 import { Link } from "react-router";
+import { HelpDialog } from "../components/shared/help-dialog";
 
 // ── Required fields for BS and MIS ───────────────────────────────────────────
 const BS_REQUIRED_FIELDS = [
@@ -41,6 +46,30 @@ interface StoredFile {
 type FieldMap = Record<string, string>;
 
 export default function Reconcile() {
+  const [showHelp, setShowHelp] = useState(false);
+
+  const features = [
+    {
+      icon: <LinkIcon className="w-5 h-5 text-sky-500" />,
+      title: "Dual-Source Mapping",
+      desc: "Connect columns from both Bank Statements and MIS reports into a single matching logic stream."
+    },
+    {
+      icon: <Search className="w-5 h-5 text-blue-500" />,
+      title: "Matching Engine",
+      desc: "Identifies exact pairs based on Challan Number and Amount, while flagging partial discrepancies."
+    },
+    {
+      icon: <MapIcon className="w-5 h-5 text-cyan-500" />,
+      title: "Sheet Flexibility",
+      desc: "Directly target specific sheets within multi-page workbooks for precise data comparison."
+    },
+    {
+      icon: <Database className="w-5 h-5 text-indigo-500" />,
+      title: "Vault Integration",
+      desc: "Commit finalized reconciliation results back to the secure vault for historical tracking."
+    }
+  ];
   const [files, setFiles] = useState<StoredFile[]>([]);
   const [selectedMisSheetName, setSelectedMisSheetName] = useState<string>("");
   const [selectedBsSheetName, setSelectedBsSheetName] = useState<string>("");
@@ -257,12 +286,30 @@ export default function Reconcile() {
             </h1>
             <p className="text-muted-foreground font-medium">Primary data engine for bank statement verification against management reports.</p>
           </div>
-          <Button asChild variant="ghost" className="text-muted-foreground hover:text-foreground">
-             <Link to="/" className="flex items-center gap-2">
-               <ArrowLeft className="w-4 h-4" /> Back to Tools
-             </Link>
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowHelp(true)}
+              className="border-sky-500/30 text-sky-600 hover:bg-sky-500/10 dark:text-sky-400 gap-2 h-10 px-4 rounded-xl font-bold"
+            >
+              <HelpCircle className="w-4 h-4" />
+              Features & Tips
+            </Button>
+            <Button asChild variant="ghost" className="text-muted-foreground hover:text-foreground h-10 rounded-xl">
+               <Link to="/" className="flex items-center gap-2">
+                 <ArrowLeft className="w-4 h-4" /> Back to Tools
+               </Link>
+            </Button>
+          </div>
         </div>
+
+        <HelpDialog 
+          isOpen={showHelp}
+          onOpenChange={setShowHelp}
+          title="Reconciliation Guidelines"
+          subtitle="Tips for matching Bank Statements against MIS records."
+          features={features}
+        />
 
         {/* Configuration Card */}
         <Card className="p-8 border-border bg-card/40 backdrop-blur-xl shadow-2xl relative overflow-hidden group">

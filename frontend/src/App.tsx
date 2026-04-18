@@ -8,10 +8,12 @@ import Reconcile from "./Pages/Reconcile";
 import AuditTool from "./Pages/AuditTool";
 import MergeJson from "./Pages/MergeJson";
 import Navbar from "./components/Navbar";
+import ScrollToTop from "./components/shared/scroll-to-top";
 
 function App() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
+      <ScrollToTop />
       <Navbar />
       <div className="flex-1">
         <Routes>

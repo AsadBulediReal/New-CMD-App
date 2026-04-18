@@ -16,9 +16,15 @@ import {
   Loader2,
   Save,
   ArrowLeft,
-  Filter
+  Filter,
+  HelpCircle,
+  ShieldCheck,
+  LayoutGrid,
+  ClipboardCheck,
+  XCircle
 } from "lucide-react";
 import { Link } from "react-router";
+import { HelpDialog } from "../components/shared/help-dialog";
 
 // ── Required mappings for Audit ──────────────────────────────────────────────
 const ALL_FIELDS = [
@@ -49,6 +55,30 @@ interface StoredFile {
 type FieldMap = Record<string, string>;
 
 export default function AuditTool() {
+  const [showHelp, setShowHelp] = useState(false);
+
+  const features = [
+    {
+      icon: <ShieldCheck className="w-5 h-5 text-purple-500" />,
+      title: "Strict dual match",
+      desc: "Requires both Type Code and Challan No to match for highest accuracy in transaction routing."
+    },
+    {
+      icon: <LayoutGrid className="w-5 h-5 text-indigo-500" />,
+      title: "Category collections",
+      desc: "Automatically groups transactions into audit-ready sheets based on their respective Type Code prefixes."
+    },
+    {
+      icon: <XCircle className="w-5 h-5 text-rose-500" />,
+      title: "Null-data mapping",
+      desc: "All invalid or mismatched records are routed to a dedicated sheet for manual inspection and correction."
+    },
+    {
+      icon: <ClipboardCheck className="w-5 h-5 text-emerald-500" />,
+      title: "Batch summaries",
+      desc: "Each generated sheet includes a volume summary (count and total amount) for quick verification."
+    }
+  ];
   const [files, setFiles] = useState<StoredFile[]>([]);
   const [selectedFileId, setSelectedFileId] = useState<string>("");
   const [selectedSheetName, setSelectedSheetName] = useState<string>("");
@@ -270,12 +300,30 @@ export default function AuditTool() {
             </h1>
             <p className="text-muted-foreground font-medium">Auto-classify transactions into predefined collections based on Type Codes.</p>
           </div>
-          <Button asChild variant="ghost" className="text-muted-foreground hover:text-foreground">
-             <Link to="/" className="flex items-center gap-2">
-               <ArrowLeft className="w-4 h-4" /> Back to Tools
-             </Link>
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowHelp(true)}
+              className="border-purple-500/30 text-purple-600 hover:bg-purple-500/10 dark:text-purple-400 gap-2 h-10 px-4 rounded-xl font-bold"
+            >
+              <HelpCircle className="w-4 h-4" />
+              Features & Tips
+            </Button>
+            <Button asChild variant="ghost" className="text-muted-foreground hover:text-foreground h-10 rounded-xl">
+               <Link to="/" className="flex items-center gap-2">
+                 <ArrowLeft className="w-4 h-4" /> Back to Tools
+               </Link>
+            </Button>
+          </div>
         </div>
+
+        <HelpDialog 
+          isOpen={showHelp}
+          onOpenChange={setShowHelp}
+          title="Audit Engine Guidelines"
+          subtitle="Strict categorization logic and data validation rules."
+          features={features}
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { decompressSheetData } from "../utils/dataProcessing";
 import { Link } from "react-router";
 import { Button } from "../components/ui/button";
 import {
@@ -27,11 +28,17 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
+  ArrowDownRight,
+  HelpCircle,
+  Scan,
+  CalendarDays,
+  Coins,
+  ShieldCheck,
   Zap,
   Layers,
-  ArrowUpRight,
-  ArrowDownRight
+  ArrowUpRight
 } from "lucide-react";
+import { HelpDialog } from "../components/shared/help-dialog";
 
 interface StoredFile {
   _id: string;
@@ -101,6 +108,30 @@ function SkeletonRow() {
 }
 
 export default function SavedFiles() {
+  const [showHelp, setShowHelp] = useState(false);
+
+  const features = [
+    {
+      icon: <Scan className="w-5 h-5 text-blue-500" />,
+      title: "Metadata Scanning",
+      desc: "Deep-scans Excel/JSON files to automatically extract dates, record counts, and sheet metadata."
+    },
+    {
+      icon: <CalendarDays className="w-5 h-5 text-cyan-500" />,
+      title: "Transaction Filters",
+      desc: "Filter results by the actual transaction dates found inside records, not just by upload time."
+    },
+    {
+      icon: <Coins className="w-5 h-5 text-emerald-500" />,
+      title: "Financial Stats",
+      desc: "Instantly view Net Flow and Credit/Debit tallies directly on document cards without opening them."
+    },
+    {
+      icon: <ShieldCheck className="w-5 h-5 text-indigo-500" />,
+      title: "Batch Management",
+      desc: "Select and delete multiple reports at once to keep your workspace organized and efficient."
+    }
+  ];
   const [files, setFiles] = useState<StoredFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -178,13 +209,13 @@ export default function SavedFiles() {
       if (data) {
         let sheetsToLoad: SheetData[] = [];
         if (data.sheets && data.sheets.length > 0) {
-          sheetsToLoad = data.sheets.map((s: any, idx: number) => ({
+          sheetsToLoad = decompressSheetData(data.sheets.map((s: any, idx: number) => ({
             name: s.name || `Sheet ${idx + 1}`,
             headers: s.headers || [],
             rows: s.rows || [],
-          }));
+          })));
         } else {
-          sheetsToLoad = [{ name: "Sheet 1", headers: data.headers || [], rows: data.rows || [] }];
+          sheetsToLoad = decompressSheetData([{ name: "Sheet 1", headers: data.headers || [], rows: data.rows || [] }]);
         }
         setFileData({ filename: data.filename || filename, sheets: sheetsToLoad });
       }
@@ -342,12 +373,30 @@ export default function SavedFiles() {
               {loading ? "Loading…" : `${files.length} document${files.length !== 1 ? "s" : ""} stored in the vault`}
             </p>
           </div>
-          <Button asChild variant="ghost" className="text-muted-foreground hover:text-foreground self-start md:self-auto">
-            <Link to="/" className="flex items-center gap-2">
-              <ArrowLeft className="w-4 h-4" /> Back to Tools
-            </Link>
-          </Button>
+          <div className="flex items-center gap-3 self-start md:self-auto">
+            <Button 
+               variant="outline" 
+               onClick={() => setShowHelp(true)}
+               className="border-blue-500/30 text-blue-600 hover:bg-blue-500/10 dark:text-blue-400 gap-2 h-10 px-4 rounded-xl font-bold"
+            >
+              <HelpCircle className="w-4 h-4" />
+              Features & Tips
+            </Button>
+            <Button asChild variant="ghost" className="text-muted-foreground hover:text-foreground">
+              <Link to="/" className="flex items-center gap-2">
+                <ArrowLeft className="w-4 h-4" /> Back to Tools
+              </Link>
+            </Button>
+          </div>
         </header>
+
+        <HelpDialog 
+          isOpen={showHelp}
+          onOpenChange={setShowHelp}
+          title="Vault Guidelines"
+          subtitle="Manage and filter your processed processed data sets."
+          features={features}
+        />
 
         {/* ── Toolbar ── */}
         <div className="bg-card/40 backdrop-blur-xl rounded-2xl border border-border p-4 mb-4 space-y-3 transition-all">

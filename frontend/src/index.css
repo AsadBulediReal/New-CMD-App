@@ -113,6 +113,10 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -155,5 +159,21 @@
   ::view-transition-new(root) {
     animation: none !important;
   }
+}
+
+
+@keyframes progress {
+  0% { transform: scaleX(0); }
+  30% { transform: scaleX(0.4); }
+  70% { transform: scaleX(0.85); }
+  100% { transform: scaleX(1); }
+}
+
+.animate-progress {
+  animation: progress 30s cubic-bezier(0.1, 0.7, 0.1, 1) forwards;
+}
+
+.origin-left {
+  transform-origin: left;
 }
 

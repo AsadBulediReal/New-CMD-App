@@ -133,23 +133,34 @@ function extractMetadata(sheets) {
 
 // ── Chunking helper
 async function getFileWithChunks(id) {
+  // Validate ObjectId before hitting the DB to avoid CastError
+  if (!mongoose.Types.ObjectId.isValid(id)) return null;
+
   const file = await StoredFile.findById(id).lean();
   if (!file) return null;
   
   if (file.hasChunks) {
-    const chunks = await FileChunk.find({ fileId: id }).sort('chunkIndex').lean();
+    const chunks = await FileChunk.find({ fileId: id }).sort({ chunkIndex: 1 }).lean();
     
+    // Build a mutable map of sheets so we can push rows into them
     if (!file.sheets) file.sheets = [];
     if (!file.rows) file.rows = [];
 
+    // Convert the lean sheet array to a map for O(1) lookup
+    const sheetMap = new Map();
+    file.sheets.forEach(s => {
+      if (!s.rows) s.rows = [];
+      sheetMap.set(s.name, s);
+    });
+
     for (const chunk of chunks) {
       if (chunk.sheetName) {
-        let sheet = file.sheets.find(s => s.name === chunk.sheetName);
+        let sheet = sheetMap.get(chunk.sheetName);
         if (!sheet) {
           sheet = { name: chunk.sheetName, headers: [], rows: [] };
           file.sheets.push(sheet);
+          sheetMap.set(chunk.sheetName, sheet);
         }
-        if (!sheet.rows) sheet.rows = [];
         sheet.rows.push(...chunk.rows);
       } else {
         file.rows.push(...chunk.rows);
@@ -347,7 +358,7 @@ app.get("/api/files/:id", async (req, res) => {
     res.status(200).json(file);
   } catch (error) {
     console.error("Error fetching file details:", error);
-    res.status(500).json({ error: "Failed to fetch file details" });
+    res.status(500).json({ error: `Failed to fetch file details: ${error.message}` });
   }
 });
 
@@ -363,6 +374,22 @@ app.delete("/api/files/:id", async (req, res) => {
   } catch (error) {
     console.error("Error deleting file:", error);
     res.status(500).json({ error: "Failed to delete file" });
+  }
+});
+
+// 4.1 Rename a specific file by ID
+app.patch("/api/files/:id/rename", async (req, res) => {
+  try {
+    const { newFilename } = req.body;
+    if (!newFilename) return res.status(400).json({ error: "newFilename is required" });
+    const file = await StoredFile.findByIdAndUpdate(req.params.id, { filename: newFilename.trim() }, { new: true });
+    if (!file) {
+      return res.status(404).json({ error: "File not found" });
+    }
+    res.status(200).json({ message: "File successfully renamed", file });
+  } catch (error) {
+    console.error("Error renaming file:", error);
+    res.status(500).json({ error: "Failed to rename file" });
   }
 });
 

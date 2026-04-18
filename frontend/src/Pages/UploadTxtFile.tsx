@@ -1,9 +1,35 @@
 import { TxtUploadEditor } from "@/components/txt-upload-editor";
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft, FileText, HelpCircle, Eraser, Calendar, ScanLine, Combine } from "lucide-react";
 import { Link } from "react-router";
 import { Button } from "../components/ui/button";
+import { useState } from "react";
+import { HelpDialog } from "../components/shared/help-dialog";
 
 export default function UploadTxtFile() {
+  const [showHelp, setShowHelp] = useState(false);
+
+  const features = [
+    {
+      icon: <Eraser className="w-5 h-5 text-cyan-500" />,
+      title: "Noise Reduction",
+      desc: "Automatically identifies and strips away system headers, page numbers, and repetitive bank footers."
+    },
+    {
+      icon: <Calendar className="w-5 h-5 text-blue-500" />,
+      title: "Date Extraction",
+      desc: "Parses multiple date formats (DD/MM/YYYY, DD-MMM-YY, etc.) into a standardized system format."
+    },
+    {
+      icon: <ScanLine className="w-5 h-5 text-purple-500" />,
+      title: "Smart Remarks",
+      desc: "Isolates transaction particulars from transaction IDs and other metadata for cleaner reporting."
+    },
+    {
+      icon: <Combine className="w-5 h-5 text-emerald-500" />,
+      title: "Challan Detection",
+      desc: "Specifically scans descriptions for Challan Numbers to enable downstream reconciliation."
+    }
+  ];
   return (
     <main className="min-h-screen bg-background relative overflow-hidden transition-colors duration-300">
       {/* Background ambient effects */}
@@ -22,12 +48,30 @@ export default function UploadTxtFile() {
               Upload plain text bank statements. The system will automatically detect headers, extract transactions, and match them with challan remarks.
             </p>
           </div>
-          <Button asChild variant="ghost" className="text-muted-foreground hover:text-foreground">
-            <Link to="/" className="flex items-center gap-2">
-              <ArrowLeft className="w-4 h-4" /> Back to Tools
-            </Link>
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowHelp(true)}
+              className="border-blue-500/30 text-blue-600 hover:bg-blue-500/10 dark:text-blue-400 gap-2 h-10 px-4 rounded-xl font-bold"
+            >
+              <HelpCircle className="w-4 h-4" />
+              Features & Tips
+            </Button>
+            <Button asChild variant="ghost" className="text-muted-foreground hover:text-foreground h-10 rounded-xl">
+              <Link to="/" className="flex items-center gap-2">
+                <ArrowLeft className="w-4 h-4" /> Back to Tools
+              </Link>
+            </Button>
+          </div>
         </header>
+
+        <HelpDialog 
+          isOpen={showHelp}
+          onOpenChange={setShowHelp}
+          title="Parser Engine Guidelines"
+          subtitle="How the system transforms raw text into structured data."
+          features={features}
+        />
 
         <div className="bg-card/40 backdrop-blur-xl border border-border rounded-3xl p-2 shadow-2xl relative">
           <div className="p-6">
