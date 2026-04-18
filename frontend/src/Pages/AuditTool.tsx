@@ -396,7 +396,6 @@ export default function AuditTool() {
                         <div className="flex flex-col gap-2">
                           {REQUIRED_FIELDS.map(f => {
                             const mapped = fieldMap[f.key];
-                            const isExact = mapped === f.key;
                             const isMissing = !mapped;
                             return (
                               <div
