@@ -1,0 +1,33 @@
+services:
+  db:
+    image: mongo:latest
+    container_name: mongodb_cmd
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  server:
+    build: ./server
+    container_name: server_cmd
+    restart: always
+    depends_on:
+      - db
+    environment:
+      - MONGODB_URI=mongodb://db:27017/cmd_app
+      - PORT=5000
+    ports:
+      - "5000:5000"
+
+  frontend:
+    build: ./frontend
+    container_name: frontend_cmd
+    restart: always
+    depends_on:
+      - server
+    ports:
+      - "80:80"
+
+volumes:
+  mongodb_data:
