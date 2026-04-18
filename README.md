@@ -6,9 +6,13 @@ A robust full-stack application for statement analytics, audit categorization, a
 
 The easiest way to run the application is using Docker and Docker Compose. This will set up the Frontend, Backend, and MongoDB database automatically.
 
-### Prerequisites
-- [Docker](https://www.docker.com/products/docker-desktop/) installed on your machine.
-- [Docker Compose](https://docs.docker.com/compose/install/) (usually included with Docker Desktop).
+### 📋 Prerequisites
+The following **must** be installed on your machine before setting up the application:
+
+- [Git](https://git-scm.com/downloads) - For cloning and updating the source code.
+- [Docker & Docker Compose](https://www.docker.com/products/docker-desktop/) - Docker Desktop includes Docker Compose automatically.
+
+*To check if these are installed, run `git --version`, `docker --version`, and `docker-compose --version` in your terminal.*
 
 ### Installation & Setup
 
@@ -49,6 +53,24 @@ If you make changes to the code and want to see them in Docker:
 docker-compose up --build
 ```
 
+### 🔄 Updating to Latest Version
+If you have pushed changes and want to update the application, run these commands from the **project root directory**:
+
+1. **Pull latest source code:**
+   ```bash
+   git pull origin main
+   ```
+
+2. **Rebuild and restart containers:**
+   ```bash
+   docker-compose up --build -d
+   ```
+
+3. **(Optional) Clean up old images:**
+   ```bash
+   docker image prune -f
+   ```
+
 ---
 
 ## 📂 Project Structure
@@ -65,26 +87,41 @@ Images can be pulled from:
 - `ghcr.io/asadbuledireal/new-cmd-app-frontend:latest`
 - `ghcr.io/asadbuledireal/new-cmd-app-server:latest`
 
+To pull and run these images without the source code, you can use:
+```bash
+docker pull ghcr.io/asadbuledireal/new-cmd-app-frontend:latest
+docker pull ghcr.io/asadbuledireal/new-cmd-app-server:latest
+```
+
 ---
 
 ## 🐞 Bug Report Configuration
 
-The application includes a bug reporting feature that sends emails via SMTP. To enable this, configure the following environment variables.
+The application includes a bug reporting feature that sends emails via SMTP. Follow these steps to set it up:
 
-### Local Setup
-If running the server directly, add these to `server/.env`:
+### Step 1: Obtain SMTP Credentials
+If you are using Gmail (recommended), you **cannot** use your regular password. You must use an **App Password**:
+1. Go to your [Google Account Settings](https://myaccount.google.com/).
+2. Navigate to **Security**.
+3. Enable **2-Step Verification** if it isn't already.
+4. Search for **App passwords** in the search bar.
+5. Create a new app password (e.g., name it "CMD App") and copy the 16-character code.
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `SMTP_HOST` | SMTP Server address | `smtp.gmail.com` |
-| `SMTP_PORT` | SMTP Port | `587` (TLS) or `465` (SSL) |
-| `SMTP_USER` | Email address used to send reports | `reports@example.com` |
-| `SMTP_PASS` | App password for the SMTP user | `your-app-password` |
-| `REPORT_RECIPIENT` | Email address where bug reports are sent | `bulediasadjamil@gmail.com` |
+### Step 2: Configure Environment Variables
+You can configure the system for either **Local** or **Docker** setup.
 
-### Docker Setup
-When using Docker Compose, you can add these variables to the `environment` section of the `server` service in `docker-compose.yml`:
+#### Option A: Local Setup
+Create or edit `server/.env` and add the following:
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=xxxx-xxxx-xxxx-xxxx  # Your 16-character App Password
+REPORT_RECIPIENT=bulediasadjamil@gmail.com
+```
 
+#### Option B: Docker Setup (Recommended)
+Edit the `docker-compose.yml` file in the root directory and update the `server` service environment:
 ```yaml
   server:
     ...
@@ -94,9 +131,15 @@ When using Docker Compose, you can add these variables to the `environment` sect
       - SMTP_HOST=smtp.gmail.com
       - SMTP_PORT=587
       - SMTP_USER=your-email@gmail.com
-      - SMTP_PASS=your-app-password
+      - SMTP_PASS=xxxx-xxxx-xxxx-xxxx  # Your 16-character App Password
       - REPORT_RECIPIENT=bulediasadjamil@gmail.com
 ```
 
-> [!TIP]
-> If using Gmail, you must generate an **App Password** from your Google Account settings to use as the `SMTP_PASS`.
+### Step 3: Restart the Application
+For the changes to take effect, restart the server:
+
+- **Local:** Restart the Node.js process.
+- **Docker:** Run `docker-compose up -d` to refresh the container configuration.
+
+> [!IMPORTANT]
+> Ensure `SMTP_PORT` is set to `587` for TLS or `465` for SSL. If using Gmail, `587` is the standard.
