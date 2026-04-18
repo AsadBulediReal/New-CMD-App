@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router";
 import { ModeToggle } from "./ModeToggle";
+import { BugReportDialog } from "./BugReportDialog";
 
 export default function Navbar() {
   const location = useLocation();
@@ -51,6 +52,7 @@ export default function Navbar() {
           
           <div className="h-8 w-px bg-border hidden md:block mx-1" />
           
+          <BugReportDialog />
           <ModeToggle />
         </div>
       </div>

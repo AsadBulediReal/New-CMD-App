@@ -64,3 +64,39 @@ This project uses **GitHub Actions** to automatically build and push Docker imag
 Images can be pulled from:
 - `ghcr.io/asadbuledireal/new-cmd-app-frontend:latest`
 - `ghcr.io/asadbuledireal/new-cmd-app-server:latest`
+
+---
+
+## 🐞 Bug Report Configuration
+
+The application includes a bug reporting feature that sends emails via SMTP. To enable this, configure the following environment variables.
+
+### Local Setup
+If running the server directly, add these to `server/.env`:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `SMTP_HOST` | SMTP Server address | `smtp.gmail.com` |
+| `SMTP_PORT` | SMTP Port | `587` (TLS) or `465` (SSL) |
+| `SMTP_USER` | Email address used to send reports | `reports@example.com` |
+| `SMTP_PASS` | App password for the SMTP user | `your-app-password` |
+| `REPORT_RECIPIENT` | Email address where bug reports are sent | `bulediasadjamil@gmail.com` |
+
+### Docker Setup
+When using Docker Compose, you can add these variables to the `environment` section of the `server` service in `docker-compose.yml`:
+
+```yaml
+  server:
+    ...
+    environment:
+      - MONGODB_URI=mongodb://db:27017/cmd_app
+      - PORT=5000
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=587
+      - SMTP_USER=your-email@gmail.com
+      - SMTP_PASS=your-app-password
+      - REPORT_RECIPIENT=bulediasadjamil@gmail.com
+```
+
+> [!TIP]
+> If using Gmail, you must generate an **App Password** from your Google Account settings to use as the `SMTP_PASS`.

@@ -258,7 +258,7 @@ export default function MergeJson() {
     setMappings(prev => [
       ...prev,
       {
-        outputSheetName: `Merged Sheet \${prev.length + 1}`,
+        outputSheetName: `Merged Sheet ${prev.length + 1}`,
         sources: []
       }
     ]);
@@ -312,7 +312,7 @@ export default function MergeJson() {
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || `HTTP \${response.status}`);
+        throw new Error(errData.error || `HTTP ${response.status}`);
       }
 
       const result = await response.json();
@@ -348,12 +348,12 @@ export default function MergeJson() {
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `HTTP \${res.status}`);
+        throw new Error(err.error || `HTTP ${res.status}`);
       }
       setSaveMessage("✓ Saved successfully!");
       fetchFiles();
     } catch (e) {
-      setSaveMessage(`✗ \${e instanceof Error ? e.message : "Unknown error"}`);
+      setSaveMessage(`✗ ${e instanceof Error ? e.message : "Unknown error"}`);
     } finally {
       setIsSaving(false);
     }
@@ -395,7 +395,7 @@ export default function MergeJson() {
   const executeDelete = async () => {
     if (!fileToDelete) return;
     try {
-      const res = await fetch(`/api/files/\${fileToDelete.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/files/${fileToDelete.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete file");
       setFiles(files.filter(f => f._id !== fileToDelete.id));
       setSelectedFileIds(prev => prev.filter(id => id !== fileToDelete.id));
@@ -410,17 +410,21 @@ export default function MergeJson() {
     if (!fileToRename || !renameValue.trim()) return;
     setIsRenaming(true);
     try {
-      const res = await fetch(`/api/files/\${fileToRename.id}/rename`, {
+      const res = await fetch(`/api/files/${fileToRename.id}/rename`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ newFilename: renameValue }),
       });
-      if (!res.ok) throw new Error("Rename failed");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Rename failed");
+      }
       const data = await res.json();
       setFiles(files.map(f => f._id === fileToRename.id ? { ...f, filename: data.file.filename } : f));
       setFileToRename(null);
     } catch (error) {
       console.error("Failed to rename:", error);
+      alert(error instanceof Error ? error.message : "Failed to rename file");
     } finally {
       setIsRenaming(false);
     }
@@ -501,13 +505,13 @@ export default function MergeJson() {
                       variant="outline"
                       size="sm"
                       onClick={() => setShowFilters(v => !v)}
-                      className={`flex-1 h-7 text-xs gap-1 transition-all \${showFilters || dateFrom || dateTo ? "bg-cyan-500/10 border-cyan-500/30 text-cyan-500" : ""}`}
+                      className={`flex-1 h-7 text-xs gap-1 transition-all ${showFilters || dateFrom || dateTo ? "bg-cyan-500/10 border-cyan-500/30 text-cyan-500" : ""}`}
                     >
                       <Filter className="w-3 h-3" />
                       Date Filters
                     </Button>
                     <Button variant="outline" size="sm" onClick={fetchFiles} className="h-7 w-7 p-0" title="Refresh list">
-                      <RefreshCw className={`w-3 h-3 \${loadingFiles ? "animate-spin" : ""}`} />
+                      <RefreshCw className={`w-3 h-3 ${loadingFiles ? "animate-spin" : ""}`} />
                     </Button>
                   </div>
                   
@@ -547,7 +551,7 @@ export default function MergeJson() {
                          <div 
                            key={f._id} 
                            onClick={(e) => toggleFileSelection(f._id, processedFiles.indexOf(f), e.shiftKey)}
-                           className={`p-3 rounded-xl border transition-all cursor-pointer \${
+                           className={`p-3 rounded-xl border transition-all cursor-pointer ${
                              isSelected 
                                ? "bg-cyan-500/10 border-cyan-500/40 shadow-[0_0_10px_rgba(6,182,212,0.1)]" 
                                : "bg-muted/30 border-border hover:border-cyan-500/20"
@@ -555,7 +559,7 @@ export default function MergeJson() {
                          >
                            <div className="flex items-start justify-between gap-2">
                               <div className="font-bold text-sm text-foreground truncate">{f.filename}</div>
-                              <div className={`w-4 h-4 rounded-full border flex-shrink-0 mt-0.5 transition-colors \${
+                              <div className={`w-4 h-4 rounded-full border flex-shrink-0 mt-0.5 transition-colors ${
                                   isSelected ? "bg-cyan-500 border-cyan-500" : "border-muted-foreground/30"
                               }`}>
                                   {isSelected && <div className="w-full h-full flex items-center justify-center text-white"><CheckIcon className="w-3 h-3"/></div>}
@@ -763,7 +767,7 @@ export default function MergeJson() {
                    
                    <div className="flex items-center gap-4 w-full md:w-auto">
                       {saveMessage && (
-                       <span className={`text-sm font-bold mr-2 \${saveMessage.startsWith("✓") ? "text-emerald-500" : "text-red-500"}`}>
+                       <span className={`text-sm font-bold mr-2 ${saveMessage.startsWith("✓") ? "text-emerald-500" : "text-red-500"}`}>
                          {saveMessage}
                        </span>
                      )}

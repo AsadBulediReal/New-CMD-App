@@ -9,11 +9,13 @@ import AuditTool from "./Pages/AuditTool";
 import MergeJson from "./Pages/MergeJson";
 import Navbar from "./components/Navbar";
 import ScrollToTop from "./components/shared/scroll-to-top";
+import { Toaster } from "./components/ui/sonner";
 
 function App() {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-transparent flex flex-col">
       <ScrollToTop />
+      <Toaster position="top-center" expand={false} richColors />
       <Navbar />
       <div className="flex-1">
         <Routes>

@@ -1,5 +1,6 @@
      require("dotenv").config();
 const express = require("express");
+const nodemailer = require("nodemailer");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const StoredFile = require("./models/StoredFile");
@@ -179,9 +180,9 @@ app.post("/api/files", async (req, res) => {
       return res.status(400).json({ error: "Filename is required" });
     }
 
-    const existingFile = await StoredFile.findOne({ filename });
+    const existingFile = await StoredFile.findOne({ filename: filename.trim() });
     if (existingFile) {
-      return res.status(400).json({ error: "A file with this name already exists. Please choose a different name." });
+      return res.status(400).json({ error: "File already saved" });
     }
 
     let primaryHeaders = headers || [];
@@ -382,7 +383,14 @@ app.patch("/api/files/:id/rename", async (req, res) => {
   try {
     const { newFilename } = req.body;
     if (!newFilename) return res.status(400).json({ error: "newFilename is required" });
-    const file = await StoredFile.findByIdAndUpdate(req.params.id, { filename: newFilename.trim() }, { new: true });
+    
+    const trimmedName = newFilename.trim();
+    const existingFile = await StoredFile.findOne({ filename: trimmedName });
+    if (existingFile) {
+      return res.status(400).json({ error: "File already saved" });
+    }
+
+    const file = await StoredFile.findByIdAndUpdate(req.params.id, { filename: trimmedName }, { new: true });
     if (!file) {
       return res.status(404).json({ error: "File not found" });
     }
@@ -865,6 +873,60 @@ app.post("/api/merge-files", async (req, res) => {
   } catch (error) {
     console.error("Error merging files:", error);
     res.status(500).json({ error: "Failed to merge files" });
+  }
+});
+
+
+// 9. Report Bug / Feedback
+app.post("/api/report-bug", async (req, res) => {
+  try {
+    const { email, description, photo, metadata } = req.body;
+
+    if (!description) {
+      return res.status(400).json({ error: "Description is required" });
+    }
+
+    // Configure Nodemailer
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      secure: process.env.SMTP_PORT == 465, // true for 465, false for other ports
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    const attachments = [];
+    if (photo && photo.startsWith("data:image")) {
+      const base64Data = photo.split(",")[1];
+      const extension = photo.split(";")[0].split("/")[1];
+      attachments.push({
+        filename: `screenshot.${extension}`,
+        content: base64Data,
+        encoding: "base64",
+      });
+    }
+
+    const mailOptions = {
+      from: process.env.SMTP_USER,
+      to: process.env.REPORT_RECIPIENT || "bulediasadjamil@gmail.com",
+      subject: "New Bug Report - CMD System",
+      text: `
+User Email: ${email || "Not provided"}
+Description: ${description}
+
+Metadata:
+${JSON.stringify(metadata, null, 2)}
+      `,
+      attachments: attachments,
+    };
+
+    await transporter.sendMail(mailOptions);
+    res.status(200).json({ message: "Bug report sent successfully" });
+  } catch (error) {
+    console.error("Error sending bug report:", error);
+    res.status(500).json({ error: "Failed to send bug report. Please check SMTP settings." });
   }
 });
 
