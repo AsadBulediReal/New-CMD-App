@@ -40,7 +40,8 @@ const MONTH_MAP = { jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,
 function parseDateFromCell(val) {
   if (!val) return null;
   let dVal = String(val).trim();
-  // "02Jan25"  or "02-Jan-25" or "02 Jan 25"
+
+  // "02Jan25" or "02-Jan-25" or "02 Jan 25"
   const compact = dVal.match(/^(\d{1,2})[-\s]?([A-Za-z]{3})[-\s]?(\d{2,4})$/);
   if (compact) {
     const day = parseInt(compact[1], 10);
@@ -49,7 +50,26 @@ function parseDateFromCell(val) {
     if (yr < 100) yr += 2000;
     if (mon !== undefined) return new Date(yr, mon, day);
   }
-  // ISO or locale date strings
+
+  // DD/MM/YYYY, DD-MM-YYYY, DD.MM.YYYY  — common in bank statements
+  // Must be tried BEFORE new Date() because JS misparses "24/04/2026" as Invalid Date
+  const slashDate = dVal.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+  if (slashDate) {
+    const p1 = parseInt(slashDate[1], 10);
+    const p2 = parseInt(slashDate[2], 10);
+    let yr  = parseInt(slashDate[3], 10);
+    if (yr < 100) yr += 2000;
+    if (yr >= 1900 && yr <= 2100) {
+      // p1 > 12 → unambiguously DD/MM/YYYY (e.g. "24/04/2026")
+      if (p1 > 12 && p2 >= 1 && p2 <= 12) return new Date(yr, p2 - 1, p1);
+      // p2 > 12 → unambiguously MM/DD/YYYY (e.g. "04/24/2026")
+      if (p2 > 12 && p1 >= 1 && p1 <= 12) return new Date(yr, p1 - 1, p2);
+      // Ambiguous — default to DD/MM/YYYY (standard in financial/international docs)
+      if (p1 >= 1 && p1 <= 31 && p2 >= 1 && p2 <= 12) return new Date(yr, p2 - 1, p1);
+    }
+  }
+
+  // ISO or other locale date strings (e.g. "2026-04-24", "April 24, 2026")
   const parsed = new Date(dVal);
   if (!isNaN(parsed.getTime())) return parsed;
   return null;

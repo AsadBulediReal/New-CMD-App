@@ -256,6 +256,9 @@ export function FileUpload({
     }
 
     onFileUpload(finalSheets, originalFilename);
+    // Reset so the configure UI clears immediately
+    setRawSheets(null);
+    setConfigs([]);
   }
 
   if (rawSheets) {
