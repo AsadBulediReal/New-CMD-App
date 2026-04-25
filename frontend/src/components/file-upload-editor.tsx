@@ -23,8 +23,14 @@ export function FileUploadEditor() {
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [filename, setFilename] = useState("")
+  const [originalFilename, setOriginalFilename] = useState("")
 
-  const handleFileUpload = (uploadedData: SheetData[]) => {
+  const handleFileUpload = (uploadedData: SheetData[], originalFile?: string) => {
+    if (originalFile) {
+       setOriginalFilename(originalFile.replace(/\.[^/.]+$/, ""))
+    } else {
+       setOriginalFilename("Document")
+    }
     // Check if CHANNEL column exists to decide if we need a prompt
     const primarySheet = uploadedData.find(s => s.name === "Transactions") || uploadedData[0];
     const hasChannel = primarySheet?.headers?.some(h => h.toUpperCase() === "CHANNEL");
@@ -64,10 +70,95 @@ export function FileUploadEditor() {
     setSheets(newSheets);
   }
 
+  const generateDefaultFilename = () => {
+    if (!sheets) return originalFilename || "Document";
+    
+    // Strip common date formats from the original filename to avoid duplicate dates
+    let cleanOriginalFilename = (originalFilename || "Document")
+        .replace(/\b\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}\b/g, '')
+        .replace(/\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? \d{4}\b/gi, '')
+        .replace(/\b\d{1,2}(?:st|nd|rd|th)? (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{4}\b/gi, '')
+        .replace(/[-_\s]*\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[-_\s]*\d{2,4}\b/gi, '') // Matches "-JAN-26", "March 2026", "_Jan_2024", etc.
+        .replace(/[-_\s]+$/g, '') // Trim trailing hyphens, underscores and spaces
+        .replace(/^[-\s]+|[-\s]+$/g, '') // Trim leading/trailing hyphens and spaces
+        .trim();
+        
+    if (!cleanOriginalFilename) cleanOriginalFilename = "Document";
+
+    let autoName = cleanOriginalFilename;
+    let extractedDate = "";
+    
+    const headerSheet = sheets.find(s => s.name.startsWith("Header Details"));
+    if (headerSheet && headerSheet.rows && headerSheet.rows.length > 0) {
+       // Extract meaningful information from header values (first 2 valid values)
+       const headerParts = headerSheet.rows
+           .map(r => r.Value?.toString().trim())
+           .filter(val => val && val.length > 0 && val.length < 50)
+           .slice(0, 2);
+           
+       if (headerParts.length > 0) {
+          autoName += ` - ${headerParts.join(" ")}`;
+       }
+       
+       // Try to extract date from headers
+       const dateRow = headerSheet.rows.find(r => {
+          const keyMatch = r.Key?.toString().toLowerCase().includes("date") || r.Key?.toString().toLowerCase().includes("period");
+          const valMatch = r.Value?.toString().match(/\b\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}\b/) || r.Value?.toString().match(/\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? \d{4}\b/i);
+          return keyMatch || valMatch;
+       });
+       if (dateRow) {
+           extractedDate = dateRow.Value?.toString().trim() || "";
+       }
+    }
+    
+    // Check main records for Date if not found in headers
+    if (!extractedDate) {
+        const dataSheet = sheets.find(s => s.name === "Transactions") || sheets[0];
+        if (dataSheet && dataSheet.rows && dataSheet.rows.length > 0) {
+            const dateHeaders = dataSheet.headers.filter(h => h.toLowerCase().includes("date"));
+            if (dateHeaders.length > 0) {
+                for (let i = 0; i < Math.min(5, dataSheet.rows.length); i++) {
+                    if (dataSheet.rows[i][dateHeaders[0]]) {
+                        extractedDate = dataSheet.rows[i][dateHeaders[0]]?.toString().trim() || "";
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    let finalDateStr = "";
+    if (extractedDate) {
+        const dateMatch = extractedDate.match(/\b(\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4})\b/);
+        const textDateMatch = extractedDate.match(/\b((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? \d{4})\b/i);
+        
+        if (dateMatch) {
+            finalDateStr = dateMatch[1];
+        } else if (textDateMatch) {
+            finalDateStr = textDateMatch[1];
+        } else if (extractedDate.length < 30) {
+            finalDateStr = extractedDate;
+        }
+    }
+
+    // Fallback to current date
+    if (!finalDateStr) {
+        finalDateStr = new Date().toISOString().split('T')[0];
+    }
+    
+    // Append the final date if it's not already in the auto name string
+    if (finalDateStr && !autoName.includes(finalDateStr)) {
+        autoName += ` ${finalDateStr}`;
+    }
+    
+    // Sanitize string for filename
+    return autoName.replace(/[/\\?%*:|"<>]/g, '-').replace(/\s+/g, ' ').trim();
+  }
+
   const handleOpenSubmitModal = () => {
     if (!sheets) return
     setIsModalOpen(true)
-    setFilename("") // Reset filename
+    setFilename(generateDefaultFilename())
   }
 
   const handleSubmit = async () => {
@@ -124,7 +215,11 @@ export function FileUploadEditor() {
       )}
 
       {!sheets ? (
-        <FileUpload onFileUpload={handleFileUpload} onLoadingStart={() => setIsLoading(true)} />
+        <FileUpload 
+          onFileUpload={handleFileUpload} 
+          onLoadingStart={() => setIsLoading(true)} 
+          onLoadingEnd={() => setIsLoading(false)}
+        />
       ) : (
         <>
           <Card className="border-border bg-card/40 backdrop-blur-xl shadow-2xl overflow-hidden rounded-3xl">
@@ -165,7 +260,11 @@ export function FileUploadEditor() {
             </div>
             
             <div className="p-1 bg-muted/20 overflow-hidden">
-               <MultiSheetViewer sheets={sheets} onDataUpdate={handleDataUpdate} />
+               <MultiSheetViewer 
+                 sheets={sheets} 
+                 onDataUpdate={handleDataUpdate} 
+                 downloadFilename={generateDefaultFilename()} 
+               />
             </div>
           </Card>
 
