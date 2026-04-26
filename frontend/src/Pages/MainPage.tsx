@@ -1,25 +1,6 @@
 import { Link } from "react-router";
 import { useEffect, useRef, useState } from "react";
 
-/* ── Animated counters ───────────────────────────────────────────────────── */
-function useCountUp(target: number, duration = 1400) {
-  const [val, setVal] = useState(0);
-  const ref = useRef(false);
-  useEffect(() => {
-    if (ref.current) return;
-    ref.current = true;
-    const start = performance.now();
-    const tick = (now: number) => {
-      const p = Math.min((now - start) / duration, 1);
-      setVal(Math.floor(p * target));
-      if (p < 1) requestAnimationFrame(tick);
-      else setVal(target);
-    };
-    requestAnimationFrame(tick);
-  }, [target, duration]);
-  return val;
-}
-
 /* ── Particle canvas background ─────────────────────────────────────────── */
 function ParticleCanvas({ dark }: { dark: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -330,21 +311,6 @@ function ToolCard({ tool, dark }: { tool: typeof tools[0]; dark: boolean }) {
   );
 }
 
-/* ── Stat counter ─────────────────────────────────────────────────────────── */
-function Stat({ value, suffix = "", label }: { value: number; suffix?: string; label: string }) {
-  const counted = useCountUp(value);
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <span className="text-4xl font-black tracking-tight text-foreground tabular-nums">
-        {counted}{suffix}
-      </span>
-      <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-        {label}
-      </span>
-    </div>
-  );
-}
-
 /* ── Detect dark mode ────────────────────────────────────────────────────── */
 function useDark() {
   const [dark, setDark] = useState(
@@ -402,21 +368,36 @@ export default function MainPage() {
         </div>
 
         {/* ── Hero ───────────────────────────────────────────────────────── */}
-        <header className="text-center mb-20">
+        <header className="flex flex-col items-center text-center mb-20">
 
-          {/* eyebrow chip */}
-          <div className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full mb-8 border border-blue-500/25 bg-blue-500/10 backdrop-blur-sm">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth={2.5}
-              className="w-3.5 h-3.5 dark:stroke-blue-400 stroke-blue-600">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+          {/* pre-heading */}
+          <div className="flex items-center justify-center gap-4 mb-6">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8 text-foreground">
+              <line x1="3" y1="22" x2="21" y2="22" />
+              <line x1="6" y1="18" x2="6" y2="11" />
+              <line x1="10" y1="18" x2="10" y2="11" />
+              <line x1="14" y1="18" x2="14" y2="11" />
+              <line x1="18" y1="18" x2="18" y2="11" />
+              <polygon points="12 2 20 7 4 7" />
             </svg>
-            <span className="text-xs font-black uppercase tracking-[0.22em] text-blue-600 dark:text-blue-400">
-              Financial Intelligence Platform
-            </span>
+            <h2 className="text-2xl sm:text-4xl font-semibold tracking-tight text-foreground">
+              Finance Wing,{" "}
+              <span
+                style={{
+                  background: "linear-gradient(135deg, #3b82f6 0%, #818cf8 40%, #c084fc 80%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                }}
+              >
+                University
+              </span>
+              {" "}<span className="text-black dark:text-white font-medium">of Sindh</span>
+            </h2>
           </div>
 
           {/* headline */}
-          <h1 className="text-5xl sm:text-7xl font-black tracking-tight leading-[1.05] text-foreground mb-6">
+          <h1 className="text-5xl sm:text-7xl font-semibold tracking-tight leading-[1.05] text-foreground mb-10">
             CMD{" "}
             <span
               style={{
@@ -428,32 +409,25 @@ export default function MainPage() {
             >
               System
             </span>
-            {" "}<span className="text-muted-foreground/30">/</span> Dashboard
+            {" "}<span className="text-black dark:text-white font-medium">Dashboard</span>
           </h1>
 
-          {/* terminal prompt line */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-card/50 mb-8">
-            <span className="text-emerald-500 dark:text-emerald-400 font-mono text-sm">$</span>
-            <span className="text-muted-foreground font-mono text-sm tracking-wide">
-              select a processing tool to begin operations
+          {/* eyebrow chip (moved from top) */}
+          <div className="inline-flex items-center gap-4 px-6 py-3 mt-6 rounded-full border border-blue-500/25 bg-blue-500/10 backdrop-blur-sm">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth={2.5}
+              className="w-7 h-7 dark:stroke-blue-400 stroke-blue-600">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+            </svg>
+            <span className="text-2xl font-black uppercase tracking-[0.22em] text-blue-600 dark:text-blue-400">
+              Financial Digital Platform
             </span>
-            <span className="w-2 h-4 bg-blue-500/80 dark:bg-blue-400/80 animate-pulse rounded-[2px]" />
-          </div>
-
-          {/* stats row */}
-          <div className="flex justify-center gap-10 sm:gap-16 mt-10">
-            <Stat value={5} label="Active Tools" />
-            <div className="w-px bg-border self-stretch" />
-            <Stat value={5} label="Tools Ready" />
-            <div className="w-px bg-border self-stretch" />
-            <Stat value={4} suffix="+" label="Export Formats" />
           </div>
         </header>
 
         {/* ── Section divider ────────────────────────────────────────────── */}
         <div className="flex items-center gap-4 mb-8">
           <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/40">
+          <span className="text-xl font-black uppercase tracking-[0.3em] text-black dark:text-white">
             Operations Center
           </span>
           <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
