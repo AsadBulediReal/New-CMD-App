@@ -1,6 +1,6 @@
 # Fullstack CMD Application
 
-A robust full-stack application for statement analytics, audit categorization, and bank reconciliation. This project is fully containerized for easy deployment and development.
+A robust full-stack application for Data analytics, audit categorization, and bank reconciliation. This project is fully containerized for easy deployment and development.
 
 ## 🚀 Quick Start (Docker)
 
