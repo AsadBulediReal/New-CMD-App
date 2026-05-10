@@ -950,6 +950,21 @@ ${JSON.stringify(metadata, null, 2)}
   }
 });
 
+// 10. Health Check / Initialization
+app.get("/api/health", async (req, res) => {
+  try {
+    const dbStatus = mongoose.connection.readyState === 1 ? "connected" : "disconnected";
+    res.status(200).json({
+      status: "ok",
+      database: dbStatus,
+      timestamp: new Date().toISOString(),
+      version: "1.0.0"
+    });
+  } catch (error) {
+    res.status(500).json({ status: "error", message: error.message });
+  }
+});
+
 // Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

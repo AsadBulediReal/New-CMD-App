@@ -11,6 +11,8 @@ import Navbar from "./components/Navbar";
 import ScrollToTop from "./components/shared/scroll-to-top";
 import { Toaster } from "./components/ui/sonner";
 
+import { BackendGuard } from "./components/BackendGuard";
+
 function App() {
   return (
     <div className="min-h-screen bg-transparent flex flex-col">
@@ -18,17 +20,19 @@ function App() {
       <Toaster position="top-center" expand={false} richColors />
       <Navbar />
       <div className="flex-1">
-        <Routes>
-          <Route path="/" element={<MainPage />} />
-          <Route path="/upload" element={<UploadeFile />} />
-          <Route path="/upload-txt" element={<UploadTxtFile />} />
-          <Route path="/saved-files" element={<SavedFiles />} />
-          <Route path="/analytics" element={<Analytics />} />
-          <Route path="/reconcile" element={<Reconcile />} />
-          <Route path="/audit" element={<AuditTool />} />
-          <Route path="/merge-json" element={<MergeJson />} />
-          <Route path="/about" element={<div>About Page</div>} />
-        </Routes>
+        <BackendGuard>
+          <Routes>
+            <Route path="/" element={<MainPage />} />
+            <Route path="/upload" element={<UploadeFile />} />
+            <Route path="/upload-txt" element={<UploadTxtFile />} />
+            <Route path="/saved-files" element={<SavedFiles />} />
+            <Route path="/analytics" element={<Analytics />} />
+            <Route path="/reconcile" element={<Reconcile />} />
+            <Route path="/audit" element={<AuditTool />} />
+            <Route path="/merge-json" element={<MergeJson />} />
+            <Route path="/about" element={<div>About Page</div>} />
+          </Routes>
+        </BackendGuard>
       </div>
     </div>
   );
