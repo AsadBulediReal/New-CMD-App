@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { RefreshCw, ShieldAlert, ShieldCheck, Database, Server, Zap } from "lucide-react";
+import { RefreshCw, ShieldAlert, ShieldCheck, Database, Server } from "lucide-react";
 
 interface BackendStatus {
   status: string;
@@ -110,7 +110,7 @@ export function BackendGuard({ children }: { children: React.ReactNode }) {
         </div>
         
         <div className="absolute bottom-12 text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground/30">
-          CMD SYSTEM · v1.0.0
+          CMD SYSTEM · v{status?.version || "1.0.0"}
         </div>
       </div>
     );

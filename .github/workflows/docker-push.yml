@@ -19,6 +19,8 @@ jobs:
       contents: read
       packages: write
 
+    env:
+      IMAGE_NAME_LOWER: ""
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
