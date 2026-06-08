@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 export interface TableData {
   headers: string[]
   rows: Record<string, unknown>[]
+  columnTypes?: string[]
 }
 import { Input } from "@/components/ui/input"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
@@ -29,21 +30,23 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
   const formatCellValue = (value: unknown, header: string): string => {
     if (value === null || value === undefined) return ""
 
-    // Check if this is likely a date column
+    // Check if this is likely a date column or an ISO date string
     const isDateColumn = header.toLowerCase().includes("date") || header.toLowerCase().includes("time")
+    const isIsoDate = typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)
 
-    if (isDateColumn && typeof value === "string") {
+    if (isDateColumn || isIsoDate || value instanceof Date) {
+      const stringValue = value instanceof Date ? value.toISOString() : String(value)
       const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-      const hasMonthName = monthNames.some((month) => value.includes(month))
+      const hasMonthName = monthNames.some((month) => stringValue.includes(month))
 
       // If already formatted with month name, just return it
       if (hasMonthName) {
-        return value
+        return stringValue
       }
 
-      // Try to parse numeric dates (timestamps or YYYY-MM-DD format)
+      // Try to parse numeric/ISO dates
       try {
-        const dateObj = new Date(value)
+        const dateObj = value instanceof Date ? value : new Date(stringValue)
         if (!isNaN(dateObj.getTime())) {
           return dateObj.toLocaleDateString("en-US", {
             year: "numeric",
@@ -52,12 +55,16 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
           })
         }
       } catch {
-        // If parsing fails, return original value
+        // If parsing fails, fall back to default
       }
     }
 
     if (typeof value === "number") {
       return value.toString()
+    }
+
+    if (typeof value === "boolean") {
+      return value ? "true" : "false"
     }
 
     return String(value)
@@ -250,7 +257,7 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
               <th className="px-4 py-3 text-left text-sm font-semibold text-foreground bg-muted border-r border-border sticky left-0 z-30 w-12 flex-shrink-0">
                 #
               </th>
-              {data.headers.map((header) => (
+              {data.headers.map((header, idx) => (
                 <th
                   key={header}
                   className="px-4 py-3 text-left text-sm font-bold text-foreground bg-muted/30 border-r border-border flex-shrink-0 cursor-pointer hover:bg-muted/50 transition-colors"
@@ -279,6 +286,11 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
                         <span className="truncate">
                             {header}
                         </span>
+                        {data.columnTypes && data.columnTypes[idx] && data.columnTypes[idx] !== 'string' && (
+                            <span className="text-[10px] bg-muted-foreground/10 text-muted-foreground px-1.5 py-0.5 rounded uppercase font-bold ml-1">
+                                {data.columnTypes[idx]}
+                            </span>
+                        )}
                         {sortConfig?.key === header ? (
                             <span className="text-xs text-indigo-600 font-bold ml-1">
                                 {sortConfig?.direction === "asc" ? "↑" : "↓"}

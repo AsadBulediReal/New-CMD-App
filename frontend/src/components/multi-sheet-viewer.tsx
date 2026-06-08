@@ -1,12 +1,13 @@
 import { useState, useMemo } from "react";
 import * as XLSX from "xlsx";
 import { DataTable } from "./data-table";
-import { decompressSheetData } from "../utils/dataProcessing";
+import { decompressSheetData, detectAndCastSheet } from "../utils/dataProcessing";
 
 export interface SheetData {
   name: string;
   headers: string[];
   rows: any[]; // Can be Record<string, any>[] or any[][]
+  columnTypes?: string[];
 }
 
 interface MultiSheetViewerProps {
@@ -30,7 +31,15 @@ export function MultiSheetViewer({
   const [isExporting, setIsExporting] = useState(false);
 
   // DECOMPRESSION: Ensure data is in object format for DataTable and Export
-  const sheets = useMemo(() => decompressSheetData(rawSheets), [rawSheets]);
+  const sheets = useMemo(() => {
+    const decompressed = decompressSheetData(rawSheets);
+    return decompressed.map(sheet => {
+      if (!sheet.columnTypes || sheet.columnTypes.length === 0) {
+        return detectAndCastSheet(sheet);
+      }
+      return sheet;
+    });
+  }, [rawSheets]);
 
   const handleDownload = () => {
     if (!sheets || sheets.length === 0) return;
@@ -47,6 +56,38 @@ export function MultiSheetViewer({
           if (!safeName) safeName = `Sheet ${idx + 1}`;
           
           const ws = XLSX.utils.json_to_sheet(sheet.rows);
+          
+          // Apply cell types and format strings to columns based on columnTypes
+          if (sheet.columnTypes && sheet.columnTypes.length > 0) {
+            const range = XLSX.utils.decode_range(ws['!ref'] || 'A1:A1');
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+              const type = sheet.columnTypes[C];
+              if (!type) continue;
+              
+              for (let R = range.s.r + 1; R <= range.e.r; ++R) { // Skip header row (R=0)
+                const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
+                const cell = ws[cellRef];
+                if (!cell) continue;
+
+                if (type === 'number') {
+                  const valStr = String(cell.v);
+                  if (valStr.includes('.')) {
+                    cell.z = '0.00';
+                  } else {
+                    cell.z = '0';
+                  }
+                  cell.t = 'n'; // ensure type is number
+                } else if (type === 'boolean') {
+                  cell.z = '@';
+                  cell.t = 'b'; // ensure type is boolean
+                } else if (type === 'date') {
+                  cell.z = 'mmm d, yyyy';
+                  cell.t = 'd'; // ensure type is date
+                }
+              }
+            }
+          }
+          
           XLSX.utils.book_append_sheet(wb, ws, safeName);
         });
         
@@ -109,7 +150,7 @@ export function MultiSheetViewer({
       <div className="flex-1 flex flex-col overflow-hidden">
         {currentSheet && (
           <DataTable
-            data={{ headers: currentSheet.headers, rows: currentSheet.rows }}
+            data={{ headers: currentSheet.headers, rows: currentSheet.rows, columnTypes: currentSheet.columnTypes }}
             onDataUpdate={(newData) => {
               if (onDataUpdate) {
                 onDataUpdate(activeTab, newData);

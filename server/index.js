@@ -75,6 +75,119 @@ function parseDateFromCell(val) {
   return null;
 }
 
+// Detect column types based on values in the column
+function detectColumnTypes(headers, rows) {
+  if (!rows || rows.length === 0) {
+    return headers.map(() => "string");
+  }
+
+  const isArrayRows = Array.isArray(rows[0]);
+
+  return headers.map((header, colIdx) => {
+    let hasVal = false;
+    let isNumber = true;
+    let isBoolean = true;
+    let isDate = true;
+
+    for (const row of rows) {
+      if (!row) continue;
+      const val = isArrayRows ? row[colIdx] : row[header];
+      if (val === undefined || val === null || String(val).trim() === "") {
+        continue;
+      }
+      
+      hasVal = true;
+      const sVal = String(val).trim();
+
+      // Check Boolean
+      if (!/^(true|false|yes|no|y|n)$/i.test(sVal)) {
+        isBoolean = false;
+      }
+
+      // Check Number
+      const cleanedNum = sVal.replace(/,/g, "").replace(/^\$/, "");
+      if (cleanedNum === "" || isNaN(Number(cleanedNum))) {
+        isNumber = false;
+      }
+
+      // Check Date
+      if (!parseDateFromCell(sVal)) {
+        isDate = false;
+      }
+    }
+
+    if (!hasVal) {
+      return "string";
+    }
+
+    if (isBoolean) return "boolean";
+    if (isNumber) return "number";
+    if (isDate) return "date";
+    return "string";
+  });
+}
+
+// Cast a single value based on the detected type
+function castValue(val, type) {
+  if (val === undefined || val === null || String(val).trim() === "") {
+    return null;
+  }
+  const sVal = String(val).trim();
+
+  if (type === "boolean") {
+    return /^(true|yes|y)$/i.test(sVal);
+  }
+  if (type === "number") {
+    const cleanedNum = sVal.replace(/,/g, "").replace(/^\$/, "");
+    return Number(cleanedNum);
+  }
+  if (type === "date") {
+    const d = parseDateFromCell(sVal);
+    if (d) {
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+    }
+    return val;
+  }
+  return val;
+}
+
+// Cast all rows in a sheet based on detected column types
+function detectAndCastSheet(sheet) {
+  const headers = sheet.headers || [];
+  const rows = sheet.rows || [];
+  if (headers.length === 0 || rows.length === 0) return sheet;
+
+  const isArrayRows = Array.isArray(rows[0]);
+  const columnTypes = detectColumnTypes(headers, rows);
+
+  const castedRows = rows.map(row => {
+    if (!row) return row;
+    if (isArrayRows) {
+      const newRow = [...row];
+      for (let colIdx = 0; colIdx < headers.length; colIdx++) {
+        const type = columnTypes[colIdx];
+        newRow[colIdx] = castValue(newRow[colIdx], type);
+      }
+      return newRow;
+    } else {
+      const newRow = { ...row };
+      for (let colIdx = 0; colIdx < headers.length; colIdx++) {
+        const header = headers[colIdx];
+        const type = columnTypes[colIdx];
+        newRow[header] = castValue(newRow[header], type);
+      }
+      return newRow;
+    }
+  });
+
+  return {
+    ...sheet,
+    rows: castedRows,
+    columnTypes
+  };
+}
+
 // Extract the min/max date from an array of sheets (rows may be compressed or objects)
 function extractDateRange(sheets) {
   let minDate = null;
@@ -115,7 +228,12 @@ function extractMetadata(sheets) {
     totalRecords += recCount;
     if (i === 0) columnCount = hdrs.length;
 
-    sheetMeta.push({ name: sheet.name || `Sheet ${i+1}`, recordCount: recCount, columnCount: hdrs.length });
+    sheetMeta.push({ 
+      name: sheet.name || `Sheet ${i+1}`, 
+      recordCount: recCount, 
+      columnCount: hdrs.length,
+      columnTypes: sheet.columnTypes || []
+    });
 
     // Detect debit / credit columns (case-insensitive)
     const debitCol  = hdrs.find(h => /^debit$/i.test(h.trim()));
@@ -221,11 +339,14 @@ app.post("/api/files", async (req, res) => {
       }];
     }
 
+    // Detect column types and cast values
+    const castedSheets = finalSheets.map(s => detectAndCastSheet(s));
+
     // Extract Date Range from records using shared helper
-    const { start: minDate, end: maxDate } = extractDateRange(finalSheets);
+    const { start: minDate, end: maxDate } = extractDateRange(castedSheets);
 
     // Extract rich metadata
-    const { totalRecords, columnCount, sheetCount, sheetMeta, financialSummary } = extractMetadata(finalSheets);
+    const { totalRecords, columnCount, sheetCount, sheetMeta, financialSummary } = extractMetadata(castedSheets);
 
     const newFile = new StoredFile({
       filename: filename.trim(),
@@ -238,7 +359,7 @@ app.post("/api/files", async (req, res) => {
       sheetMeta,
       financialSummary,
       rows: [],
-      sheets: finalSheets.map(s => ({
+      sheets: castedSheets.map(s => ({
         name: s.name,
         headers: s.headers,
         rows: []
@@ -252,7 +373,7 @@ app.post("/api/files", async (req, res) => {
     const chunkPromises = [];
     let chunkIndex = 0;
 
-    for (const sheet of finalSheets) {
+    for (const sheet of castedSheets) {
       const rows = sheet.rows || [];
       for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
         chunkPromises.push(new FileChunk({
@@ -465,8 +586,9 @@ app.post("/api/files/recompute-meta", async (req, res) => {
             : []
         );
         if (sheets.length === 0) continue;
-        const { start, end } = extractDateRange(sheets);
-        const { totalRecords, columnCount, sheetCount, sheetMeta, financialSummary } = extractMetadata(sheets);
+        const castedSheets = sheets.map(sheet => detectAndCastSheet(sheet));
+        const { start, end } = extractDateRange(castedSheets);
+        const { totalRecords, columnCount, sheetCount, sheetMeta, financialSummary } = extractMetadata(castedSheets);
         
         await StoredFile.updateOne(
           { _id: meta._id },
@@ -479,6 +601,27 @@ app.post("/api/files/recompute-meta", async (req, res) => {
             financialSummary
           } }
         );
+
+        // Delete existing FileChunks and re-write them with casted values
+        await FileChunk.deleteMany({ fileId: meta._id });
+
+        const CHUNK_SIZE = 5000;
+        const chunkPromises = [];
+        let chunkIndex = 0;
+
+        for (const sheet of castedSheets) {
+          const rows = sheet.rows || [];
+          for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
+            chunkPromises.push(new FileChunk({
+              fileId: meta._id,
+              sheetName: sheet.name,
+              chunkIndex: chunkIndex++,
+              rows: rows.slice(i, i + CHUNK_SIZE)
+            }).save());
+          }
+        }
+
+        await Promise.all(chunkPromises);
         updated++;
       } catch (e) {
         console.error(`Failed to recompute meta for ${meta.filename}:`, e.message);

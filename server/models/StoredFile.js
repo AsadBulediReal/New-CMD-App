@@ -46,6 +46,7 @@ const storedFileSchema = new mongoose.Schema({
       name: String,
       recordCount: Number,
       columnCount: Number,
+      columnTypes: { type: [String], default: [] }
     }],
     default: [],
   },

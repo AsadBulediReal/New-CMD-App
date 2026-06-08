@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
 import { HelpCircle, Info } from "lucide-react"
 import type { SheetData } from "./multi-sheet-viewer"
+import { detectAndCastSheet } from "../utils/dataProcessing"
 
 interface RawSheetData {
   name: string;
@@ -255,7 +256,8 @@ export function FileUpload({
       return;
     }
 
-    onFileUpload(finalSheets, originalFilename);
+    const castedSheets = finalSheets.map(detectAndCastSheet);
+    onFileUpload(castedSheets, originalFilename);
     // Reset so the configure UI clears immediately
     setRawSheets(null);
     setConfigs([]);

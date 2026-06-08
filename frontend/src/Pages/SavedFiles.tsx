@@ -185,7 +185,7 @@ export default function SavedFiles() {
         fetch("/api/files/recompute-meta", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ all: false }),
+          body: JSON.stringify({ all: true }),
         }),
         new Promise(resolve => setTimeout(resolve, 1000))
       ]);
@@ -209,13 +209,23 @@ export default function SavedFiles() {
       if (data) {
         let sheetsToLoad: SheetData[] = [];
         if (data.sheets && data.sheets.length > 0) {
-          sheetsToLoad = decompressSheetData(data.sheets.map((s: any, idx: number) => ({
-            name: s.name || `Sheet ${idx + 1}`,
-            headers: s.headers || [],
-            rows: s.rows || [],
-          })));
+          sheetsToLoad = decompressSheetData(data.sheets.map((s: any, idx: number) => {
+            const meta = data.sheetMeta?.find((m: any) => m.name === s.name);
+            return {
+              name: s.name || `Sheet ${idx + 1}`,
+              headers: s.headers || [],
+              rows: s.rows || [],
+              columnTypes: meta?.columnTypes || [],
+            };
+          }));
         } else {
-          sheetsToLoad = decompressSheetData([{ name: "Sheet 1", headers: data.headers || [], rows: data.rows || [] }]);
+          const firstMeta = data.sheetMeta?.[0];
+          sheetsToLoad = decompressSheetData([{
+            name: "Sheet 1",
+            headers: data.headers || [],
+            rows: data.rows || [],
+            columnTypes: firstMeta?.columnTypes || [],
+          }]);
         }
         setFileData({ filename: data.filename || filename, sheets: sheetsToLoad });
       }
