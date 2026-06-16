@@ -464,7 +464,7 @@ export function FileUploadEditor() {
                <MultiSheetViewer 
                  sheets={sheets} 
                  onDataUpdate={handleDataUpdate} 
-                 downloadFilename={generateDefaultFilename()} 
+                 downloadFilename={filename || generateDefaultFilename()} 
                />
             </div>
           </Card>

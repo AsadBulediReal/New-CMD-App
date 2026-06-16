@@ -18,6 +18,7 @@ export function TxtUploadEditor() {
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [filename, setFilename] = useState("")
+  const [originalFilename, setOriginalFilename] = useState("")
 
   const [isDragging, setIsDragging] = useState(false)
   const [error, setError] = useState("")
@@ -90,6 +91,7 @@ export function TxtUploadEditor() {
   const handleFile = async (file: File) => {
     setError("")
     console.log("[v0] handleFile txt called with:", file.name, file.type)
+    setOriginalFilename(file.name.replace(/\.[^/.]+$/, ""))
 
     try {
       if (!file.name.endsWith(".txt")) {
@@ -135,10 +137,89 @@ export function TxtUploadEditor() {
     setSheets(newSheets);
   }
 
+  const generateDefaultFilename = () => {
+    if (!sheets) return originalFilename || "Document";
+    
+    // Strip common date formats from the original filename to avoid duplicate dates
+    let cleanOriginalFilename = (originalFilename || "Document")
+        .replace(/\b\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}\b/g, '')
+        .replace(/\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? \d{4}\b/gi, '')
+        .replace(/\b\d{1,2}(?:st|nd|rd|th)? (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{4}\b/gi, '')
+        .replace(/[-_\s]*\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*[-_\s]*\d{2,4}\b/gi, '')
+        .replace(/[-_\s]+$/g, '') // Trim trailing hyphens, underscores and spaces
+        .replace(/^[-\s]+|[-\s]+$/g, '') // Trim leading/trailing hyphens and spaces
+        .trim();
+        
+    if (!cleanOriginalFilename) cleanOriginalFilename = "Document";
+
+    let autoName = cleanOriginalFilename;
+    let extractedDate = "";
+    
+    const headerSheet = sheets.find(s => s.name.startsWith("Header Details"));
+    if (headerSheet && headerSheet.rows && headerSheet.rows.length > 0) {
+       const headerParts = headerSheet.rows
+           .map(r => r.Value?.toString().trim())
+           .filter(val => val && val.length > 0 && val.length < 50)
+           .slice(0, 2);
+           
+       if (headerParts.length > 0) {
+          autoName += ` - ${headerParts.join(" ")}`;
+       }
+       
+       const dateRow = headerSheet.rows.find(r => {
+          const keyMatch = r.Key?.toString().toLowerCase().includes("date") || r.Key?.toString().toLowerCase().includes("period");
+          const valMatch = r.Value?.toString().match(/\b\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}\b/) || r.Value?.toString().match(/\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? \d{4}\b/i);
+          return keyMatch || valMatch;
+       });
+       if (dateRow) {
+           extractedDate = dateRow.Value?.toString().trim() || "";
+       }
+    }
+    
+    if (!extractedDate) {
+        const dataSheet = sheets.find(s => s.name === "Transactions") || sheets[0];
+        if (dataSheet && dataSheet.rows && dataSheet.rows.length > 0) {
+            const dateHeaders = dataSheet.headers.filter(h => /\bdate\b/i.test(h));
+            if (dateHeaders.length > 0) {
+                for (let i = 0; i < Math.min(5, dataSheet.rows.length); i++) {
+                    if (dataSheet.rows[i][dateHeaders[0]]) {
+                        extractedDate = dataSheet.rows[i][dateHeaders[0]]?.toString().trim() || "";
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    let finalDateStr = "";
+    if (extractedDate) {
+        const dateMatch = extractedDate.match(/\b(\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4})\b/);
+        const textDateMatch = extractedDate.match(/\b((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? \d{4})\b/i);
+        
+        if (dateMatch) {
+            finalDateStr = dateMatch[1];
+        } else if (textDateMatch) {
+            finalDateStr = textDateMatch[1];
+        } else if (extractedDate.length < 30) {
+            finalDateStr = extractedDate;
+        }
+    }
+
+    if (!finalDateStr) {
+        finalDateStr = new Date().toISOString().split('T')[0];
+    }
+    
+    if (finalDateStr && !autoName.includes(finalDateStr)) {
+        autoName += ` ${finalDateStr}`;
+    }
+    
+    return autoName.replace(/[/\\?%*:|"<>]/g, '-').replace(/\s+/g, ' ').trim();
+  }
+
   const handleOpenSubmitModal = () => {
     if (!sheets) return
     setIsModalOpen(true)
-    setFilename("") // Reset filename
+    setFilename(generateDefaultFilename())
   }
 
   const handleSubmit = async () => {
@@ -262,7 +343,11 @@ export function TxtUploadEditor() {
             </div>
             
             <div className="p-1 bg-muted/20 overflow-hidden">
-               <MultiSheetViewer sheets={sheets} onDataUpdate={handleDataUpdate} />
+               <MultiSheetViewer 
+                 sheets={sheets} 
+                 onDataUpdate={handleDataUpdate} 
+                 downloadFilename={filename || generateDefaultFilename()} 
+               />
             </div>
           </Card>
 

@@ -69,20 +69,38 @@ export function MultiSheetViewer({
                 const cell = ws[cellRef];
                 if (!cell) continue;
 
+                if (cell.v === null || cell.v === undefined || cell.v === "") continue;
+
                 if (type === 'number') {
-                  const valStr = String(cell.v);
-                  if (valStr.includes('.')) {
-                    cell.z = '0.00';
-                  } else {
-                    cell.z = '0';
+                  if (typeof cell.v !== 'number') {
+                    const num = Number(String(cell.v).replace(/,/g, '').replace(/^\$/, ''));
+                    if (!isNaN(num)) cell.v = num;
                   }
-                  cell.t = 'n'; // ensure type is number
+                  if (typeof cell.v === 'number') {
+                    const valStr = String(cell.v);
+                    if (valStr.includes('.')) {
+                      cell.z = '0.00';
+                    } else {
+                      cell.z = '0';
+                    }
+                    cell.t = 'n';
+                  }
                 } else if (type === 'boolean') {
-                  cell.z = '@';
-                  cell.t = 'b'; // ensure type is boolean
+                  if (typeof cell.v === 'string') {
+                    cell.v = /^(true|yes|y)$/i.test(cell.v);
+                  }
+                  cell.t = 'b';
                 } else if (type === 'date') {
                   cell.z = 'mmm d, yyyy';
-                  cell.t = 'd'; // ensure type is date
+                  if (!(cell.v instanceof Date)) {
+                    const d = new Date(cell.v);
+                    if (!isNaN(d.getTime())) {
+                      cell.v = d;
+                      cell.t = 'd';
+                    }
+                  } else {
+                    cell.t = 'd';
+                  }
                 }
               }
             }

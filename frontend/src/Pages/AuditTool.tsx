@@ -534,7 +534,7 @@ export default function AuditTool() {
               </div>
               
               <div className="p-1 bg-muted/20 overflow-hidden">
-                <MultiSheetViewer sheets={sheets} onDataUpdate={handleDataUpdate} />
+                <MultiSheetViewer sheets={sheets} onDataUpdate={handleDataUpdate} downloadFilename={auditedFilename} />
               </div>
             </Card>
           </div>

@@ -513,7 +513,7 @@ export default function Reconcile() {
               </div>
               
               <div className="p-2 bg-muted/10">
-                <MultiSheetViewer sheets={sheets} />
+                <MultiSheetViewer sheets={sheets} downloadFilename={resultFilename} />
               </div>
             </Card>
           </div>
