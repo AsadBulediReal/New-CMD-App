@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router";
 import { HelpDialog } from "../components/shared/help-dialog";
+import { AdvancedFileSelector, type DateFilter, type StoredFileMeta } from "../components/shared/advanced-file-selector";
 
 // ── Required analytics fields ──────────────────────────────────────────────
 const REQUIRED_FIELDS: { key: string; label: string; description: string }[] = [
@@ -34,14 +35,7 @@ const REQUIRED_FIELDS: { key: string; label: string; description: string }[] = [
   { key: "Credit",       label: "Credit Amount",               description: "Credit transaction value"                     },
 ];
 
-interface StoredFile {
-  _id: string;
-  filename: string;
-  uploadDate: string;
-  headers: string[];
-  totalRecords?: number;
-  sheets?: SheetData[];
-}
+type StoredFile = StoredFileMeta;
 
 type FieldMap = Record<string, string>;
 
@@ -74,6 +68,7 @@ export default function Analytics() {
   const [selectedFileId, setSelectedFileId] = useState<string>("");
   const [selectedSheetName, setSelectedSheetName] = useState<string>("");
   const [loadingFiles, setLoadingFiles]     = useState(true);
+  const [dateFilter, setDateFilter]         = useState<DateFilter>({ column: "", start: undefined, end: undefined });
 
   // Field mapping
   const [fieldMap, setFieldMap]     = useState<FieldMap>({});
@@ -190,6 +185,7 @@ export default function Analytics() {
           fileId: selectedFileId,
           sheetName: selectedSheetName,
           fieldMap: Object.keys(resolvedMap).length > 0 ? resolvedMap : undefined,
+          dateFilter: dateFilter.column ? dateFilter : undefined,
         }),
       });
 
@@ -295,68 +291,27 @@ export default function Analytics() {
         />
 
         {/* Configuration Card */}
-        <Card className="p-8 border-border bg-card/40 backdrop-blur-xl shadow-2xl relative overflow-hidden group">
+        <Card className="p-8 border-border bg-card/40 backdrop-blur-xl shadow-2xl relative group">
           <div className="absolute top-0 inset-x-0 h-1 bg-linear-to-r from-blue-600 to-cyan-500 opacity-20" />
           
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
             {/* Left: Selection */}
             <div className="lg:col-span-5 space-y-6">
-               <div className="space-y-4">
-                 <div className="flex items-center gap-2 text-foreground font-bold text-sm uppercase tracking-widest opacity-60">
-                   <Database className="w-4 h-4 text-blue-500" />
-                   Source File Selection
-                 </div>
-                 <select
-                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/50 transition-all cursor-pointer box-border"
-                  value={selectedFileId}
-                  onChange={e => handleFileSelect(e.target.value)}
-                  disabled={loadingFiles || isAnalyzing}
-                >
-                  <option value="">-- Choose a vault file --</option>
-                  {files.map(f => (
-                    <option key={f._id} value={f._id}>
-                      {f.filename} • {new Date(f.uploadDate).toLocaleDateString()}
-                    </option>
-                  ))}
-                </select>
-
-                {selectedFileId && (files.find(f => f._id === selectedFileId)?.sheets?.length || 0) > 1 && (
-                    <div className="space-y-4 pt-2 animate-in fade-in slide-in-from-top-1">
-                      <div className="flex items-center gap-2 text-foreground font-bold text-sm uppercase tracking-widest opacity-60">
-                         <Database className="w-4 h-4 text-cyan-500" />
-                         Target Sheet Selection
-                      </div>
-                      <select
-                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500/50 transition-all cursor-pointer box-border"
-                        value={selectedSheetName}
-                        onChange={e => handleSheetSelect(e.target.value)}
-                        disabled={isAnalyzing}
-                      >
-                        <option value="">-- Choose target sheet --</option>
-                        {files.find(f => f._id === selectedFileId)?.sheets?.map(s => (
-                          <option key={s.name} value={s.name}>{s.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                )}
-                {!selectedFileId && (
-                  <p className="text-xs text-muted-foreground font-medium italic">
-                    Select a bank statement from the database to start analysis.
-                  </p>
-                )}
-               </div>
-
-               {selectedFileId && (
-                 <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/10 space-y-3">
-                   <div className="flex items-center justify-between text-xs font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400">
-                     <span>File Context</span>
-                     <span className="opacity-60">{selectedFile?.totalRecords ?? 0} records</span>
-                   </div>
-                   <div className="text-sm font-medium text-foreground truncate">
-                     {selectedFile?.filename}
-                   </div>
-                 </div>
-               )}
+               <AdvancedFileSelector
+                 files={files}
+                 selectedFileId={selectedFileId}
+                 onFileChange={handleFileSelect}
+                 selectedSheetName={selectedSheetName}
+                 onSheetChange={handleSheetSelect}
+                 showDateFilter={true}
+                 dateFilter={dateFilter}
+                 onDateFilterChange={setDateFilter}
+                 disabled={isAnalyzing}
+                 loading={loadingFiles}
+                 accentColor="blue"
+                 label="Source File Selection"
+                 labelIcon={<Database className="w-3.5 h-3.5 text-blue-500" />}
+               />
             </div>
 
             {/* Right: Mapping & Action */}

@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router";
 import { HelpDialog } from "../components/shared/help-dialog";
+import { AdvancedFileSelector, type DateFilter, type StoredFileMeta } from "../components/shared/advanced-file-selector";
 
 // ── Required fields for BS and MIS ───────────────────────────────────────────
 const BS_REQUIRED_FIELDS = [
@@ -34,14 +35,7 @@ const MIS_REQUIRED_FIELDS = [
   { key: "Remarks",     label: "MIS Remarks",        description: "Contains corrections or actual numbers" },
 ];
 
-interface StoredFile {
-  _id: string;
-  filename: string;
-  uploadDate: string;
-  headers: string[];
-  totalRecords?: number;
-  sheets?: SheetData[];
-}
+type StoredFile = StoredFileMeta;
 
 type FieldMap = Record<string, string>;
 
@@ -77,6 +71,10 @@ export default function Reconcile() {
   // File Selections
   const [bsFileId, setBsFileId] = useState<string>("");
   const [misFileId, setMisFileId] = useState<string>("");
+
+  // Date Filters
+  const [bsDateFilter, setBsDateFilter] = useState<DateFilter>({ column: "", start: undefined, end: undefined });
+  const [misDateFilter, setMisDateFilter] = useState<DateFilter>({ column: "", start: undefined, end: undefined });
 
   // Mappings
   const [bsFieldMap, setBsFieldMap] = useState<FieldMap>({});
@@ -221,7 +219,9 @@ export default function Reconcile() {
           bsSheetName: selectedBsSheetName,
           misSheetName: selectedMisSheetName,
           bsMapping: bsFieldMap,
-          misMapping: misFieldMap
+          misMapping: misFieldMap,
+          bsDateFilter: bsDateFilter.column ? bsDateFilter : undefined,
+          misDateFilter: misDateFilter.column ? misDateFilter : undefined,
         }),
       });
 
@@ -312,54 +312,28 @@ export default function Reconcile() {
         />
 
         {/* Configuration Card */}
-        <Card className="p-8 border-border bg-card/40 backdrop-blur-xl shadow-2xl relative overflow-hidden group">
+        <Card className="p-8 border-border bg-card/40 backdrop-blur-xl shadow-2xl relative group">
           <div className="absolute top-0 inset-x-0 h-1 bg-linear-to-r from-sky-500 to-blue-600 opacity-20" />
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             {/* Left: Bank Statement Selection */}
             <div className="space-y-6">
-               <div className="flex items-center gap-3 text-foreground font-bold text-sm uppercase tracking-widest opacity-60">
-                 <FileText className="w-5 h-5 text-sky-500" />
-                 1. Bank Statement (BS)
-               </div>
-               
-               <select
-                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20 transition-all cursor-pointer box-border"
-                  value={bsFileId}
-                  onChange={e => handleFileSelect("BS", e.target.value)}
-                  disabled={isReconciling}
-                >
-                  <option value="">-- Choose a file --</option>
-                  {files.map(f => (
-                    <option key={f._id} value={f._id}>{f.filename}</option>
-                  ))}
-                </select>
+               <AdvancedFileSelector
+                 files={files}
+                 selectedFileId={bsFileId}
+                 onFileChange={(id) => handleFileSelect("BS", id)}
+                 selectedSheetName={selectedBsSheetName}
+                 onSheetChange={handleBsSheetSelect}
+                 showDateFilter={true}
+                 dateFilter={bsDateFilter}
+                 onDateFilterChange={setBsDateFilter}
+                 disabled={isReconciling}
+                 accentColor="sky"
+                 label="1. Bank Statement (BS)"
+                 labelIcon={<FileText className="w-3.5 h-3.5 text-sky-500" />}
+               />
 
-                {bsFileId && (
-                    <div className="space-y-4 pt-2 animate-in fade-in slide-in-from-top-1">
-                      <div className="flex items-center gap-3 text-foreground font-bold text-sm uppercase tracking-widest opacity-60">
-                         <FileText className="w-5 h-5 text-cyan-500" />
-                         Target Sheet
-                      </div>
-                      <select
-                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition-all cursor-pointer box-border"
-                        value={selectedBsSheetName}
-                        onChange={e => handleBsSheetSelect(e.target.value)}
-                        disabled={isReconciling}
-                      >
-                        <option value="">-- Choose target sheet --</option>
-                        {(files.find(f => f._id === bsFileId)?.sheets || []).length > 0 ? (
-                          files.find(f => f._id === bsFileId)?.sheets?.map(s => (
-                            <option key={s.name} value={s.name}>{s.name}</option>
-                          ))
-                        ) : (
-                          <option value="Main Sheet">Main Sheet</option>
-                        )}
-                      </select>
-                    </div>
-                )}
-
-                {bsFile && selectedBsSheetName && (
+               {bsFile && selectedBsSheetName && (
                   <div className="flex items-center justify-between p-4 rounded-xl bg-sky-500/5 border border-sky-500/10 animate-in fade-in zoom-in-95 duration-300">
                       <div className="space-y-3 flex-1">
                         <div className="flex flex-wrap gap-2">
@@ -378,72 +352,46 @@ export default function Reconcile() {
                         Map
                       </Button>
                    </div>
-                )}
+               )}
             </div>
 
             {/* Right: MIS Data Selection */}
             <div className="space-y-6">
-               <div className="flex items-center gap-3 text-foreground font-bold text-sm uppercase tracking-widest opacity-60">
-                 <FileSpreadsheet className="w-5 h-5 text-blue-500" />
-                 2. MIS Record Data
-               </div>
+               <AdvancedFileSelector
+                 files={files}
+                 selectedFileId={misFileId}
+                 onFileChange={(id) => handleFileSelect("MIS", id)}
+                 selectedSheetName={selectedMisSheetName}
+                 onSheetChange={handleMisSheetSelect}
+                 showDateFilter={true}
+                 dateFilter={misDateFilter}
+                 onDateFilterChange={setMisDateFilter}
+                 disabled={isReconciling}
+                 accentColor="blue"
+                 label="2. MIS Record Data"
+                 labelIcon={<FileSpreadsheet className="w-3.5 h-3.5 text-blue-500" />}
+               />
 
-               <select
-                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all cursor-pointer box-border"
-                  value={misFileId}
-                  onChange={e => handleFileSelect("MIS", e.target.value)}
-                  disabled={isReconciling}
-                >
-                  <option value="">-- Choose a file --</option>
-                  {files.map(f => (
-                    <option key={f._id} value={f._id}>{f.filename}</option>
-                  ))}
-                </select>
-
-                {misFileId && (
-                    <div className="space-y-4 pt-2 animate-in fade-in slide-in-from-top-1">
-                      <div className="flex items-center gap-3 text-foreground font-bold text-sm uppercase tracking-widest opacity-60">
-                         <FileSpreadsheet className="w-5 h-5 text-cyan-500" />
-                         Target Sheet
-                      </div>
-                      <select
-                        className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-cyan-500/20 transition-all cursor-pointer box-border"
-                        value={selectedMisSheetName}
-                        onChange={e => handleMisSheetSelect(e.target.value)}
-                        disabled={isReconciling}
-                      >
-                        <option value="">-- Choose target sheet --</option>
-                        {(files.find(f => f._id === misFileId)?.sheets || []).length > 0 ? (
-                          files.find(f => f._id === misFileId)?.sheets?.map(s => (
-                            <option key={s.name} value={s.name}>{s.name}</option>
-                          ))
-                        ) : (
-                          <option value="Main Sheet">Main Sheet</option>
-                        )}
-                      </select>
-                    </div>
-                )}
-
-                {misFile && selectedMisSheetName && (
-                   <div className="flex items-center justify-between p-4 rounded-xl bg-blue-500/5 border border-blue-500/10 animate-in fade-in zoom-in-95 duration-300">
-                      <div className="space-y-3 flex-1">
-                        <div className="flex flex-wrap gap-2">
-                          {MIS_REQUIRED_FIELDS.map(f => {
-                            const mapped = misFieldMap[f.key];
-                            const isMissing = !mapped;
-                            return (
-                              <div key={f.key} className={`text-[10px] px-2 py-1 rounded-md font-bold border ${isMissing ? "bg-red-500/10 text-red-600 border-red-500/20" : "bg-blue-500/10 text-blue-600 border-blue-500/20"}`}>
-                                {f.key}: {mapped || "MISSING"}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="sm" onClick={() => openMappingModal("MIS")} className="text-blue-600 font-bold ml-4">
-                        Map
-                      </Button>
-                   </div>
-                )}
+               {misFile && selectedMisSheetName && (
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-blue-500/5 border border-blue-500/10 animate-in fade-in zoom-in-95 duration-300">
+                     <div className="space-y-3 flex-1">
+                       <div className="flex flex-wrap gap-2">
+                         {MIS_REQUIRED_FIELDS.map(f => {
+                           const mapped = misFieldMap[f.key];
+                           const isMissing = !mapped;
+                           return (
+                             <div key={f.key} className={`text-[10px] px-2 py-1 rounded-md font-bold border ${isMissing ? "bg-red-500/10 text-red-600 border-red-500/20" : "bg-blue-500/10 text-blue-600 border-blue-500/20"}`}>
+                               {f.key}: {mapped || "MISSING"}
+                             </div>
+                           );
+                         })}
+                       </div>
+                     </div>
+                     <Button variant="ghost" size="sm" onClick={() => openMappingModal("MIS")} className="text-blue-600 font-bold ml-4">
+                       Map
+                     </Button>
+                  </div>
+               )}
             </div>
           </div>
 

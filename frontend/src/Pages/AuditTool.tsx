@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router";
 import { HelpDialog } from "../components/shared/help-dialog";
+import { AdvancedFileSelector, type DateFilter, type StoredFileMeta } from "../components/shared/advanced-file-selector";
 
 // ── Required mappings for Audit ──────────────────────────────────────────────
 const ALL_FIELDS = [
@@ -43,14 +44,7 @@ const AUDIT_CATEGORIES = [
   "career_portal_challan", "miscellaneous_alumni_registration_fee"
 ];
 
-interface StoredFile {
-  _id: string;
-  filename: string;
-  uploadDate: string;
-  headers: string[];
-  totalRecords?: number;
-  sheets?: SheetData[];
-}
+type StoredFile = StoredFileMeta;
 
 type FieldMap = Record<string, string>;
 
@@ -83,6 +77,7 @@ export default function AuditTool() {
   const [selectedFileId, setSelectedFileId] = useState<string>("");
   const [selectedSheetName, setSelectedSheetName] = useState<string>("");
   const [loadingFiles, setLoadingFiles] = useState(true);
+  const [dateFilter, setDateFilter] = useState<DateFilter>({ column: "", start: undefined, end: undefined });
 
   // Field mapping
   const [fieldMap, setFieldMap] = useState<FieldMap>({});
@@ -223,7 +218,8 @@ export default function AuditTool() {
           sheetName: selectedSheetName,
           fieldMap: Object.keys(resolvedMap).length > 0 ? resolvedMap : undefined,
           categories: selectedCategories,
-          validationMode: validationMode
+          validationMode: validationMode,
+          dateFilter: dateFilter.column ? dateFilter : undefined,
         }),
       });
 
@@ -327,45 +323,25 @@ export default function AuditTool() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
-          <Card className="lg:col-span-4 p-8 border-border bg-card/40 backdrop-blur-xl shadow-2xl relative overflow-hidden group">
+          <Card className="lg:col-span-4 p-8 border-border bg-card/40 backdrop-blur-xl shadow-2xl relative group">
             <div className="absolute top-0 inset-x-0 h-1 bg-linear-to-r from-purple-600 to-indigo-500 opacity-20" />
             
             <div className="space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-foreground font-bold text-sm uppercase tracking-widest opacity-60">
-                  <Database className="w-4 h-4 text-purple-500" />
-                  Source Data
-                </div>
-                <select
-                  className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500/50 transition-all cursor-pointer box-border"
-                  value={selectedFileId}
-                  onChange={e => handleFileSelect(e.target.value)}
-                  disabled={loadingFiles || isAuditing}
-                >
-                  <option value="">-- Choose a vault file --</option>
-                  {files.map(f => (
-                    <option key={f._id} value={f._id}>
-                      {f.filename} • {new Date(f.uploadDate).toLocaleDateString()}
-                    </option>
-                  ))}
-                </select>
-
-                {selectedFileId && (files.find(f => f._id === selectedFileId)?.sheets?.length || 0) > 1 && (
-                  <div className="space-y-4 pt-2 animate-in fade-in slide-in-from-top-1">
-                    <select
-                      className="w-full bg-background border border-border rounded-xl px-4 py-3 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500/50 transition-all cursor-pointer box-border"
-                      value={selectedSheetName}
-                      onChange={e => handleSheetSelect(e.target.value)}
-                      disabled={isAuditing}
-                    >
-                      <option value="">-- Choose target sheet --</option>
-                      {files.find(f => f._id === selectedFileId)?.sheets?.map(s => (
-                        <option key={s.name} value={s.name}>{s.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              </div>
+              <AdvancedFileSelector
+                files={files}
+                selectedFileId={selectedFileId}
+                onFileChange={handleFileSelect}
+                selectedSheetName={selectedSheetName}
+                onSheetChange={handleSheetSelect}
+                showDateFilter={true}
+                dateFilter={dateFilter}
+                onDateFilterChange={setDateFilter}
+                disabled={isAuditing}
+                loading={loadingFiles}
+                accentColor="purple"
+                label="Source Data"
+                labelIcon={<Database className="w-3.5 h-3.5 text-purple-500" />}
+              />
 
               {selectedFileId && (
                 <div className="p-4 rounded-xl bg-purple-500/5 border border-purple-500/10 space-y-3">

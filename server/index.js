@@ -269,6 +269,30 @@ function extractMetadata(sheets) {
   return { totalRecords, columnCount, sheetCount, sheetMeta, financialSummary };
 }
 
+// Filter rows by date range
+function applyDateFilter(rows, headers, dateFilter) {
+  if (!dateFilter || !dateFilter.column || (!dateFilter.start && !dateFilter.end)) return rows;
+  const colIdx = headers.indexOf(dateFilter.column);
+  
+  // If column doesn't exist, just return all rows
+  if (colIdx === -1 && !headers.includes(dateFilter.column)) return rows;
+  
+  const start = dateFilter.start ? new Date(dateFilter.start) : null;
+  const end = dateFilter.end ? new Date(dateFilter.end) : null;
+  if (start) start.setHours(0, 0, 0, 0);
+  if (end) end.setHours(23, 59, 59, 999);
+
+  return rows.filter(r => {
+    const row = decompressRow(r, headers);
+    const val = row[dateFilter.column];
+    const d = parseDateFromCell(val);
+    if (!d) return false; // Exclude rows with unparseable dates
+    if (start && d < start) return false;
+    if (end && d > end) return false;
+    return true;
+  });
+}
+
 
 // ── Chunking helper
 async function getFileWithChunks(id) {
@@ -641,7 +665,7 @@ app.post("/api/files/recompute-meta", async (req, res) => {
 // 5. Analyze a saved file (with optional field mapping)
 app.post("/api/analyze-saved-file", async (req, res) => {
   try {
-    const { fileId, fieldMap, sheetName } = req.body;
+    const { fileId, fieldMap, sheetName, dateFilter } = req.body;
     if (!fileId) {
       return res.status(400).json({ error: "fileId is required" });
     }
@@ -693,7 +717,10 @@ app.post("/api/analyze-saved-file", async (req, res) => {
       });
     };
 
-    const mappedRows = applyFieldMap(transactionsSheet.rows, fieldMap, transactionsSheet.headers);
+    // ── Apply Date Filter ────────────────────────────────────────────────────
+    const filteredRows = applyDateFilter(transactionsSheet.rows, transactionsSheet.headers, dateFilter);
+
+    const mappedRows = applyFieldMap(filteredRows, fieldMap, transactionsSheet.headers);
 
     // ── Opening / Closing Balance from Summary sheet ─────────────────────────
     let openingBalance = "";
@@ -761,7 +788,7 @@ app.post("/api/analyze-saved-file", async (req, res) => {
 // 6. Reconcile BS vs MIS
 app.post("/api/reconcile-bs-mis", async (req, res) => {
   try {
-    const { bsFileId, misFileId, bsMapping = {}, misMapping = {}, misSheetName, bsSheetName } = req.body;
+    const { bsFileId, misFileId, bsMapping = {}, misMapping = {}, misSheetName, bsSheetName, bsDateFilter, misDateFilter } = req.body;
     
     if (!bsFileId || !misFileId) {
       return res.status(400).json({ error: "Both bsFileId and misFileId are required" });
@@ -810,6 +837,14 @@ app.post("/api/reconcile-bs-mis", async (req, res) => {
       misTransactions = (misFile.rows || []).map(r => decompressRow(r, misHeaders));
     }
 
+    // Apply Date Filters
+    if (bsDateFilter) {
+      bsTransactions = applyDateFilter(bsTransactions.map(r => Object.values(r)), bsHeaders, bsDateFilter).map(r => decompressRow(r, bsHeaders));
+    }
+    if (misDateFilter) {
+      misTransactions = applyDateFilter(misTransactions.map(r => Object.values(r)), misHeaders, misDateFilter).map(r => decompressRow(r, misHeaders));
+    }
+
     // Run reconciliation
     const {
       verified_mis,
@@ -848,7 +883,7 @@ app.post("/api/reconcile-bs-mis", async (req, res) => {
 // 7. Audit specific categories using TYPE_CODE
 app.post("/api/audit-saved-file", async (req, res) => {
   try {
-    const { fileId, sheetName, fieldMap, categories, validationMode } = req.body;
+    const { fileId, sheetName, fieldMap, categories, validationMode, dateFilter } = req.body;
     
     if (!fileId) {
       return res.status(400).json({ error: "fileId is required" });
@@ -890,7 +925,10 @@ app.post("/api/audit-saved-file", async (req, res) => {
       });
     };
 
-    const mappedRows = applyFieldMap(rowsData, fieldMap, headersData);
+    // ── Apply Date Filter ────────────────────────────────────────────────────
+    const filteredRows = applyDateFilter(rowsData, headersData, dateFilter);
+
+    const mappedRows = applyFieldMap(filteredRows, fieldMap, headersData);
 
     // Free the raw massive payload from DB
     if (file) {
