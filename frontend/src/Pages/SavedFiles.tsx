@@ -14,6 +14,7 @@ import {
   RefreshCw,
   Trash2,
   Eye,
+  Download,
   ArrowLeft,
   LayoutGrid,
   List,
@@ -39,6 +40,11 @@ import {
   ArrowUpRight
 } from "lucide-react";
 import { HelpDialog } from "../components/shared/help-dialog";
+import {
+  downloadSingleSavedFile,
+  downloadBulkSavedFilesAsZip,
+  type DownloadProgress
+} from "../utils/fileExporter";
 
 interface StoredFile {
   _id: string;
@@ -130,12 +136,18 @@ export default function SavedFiles() {
       icon: <ShieldCheck className="w-5 h-5 text-indigo-500" />,
       title: "Batch Management",
       desc: "Select and delete multiple reports at once to keep your workspace organized and efficient."
+    },
+    {
+      icon: <Download className="w-5 h-5 text-emerald-500" />,
+      title: "Bulk ZIP Export",
+      desc: "Download multiple reports or all filtered files simultaneously in a single compressed .zip package."
     }
   ];
   const [files, setFiles] = useState<StoredFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [fileData, setFileData] = useState<LoadedData | null>(null);
   const [fileToDelete, setFileToDelete] = useState<{ id: string; filename: string } | null>(null);
 
@@ -146,6 +158,8 @@ export default function SavedFiles() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkDownloading, setBulkDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<DownloadProgress | null>(null);
   const [page, setPage] = useState(1);
 
   // Date range filter (based on recordDateRange from records, not upload date)
@@ -154,6 +168,51 @@ export default function SavedFiles() {
   const [showFilters, setShowFilters] = useState(false);
   const [rescanLoading, setRescanLoading] = useState(false);
   const [rescanMsg, setRescanMsg] = useState<string | null>(null);
+
+  const handleSingleDownload = async (id: string, filename: string) => {
+    try {
+      setDownloadingId(id);
+      await downloadSingleSavedFile(id, filename);
+    } catch (error) {
+      console.error("Single download error:", error);
+      alert("Failed to download file. Ensure backend server is running.");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const handleBulkDownloadSelected = async () => {
+    const selectedFiles = files.filter(f => selectedIds.has(f._id));
+    if (selectedFiles.length === 0) return;
+    try {
+      setBulkDownloading(true);
+      await downloadBulkSavedFilesAsZip(
+        selectedFiles.map(f => ({ id: f._id, filename: f.filename })),
+        p => setDownloadProgress(p)
+      );
+    } catch (error) {
+      console.error("Bulk download error:", error);
+      alert("Bulk download failed. Please check network and try again.");
+    } finally {
+      setBulkDownloading(false);
+    }
+  };
+
+  const handleBulkDownloadAll = async () => {
+    if (processedFiles.length === 0) return;
+    try {
+      setBulkDownloading(true);
+      await downloadBulkSavedFilesAsZip(
+        processedFiles.map(f => ({ id: f._id, filename: f.filename })),
+        p => setDownloadProgress(p)
+      );
+    } catch (error) {
+      console.error("Bulk download error:", error);
+      alert("Bulk download failed. Please check network and try again.");
+    } finally {
+      setBulkDownloading(false);
+    }
+  };
 
   useEffect(() => { fetchFiles(); }, []);
   // Reset page on search/filter change
@@ -270,17 +329,44 @@ export default function SavedFiles() {
     }
   };
 
-  const toggleSelect = (id: string) => {
+  const [lastSelectedId, setLastSelectedId] = useState<string | null>(null);
+
+  const toggleSelect = (id: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+
+    if (e?.shiftKey && lastSelectedId && lastSelectedId !== id) {
+      const currentIndex = processedFiles.findIndex(f => f._id === id);
+      const lastIndex = processedFiles.findIndex(f => f._id === lastSelectedId);
+
+      if (currentIndex !== -1 && lastIndex !== -1) {
+        const start = Math.min(currentIndex, lastIndex);
+        const end = Math.max(currentIndex, lastIndex);
+        const rangeIds = processedFiles.slice(start, end + 1).map(f => f._id);
+
+        setSelectedIds(prev => {
+          const n = new Set(prev);
+          rangeIds.forEach(rangeId => n.add(rangeId));
+          return n;
+        });
+        setLastSelectedId(id);
+        return;
+      }
+    }
+
     setSelectedIds(prev => {
       const n = new Set(prev);
       n.has(id) ? n.delete(id) : n.add(id);
       return n;
     });
+    setLastSelectedId(id);
   };
 
   const toggleSelectAll = () => {
     if (selectedIds.size === processedFiles.length) {
       setSelectedIds(new Set());
+      setLastSelectedId(null);
     } else {
       setSelectedIds(new Set(processedFiles.map(f => f._id)));
     }
@@ -478,6 +564,17 @@ export default function SavedFiles() {
                 <Zap className={`w-4 h-4 ${rescanLoading ? "animate-pulse text-yellow-500" : ""}`} />
                 {rescanLoading ? "Scanning…" : "Re-scan Metadata"}
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBulkDownloadAll}
+                disabled={bulkDownloading || processedFiles.length === 0}
+                className="gap-2 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 font-semibold"
+                title="Download all currently visible files in a single ZIP archive"
+              >
+                <Download className={`w-4 h-4 ${bulkDownloading ? "animate-bounce" : ""}`} />
+                {bulkDownloading ? "Exporting..." : "Download All (ZIP)"}
+              </Button>
             </div>
           </div>
 
@@ -561,6 +658,15 @@ export default function SavedFiles() {
             </Button>
             <Button
               size="sm"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 shadow-lg shadow-emerald-500/20 font-bold"
+              onClick={handleBulkDownloadSelected}
+              disabled={bulkDownloading}
+            >
+              {bulkDownloading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+              {bulkDownloading ? "Downloading..." : `Download Selected (${selectedIds.size})`}
+            </Button>
+            <Button
+              size="sm"
               className="bg-red-600 hover:bg-red-700 text-white gap-2 shadow-lg shadow-red-500/20"
               onClick={() => setBulkDeleteOpen(true)}
             >
@@ -611,7 +717,8 @@ export default function SavedFiles() {
               return (
                 <div
                   key={file._id}
-                  className={`group relative bg-card/40 backdrop-blur-xl border rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl ${
+                  onClick={(e) => toggleSelect(file._id, e)}
+                  className={`group relative bg-card/40 backdrop-blur-xl border rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl cursor-pointer select-none ${
                     isSelected
                       ? "border-blue-500/50 shadow-xl shadow-blue-500/10 bg-blue-500/5"
                       : "border-border hover:border-blue-500/30 hover:shadow-blue-500/5"
@@ -619,8 +726,9 @@ export default function SavedFiles() {
                 >
                   {/* Selection checkbox */}
                   <button
-                    onClick={() => toggleSelect(file._id)}
-                    className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                    onClick={(e) => toggleSelect(file._id, e)}
+                    className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10 p-1 rounded-md hover:bg-muted/50"
+                    title="Click to select (Hold Shift for range select)"
                     style={{ opacity: isSelected ? 1 : undefined }}
                   >
                     {isSelected ? (
@@ -704,10 +812,10 @@ export default function SavedFiles() {
                     )}
                   </div>
 
-                  <div className="flex gap-2 pt-4 border-t border-border/50">
+                  <div className="flex gap-2 pt-4 border-t border-border/50" onClick={(e) => e.stopPropagation()}>
                     <Button
                       className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs gap-2 py-2.5 h-auto transition-all shadow-lg shadow-blue-500/15"
-                      onClick={() => handleLoadFile(file._id, file.filename)}
+                      onClick={(e) => { e.stopPropagation(); handleLoadFile(file._id, file.filename); }}
                       disabled={loadingId === file._id}
                     >
                       {loadingId === file._id ? (
@@ -719,8 +827,17 @@ export default function SavedFiles() {
                     </Button>
                     <Button
                       variant="outline"
+                      className="aspect-square p-0 rounded-xl border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:border-emerald-500 hover:text-white transition-all duration-200"
+                      onClick={(e) => { e.stopPropagation(); handleSingleDownload(file._id, file.filename); }}
+                      disabled={downloadingId === file._id}
+                      title="Download Excel file"
+                    >
+                      {downloadingId === file._id ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                    </Button>
+                    <Button
+                      variant="outline"
                       className="aspect-square p-0 rounded-xl border-red-500/20 text-red-500 hover:bg-red-500 hover:border-red-500 hover:text-white transition-all duration-200"
-                      onClick={() => setFileToDelete({ id: file._id, filename: file.filename })}
+                      onClick={(e) => { e.stopPropagation(); setFileToDelete({ id: file._id, filename: file.filename }); }}
                       title="Delete permanently"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -760,7 +877,7 @@ export default function SavedFiles() {
               <div className="w-32 text-left text-xs font-semibold text-muted-foreground hidden xl:block">
                 Record Dates
               </div>
-              <div className="w-24 shrink-0" />
+              <div className="w-36 shrink-0" />
             </div>
 
             {pagedFiles.map((file, idx) => {
@@ -768,11 +885,16 @@ export default function SavedFiles() {
               return (
                 <div
                   key={file._id}
-                  className={`flex items-center gap-4 px-5 py-4 transition-colors border-b border-border/30 last:border-b-0 group ${
+                  onClick={(e) => toggleSelect(file._id, e)}
+                  className={`flex items-center gap-4 px-5 py-4 transition-colors border-b border-border/30 last:border-b-0 group cursor-pointer select-none ${
                     isSelected ? "bg-blue-500/5" : idx % 2 === 0 ? "bg-transparent" : "bg-muted/10"
                   } hover:bg-blue-500/5`}
                 >
-                  <button onClick={() => toggleSelect(file._id)} className="shrink-0">
+                  <button
+                    onClick={(e) => toggleSelect(file._id, e)}
+                    className="shrink-0 p-1 rounded-md hover:bg-muted/50"
+                    title="Click to select (Hold Shift for range select)"
+                  >
                     {isSelected ? (
                       <CheckSquare className="w-4 h-4 text-blue-500" />
                     ) : (
@@ -824,11 +946,11 @@ export default function SavedFiles() {
                       <span className="text-[11px] text-muted-foreground">—</span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
                     <Button
                       size="sm"
                       className="rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs gap-1.5 h-8 px-3 shadow-md shadow-blue-500/15"
-                      onClick={() => handleLoadFile(file._id, file.filename)}
+                      onClick={(e) => { e.stopPropagation(); handleLoadFile(file._id, file.filename); }}
                       disabled={loadingId === file._id}
                     >
                       {loadingId === file._id ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Eye className="w-3 h-3" />}
@@ -837,8 +959,18 @@ export default function SavedFiles() {
                     <Button
                       variant="outline"
                       size="sm"
+                      className="h-8 w-8 p-0 rounded-lg border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:border-emerald-500 hover:text-white transition-all duration-200"
+                      onClick={(e) => { e.stopPropagation(); handleSingleDownload(file._id, file.filename); }}
+                      disabled={downloadingId === file._id}
+                      title="Download Excel file"
+                    >
+                      {downloadingId === file._id ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="h-8 w-8 p-0 rounded-lg border-red-500/20 text-red-500 hover:bg-red-500 hover:border-red-500 hover:text-white transition-all duration-200"
-                      onClick={() => setFileToDelete({ id: file._id, filename: file.filename })}
+                      onClick={(e) => { e.stopPropagation(); setFileToDelete({ id: file._id, filename: file.filename }); }}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
@@ -975,6 +1107,64 @@ export default function SavedFiles() {
             >
               {bulkDeleting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
               {bulkDeleting ? "Deleting…" : `Purge ${selectedIds.size} File${selectedIds.size !== 1 ? "s" : ""}`}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Bulk Download Progress Modal ── */}
+      <Dialog open={!!downloadProgress} onOpenChange={open => !open && !bulkDownloading && setDownloadProgress(null)}>
+        <DialogContent className="max-w-md border-border bg-background shadow-2xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-extrabold text-foreground flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                <Download className="w-5 h-5" />
+              </div>
+              {downloadProgress?.phase === "complete" ? "Export Ready!" : "Preparing ZIP Archive"}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="py-5 space-y-4">
+            <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+              <span>Progress ({downloadProgress?.current || 0} / {downloadProgress?.total || 0})</span>
+              <span className="text-emerald-500 font-bold">
+                {Math.round(((downloadProgress?.current || 0) / (downloadProgress?.total || 1)) * 100)}%
+              </span>
+            </div>
+
+            <div className="w-full bg-muted/60 h-2.5 rounded-full overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-emerald-500 to-teal-400 h-full transition-all duration-300 rounded-full"
+                style={{ width: `${Math.min(100, Math.round(((downloadProgress?.current || 0) / (downloadProgress?.total || 1)) * 100))}%` }}
+              />
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-muted/40 border border-border/50 text-xs flex items-center gap-3">
+              {downloadProgress?.phase !== "complete" ? (
+                <RefreshCw className="w-4 h-4 text-emerald-500 animate-spin shrink-0" />
+              ) : (
+                <CheckSquare className="w-4 h-4 text-emerald-500 shrink-0" />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-foreground truncate">{downloadProgress?.currentFilename}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {downloadProgress?.phase === "fetching" && "Fetching spreadsheet records from server..."}
+                  {downloadProgress?.phase === "zipping" && "Compressing Excel files into ZIP..."}
+                  {downloadProgress?.phase === "complete" && "ZIP package downloaded to your device."}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2 border-t border-border">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={bulkDownloading}
+              onClick={() => setDownloadProgress(null)}
+              className="font-bold rounded-xl"
+            >
+              {downloadProgress?.phase === "complete" ? "Done" : "Hide"}
             </Button>
           </div>
         </DialogContent>
