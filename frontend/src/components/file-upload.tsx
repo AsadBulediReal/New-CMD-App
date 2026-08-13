@@ -5,7 +5,8 @@ import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
-import { HelpCircle, Info } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { HelpCircle, Info, Lock, Eye, EyeOff, KeyRound, AlertCircle, Loader2 } from "lucide-react"
 import type { SheetData } from "./multi-sheet-viewer"
 import { detectAndCastSheet } from "../utils/dataProcessing"
 
@@ -31,7 +32,31 @@ export function FileUpload({
   const [configs, setConfigs] = useState<{ headerRowIndex: number, extractHeaderDetails: boolean, skipped?: boolean }[]>([])
   const [originalFilename, setOriginalFilename] = useState("")
 
+  // Password Protection states
+  const [pendingPasswordFile, setPendingPasswordFile] = useState<File | null>(null)
+  const [passwordInput, setPasswordInput] = useState("")
+  const [passwordError, setPasswordError] = useState("")
+  const [showPasswordVisible, setShowPasswordVisible] = useState(false)
+  const [isUnlocking, setIsUnlocking] = useState(false)
+
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const isPasswordProtectedError = (err: unknown): boolean => {
+    if (!err) return false;
+    const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+    return (
+      msg.includes("password") ||
+      msg.includes("encrypt") ||
+      msg.includes("protected") ||
+      msg.includes("decrypt") ||
+      msg.includes("crypto") ||
+      msg.includes("cfb") ||
+      msg.includes("bad key") ||
+      msg.includes("unsupported") ||
+      msg.includes("invalid header") ||
+      msg.includes("wrong")
+    );
+  };
 
   const guessHeaderRowIndex = (rows: string[][]): number => {
     let maxCols = 0;
@@ -77,64 +102,92 @@ export function FileUpload({
     })
   }
 
-  const parseExcel = (file: File): Promise<RawSheetData[]> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
+  const parseExcel = async (file: File, password?: string): Promise<RawSheetData[]> => {
+    const arrayBuffer = await file.arrayBuffer();
+    let dataBuffer: ArrayBuffer | Uint8Array = arrayBuffer;
 
-      reader.onload = async (e) => {
-        try {
-          const data = e.target?.result
-          if (!data) throw new Error("Failed to read file")
+    if (password) {
+      try {
+        let binary = '';
+        const bytes = new Uint8Array(arrayBuffer);
+        const len = bytes.byteLength;
+        for (let i = 0; i < len; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        const base64 = btoa(binary);
 
-          const XLSX = await import("xlsx")
-          const workbook = XLSX.read(data, { type: "binary", raw: true, cellText: true })
-          
-          const sheets: RawSheetData[] = []
+        const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
+        const res = await fetch(`${backendUrl}/api/files/decrypt-excel`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fileBuffer: base64, password })
+        });
 
-          for (const sheetName of workbook.SheetNames) {
-            const sheet = workbook.Sheets[sheetName]
-            if (!sheet["!ref"]) continue;
+        const json = await res.json();
+        if (!res.ok || !json.success) {
+          throw new Error(json.error || "Incorrect password. Please try again.");
+        }
 
-            const range = XLSX.utils.decode_range(sheet["!ref"])
-            const rawRows: string[][] = []
+        const decBinary = atob(json.decryptedBuffer);
+        const decBytes = new Uint8Array(decBinary.length);
+        for (let i = 0; i < decBinary.length; i++) {
+          decBytes[i] = decBinary.charCodeAt(i);
+        }
+        dataBuffer = decBytes;
+      } catch (err: any) {
+        throw new Error(err.message || "Incorrect password. Please try again.");
+      }
+    }
 
-            for (let row = range.s.r; row <= range.e.r; row++) {
-              const rowData: string[] = []
-              let hasAnyValue = false
-              for (let col = range.s.c; col <= range.e.c; col++) {
-                const cellAddress = XLSX.utils.encode_cell({ r: row, c: col })
-                const cell = sheet[cellAddress]
-                const value = cell ? cell.w || cell.v?.toString() || "" : ""
-                rowData.push(value)
-                if (value.trim()) hasAnyValue = true
-              }
-              if (hasAnyValue || rawRows.length > 0) {
-                 rawRows.push(rowData)
-              }
-            }
-            
-            while(rawRows.length > 0 && !rawRows[rawRows.length-1].some(v => v && v.trim() !== "")) {
-               rawRows.pop();
-            }
+    const XLSX = await import("xlsx");
+    let workbook: any;
+    try {
+      workbook = XLSX.read(dataBuffer, { type: "array", raw: true, cellText: true });
+    } catch (err: any) {
+      if (!password) {
+        throw new Error("File is password-protected");
+      }
+      throw err;
+    }
 
-            if (rawRows.length > 0) {
-               sheets.push({ name: sheetName, rawRows, guessedHeaderRowIndex: guessHeaderRowIndex(rawRows) })
-            }
-          }
+    const sheets: RawSheetData[] = [];
 
-          if (sheets.length === 0) throw new Error("No valid data found in Excel file")
-          resolve(sheets)
-        } catch (err) {
-          reject(err instanceof Error ? err : new Error("Failed to parse Excel file"))
+    for (const sheetName of workbook.SheetNames) {
+      const sheet = workbook.Sheets[sheetName];
+      if (!sheet["!ref"]) continue;
+
+      const range = XLSX.utils.decode_range(sheet["!ref"]);
+      const rawRows: string[][] = [];
+
+      for (let row = range.s.r; row <= range.e.r; row++) {
+        const rowData: string[] = [];
+        let hasAnyValue = false;
+        for (let col = range.s.c; col <= range.e.c; col++) {
+          const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
+          const cell = sheet[cellAddress];
+          const value = cell ? cell.w || cell.v?.toString() || "" : "";
+          rowData.push(value);
+          if (value.trim()) hasAnyValue = true;
+        }
+        if (hasAnyValue || rawRows.length > 0) {
+          rawRows.push(rowData);
         }
       }
 
-      reader.onerror = () => reject(new Error("Failed to read file"))
-      reader.readAsBinaryString(file)
-    })
-  }
+      while (rawRows.length > 0 && !rawRows[rawRows.length - 1].some(v => v && v.trim() !== "")) {
+        rawRows.pop();
+      }
 
-  const handleFile = async (file: File) => {
+      if (rawRows.length > 0) {
+        sheets.push({ name: sheetName, rawRows, guessedHeaderRowIndex: guessHeaderRowIndex(rawRows) });
+      }
+    }
+
+    if (sheets.length === 0) throw new Error("No valid data found in Excel file");
+    return sheets;
+  };
+
+  const handleFile = async (file: File, password?: string) => {
     setError("")
     onLoadingStart?.()
     setOriginalFilename(file.name)
@@ -147,7 +200,7 @@ export function FileUpload({
       let data: RawSheetData[]
 
       if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls") || file.type.includes("spreadsheet")) {
-        data = await parseExcel(file)
+        data = await parseExcel(file, password)
       } else if (file.name.endsWith(".csv") || file.type === "text/csv") {
         data = await parseCSVFile(file)
       } else {
@@ -162,12 +215,52 @@ export function FileUpload({
       })))
       setRawSheets(data)
       setConfigStepIndex(0)
+
+      // Successful unlock - reset modal states
+      setPendingPasswordFile(null)
+      setPasswordInput("")
+      setPasswordError("")
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Failed to parse file"
-      setError(errorMsg)
+      const isExcel = file.name.endsWith(".xlsx") || file.name.endsWith(".xls") || file.type.includes("spreadsheet")
+
+      if (isExcel && (isPasswordProtectedError(err) || !password)) {
+        setPendingPasswordFile(file)
+        if (password) {
+          setPasswordError("Incorrect password. Please try again.")
+        } else {
+          setPasswordError("")
+        }
+      } else {
+        setError(errorMsg)
+      }
     } finally {
       onLoadingEnd?.()
     }
+  }
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!pendingPasswordFile || !passwordInput.trim()) return
+
+    setIsUnlocking(true)
+    setPasswordError("")
+
+    try {
+      await handleFile(pendingPasswordFile, passwordInput.trim())
+    } catch (err) {
+      setPasswordError("Incorrect password. Please try again.")
+    } finally {
+      setIsUnlocking(false)
+    }
+  }
+
+  const handleCancelPassword = () => {
+    setPendingPasswordFile(null)
+    setPasswordInput("")
+    setPasswordError("")
+    if (fileInputRef.current) fileInputRef.current.value = ""
+    setError("File upload cancelled.")
   }
 
   const handleDrop = (e: React.DragEvent) => {
@@ -463,52 +556,139 @@ export function FileUpload({
   }
 
   return (
-    <Card className="p-8 border-2 border-indigo-200 dark:border-indigo-800 bg-white dark:bg-zinc-900 shadow-lg rounded-3xl">
-      <div className="text-center space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Upload Your Data File</h2>
-          <p className="text-muted-foreground font-medium">Support for CSV and Excel files (.xlsx, .xls)</p>
-        </div>
+    <>
+      <Card className="p-8 border-2 border-indigo-200 dark:border-indigo-800 bg-white dark:bg-zinc-900 shadow-lg rounded-3xl">
+        <div className="text-center space-y-6">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Upload Your Data File</h2>
+            <p className="text-muted-foreground font-medium">Support for CSV and Excel files (.xlsx, .xls)</p>
+          </div>
 
-        <div
-          className={`border-2 border-dashed rounded-2xl p-12 transition-all duration-300 cursor-pointer ${
-            isDragging
-              ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 scale-[1.02]"
-              : "border-indigo-300 dark:border-indigo-700 bg-indigo-50/50 dark:bg-indigo-900/10 hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-indigo-50/80"
-          }`}
-          onDragOver={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            setIsDragging(true)
-          }}
-          onDragLeave={() => setIsDragging(false)}
-          onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" onChange={handleChange} className="hidden" />
+          <div
+            className={`border-2 border-dashed rounded-2xl p-12 transition-all duration-300 cursor-pointer ${
+              isDragging
+                ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 scale-[1.02]"
+                : "border-indigo-300 dark:border-indigo-700 bg-indigo-50/50 dark:bg-indigo-900/10 hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-indigo-50/80"
+            }`}
+            onDragOver={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setIsDragging(true)
+            }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={handleDrop}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" onChange={handleChange} className="hidden" />
 
-          <div className="space-y-4">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-               <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-               </svg>
-            </div>
-            <div>
-               <p className="text-lg font-bold text-gray-900 dark:text-gray-100">Drag and drop your file here</p>
-               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">or click to select from your computer</p>
+            <div className="space-y-4">
+              <div className="w-16 h-16 mx-auto rounded-2xl bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                 </svg>
+              </div>
+              <div>
+                 <p className="text-lg font-bold text-gray-900 dark:text-gray-100">Drag and drop your file here</p>
+                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">or click to select from your computer</p>
+              </div>
             </div>
           </div>
+
+          {error && <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-xl p-4 text-red-700 dark:text-red-400 text-sm font-medium animate-in slide-in-from-top-2">{error}</div>}
+
+          <Button
+            onClick={() => fileInputRef.current?.click()}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-6 rounded-xl font-bold shadow-lg shadow-indigo-500/20 active:scale-95 transition-all text-base"
+          >
+            Select File
+          </Button>
         </div>
+      </Card>
 
-        {error && <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-xl p-4 text-red-700 dark:text-red-400 text-sm font-medium animate-in slide-in-from-top-2">{error}</div>}
+      <Dialog open={!!pendingPasswordFile} onOpenChange={(open) => {
+        if (!open && !isUnlocking) handleCancelPassword()
+      }}>
+        <DialogContent className="sm:max-w-md border-2 border-indigo-200 dark:border-indigo-800 rounded-3xl p-6 shadow-2xl">
+          <DialogHeader className="space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/40 border border-amber-200 dark:border-amber-700/50 flex items-center justify-center text-amber-600 dark:text-amber-400 mx-auto sm:mx-0">
+              <Lock className="w-6 h-6" />
+            </div>
+            <div>
+              <DialogTitle className="text-xl font-extrabold text-foreground">
+                Password Protected Excel File
+              </DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground mt-1">
+                <span className="font-semibold text-indigo-600 dark:text-indigo-400">{pendingPasswordFile?.name}</span> is encrypted. Enter the password below to decrypt and view its contents.
+              </DialogDescription>
+            </div>
+          </DialogHeader>
 
-        <Button
-          onClick={() => fileInputRef.current?.click()}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-6 rounded-xl font-bold shadow-lg shadow-indigo-500/20 active:scale-95 transition-all text-base"
-        >
-          Select File
-        </Button>
-      </div>
-    </Card>
+          <form onSubmit={handlePasswordSubmit} className="space-y-4 py-2">
+            <div className="space-y-2">
+              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
+                File Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPasswordVisible ? "text" : "password"}
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  placeholder="Enter file password..."
+                  autoFocus
+                  className={`w-full px-4 py-3 pr-12 rounded-xl border bg-background text-foreground text-sm font-medium transition-colors focus:outline-none focus:ring-2 ${
+                    passwordError
+                      ? "border-red-500 focus:ring-red-500/30"
+                      : "border-border focus:ring-indigo-500/30 focus:border-indigo-500"
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPasswordVisible(!showPasswordVisible)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
+                >
+                  {showPasswordVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {passwordError && (
+              <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-xl p-3 text-red-600 dark:text-red-400 text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{passwordError}</span>
+              </div>
+            )}
+
+            <DialogFooter className="pt-2 gap-2 sm:gap-0">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isUnlocking}
+                onClick={handleCancelPassword}
+                className="rounded-xl border-border"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isUnlocking || !passwordInput.trim()}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold px-6 shadow-md shadow-indigo-500/20 active:scale-95 transition-all"
+              >
+                {isUnlocking ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Unlocking...
+                  </>
+                ) : (
+                  <>
+                    <KeyRound className="w-4 h-4 mr-2" />
+                    Unlock & Open File
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }

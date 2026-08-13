@@ -19,10 +19,36 @@ mongoose
 
 // API Routes
 
+const officeCrypto = require("officecrypto-tool");
 const { parse_txt_content_to_json } = require("./utils/txtToJsonParser");
 const { analyze_transactions } = require("./utils/bsDataAnalytics");
 const { reconcile_bs_vs_mis } = require("./utils/reconcileHelper");
 const { audit_transactions, auditCategories } = require("./utils/auditHelper");
+
+// Endpoint to decrypt password-protected Excel files
+app.post("/api/files/decrypt-excel", async (req, res) => {
+  try {
+    const { fileBuffer, password } = req.body;
+    if (!fileBuffer || !password) {
+      return res.status(400).json({ error: "File buffer and password are required." });
+    }
+
+    const buffer = Buffer.from(fileBuffer, "base64");
+    const decryptedBuffer = await officeCrypto.decrypt(buffer, { password });
+
+    res.json({
+      success: true,
+      decryptedBuffer: decryptedBuffer.toString("base64")
+    });
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error("Excel decryption error:", errorMsg);
+    if (errorMsg.toLowerCase().includes("password") || errorMsg.toLowerCase().includes("incorrect")) {
+      return res.status(401).json({ error: "Incorrect password. Please try again." });
+    }
+    return res.status(400).json({ error: errorMsg || "Failed to decrypt file." });
+  }
+});
 
 // ... existing code ...
 
