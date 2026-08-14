@@ -251,148 +251,106 @@ export default function MainPage() {
   );
 }
 
+/* ── Relative Time Formatter ─────────────────────────────────────────────── */
+function formatTimeAgo(dateInput: string | Date): string {
+  if (!dateInput) return "Just now";
+  const date = new Date(dateInput);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  if (diffInSeconds < 60) {
+    return "Just now";
+  }
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) {
+    return `${diffInMinutes} ${diffInMinutes === 1 ? "min" : "mins"} ago`;
+  }
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) {
+    return `${diffInHours} ${diffInHours === 1 ? "hour" : "hours"} ago`;
+  }
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 30) {
+    return `${diffInDays} ${diffInDays === 1 ? "day" : "days"} ago`;
+  }
+  const diffInMonths = Math.floor(diffInDays / 30);
+  if (diffInMonths < 12) {
+    return `${diffInMonths} ${diffInMonths === 1 ? "month" : "months"} ago`;
+  }
+  const diffInYears = Math.floor(diffInDays / 365);
+  return `${diffInYears} ${diffInYears === 1 ? "year" : "years"} ago`;
+}
+
 /* ── Recent Activity & Vault Files Component ────────────────────────────── */
 function RecentActivitySection({ files, loading }: { files: any[]; loading: boolean }) {
   const recentFiles = files.slice(0, 5);
 
-  const activityLogs = [
-    {
-      engine: "BS ↔ MIS Reconciliation",
-      code: "MOD-02",
-      status: "Verified",
-      time: "Recent execution",
-      details: "Matched Bank Statement vs MIS logs with 0 discrepancies",
-      icon: GitCompare,
-      iconBg: "bg-cyan-500/10 text-cyan-500",
-    },
-    {
-      engine: "Audit Categorizer",
-      code: "MOD-05",
-      status: "Completed",
-      time: "Recent execution",
-      details: "Auto-classified records into audit collection sheets",
-      icon: ShieldCheck,
-      iconBg: "bg-purple-500/10 text-purple-500",
-    },
-    {
-      engine: "Report Consolidation Engine",
-      code: "MOD-03",
-      status: "Synced",
-      time: "Recent execution",
-      details: "Merged report workbooks with header deduplication",
-      icon: Combine,
-      iconBg: "bg-blue-500/10 text-blue-500",
-    },
-    {
-      engine: "TXT Statement Ingestion",
-      code: "MOD-01",
-      status: "Ingested",
-      time: "Recent execution",
-      details: "Extracted valid JSON records from raw bank text file",
-      icon: FileText,
-      iconBg: "bg-emerald-500/10 text-emerald-500",
-    },
-  ];
-
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-2">
-      {/* Left: Real Recent Stored Vault Files */}
-      <div className="lg:col-span-7 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Database className="w-4 h-4 text-primary" />
-            <h3 className="text-sm font-bold tracking-tight text-foreground uppercase">
-              Recent Vault Reports ({files.length} Total Files)
-            </h3>
-          </div>
-          <Link
-            to="/saved-files"
-            className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
-          >
-            View Full Vault ({files.length}) →
-          </Link>
+    <div className="space-y-4 pt-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Database className="w-4 h-4 text-primary" />
+          <h3 className="text-sm font-bold tracking-tight text-foreground uppercase">
+            Recent Vault Reports ({files.length} Total Files Stored)
+          </h3>
         </div>
+        <Link
+          to="/saved-files"
+          className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+        >
+          View Full Vault Repository ({files.length}) →
+        </Link>
+      </div>
 
-        <div className="rounded-lg border border-border bg-card overflow-hidden">
-          {loading ? (
-            <div className="p-8 text-center text-xs text-muted-foreground font-medium">
-              Loading real vault repository data...
-            </div>
-          ) : recentFiles.length === 0 ? (
-            <div className="p-8 text-center text-xs text-muted-foreground font-medium">
-              No files currently stored in vault. Upload an Excel or TXT file using the engines below to see live data here.
-            </div>
-          ) : (
-            <div className="divide-y divide-border">
-              {recentFiles.map((file) => (
-                <div
-                  key={file._id}
-                  className="p-3.5 flex items-center justify-between hover:bg-muted/40 transition-colors"
-                >
-                  <div className="flex items-center gap-3 min-w-0 pr-4">
-                    <div className="w-8.5 h-8.5 rounded bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                      <FileSpreadsheet className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
+      <div className="rounded-lg border border-border bg-card overflow-hidden">
+        {loading ? (
+          <div className="p-8 text-center text-xs text-muted-foreground font-medium">
+            Loading real vault repository data...
+          </div>
+        ) : recentFiles.length === 0 ? (
+          <div className="p-8 text-center text-xs text-muted-foreground font-medium">
+            No files currently stored in vault. Upload an Excel or TXT file using the engines below to see live data here.
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {recentFiles.map((file) => (
+              <div
+                key={file._id}
+                className="p-4 flex items-center justify-between hover:bg-muted/40 transition-colors"
+              >
+                <div className="flex items-center gap-3 min-w-0 pr-4">
+                  <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                    <FileSpreadsheet className="w-4.5 h-4.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
                       <h4 className="text-xs font-bold text-foreground truncate" title={file.filename}>
                         {file.filename}
                       </h4>
-                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-0.5">
-                        <span>Uploaded: {new Date(file.uploadDate).toLocaleDateString("en-GB")}</span>
-                        <span>•</span>
-                        <span className="font-semibold text-foreground">{file.totalRecords?.toLocaleString() || 0} records</span>
-                        <span>•</span>
-                        <span>{file.sheetCount || 1} sheet(s)</span>
-                      </div>
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary shrink-0">
+                        {formatTimeAgo(file.uploadDate)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-1">
+                      <span>Date: {new Date(file.uploadDate).toLocaleDateString("en-GB")}</span>
+                      <span>•</span>
+                      <span className="font-semibold text-foreground">{file.totalRecords?.toLocaleString() || 0} records</span>
+                      <span>•</span>
+                      <span>{file.sheetCount || 1} sheet(s)</span>
                     </div>
                   </div>
-
-                  <Link
-                    to="/saved-files"
-                    className="text-xs font-bold px-3 py-1.5 rounded bg-primary/10 hover:bg-primary/20 text-primary transition-colors shrink-0 flex items-center gap-1"
-                  >
-                    View File
-                  </Link>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
 
-      {/* Right: Engine Operations Feed */}
-      <div className="lg:col-span-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Activity className="w-4 h-4 text-emerald-500" />
-            <h3 className="text-sm font-bold tracking-tight text-foreground uppercase">
-              Realtime Engine Activity
-            </h3>
-          </div>
-          <span className="text-[10px] font-mono text-muted-foreground uppercase">Live Audit Stream</span>
-        </div>
-
-        <div className="rounded-lg border border-border bg-card p-4 space-y-3">
-          {activityLogs.map((log, idx) => {
-            const Icon = log.icon;
-            return (
-              <div key={idx} className="flex items-start gap-3 pb-3 border-b border-border/50 last:border-0 last:pb-0">
-                <div className={`w-8 h-8 rounded flex items-center justify-center shrink-0 ${log.iconBg}`}>
-                  <Icon className="w-4 h-4" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-bold text-foreground truncate">{log.engine}</span>
-                    <span className="text-[9px] font-mono font-semibold text-emerald-500 uppercase px-1.5 py-0.5 rounded bg-emerald-500/10">{log.status}</span>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
-                    {log.details}
-                  </p>
-                </div>
+                <Link
+                  to="/saved-files"
+                  className="text-xs font-bold px-3.5 py-1.5 rounded bg-primary/10 hover:bg-primary/20 text-primary transition-colors shrink-0 flex items-center gap-1"
+                >
+                  Open File
+                </Link>
               </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
