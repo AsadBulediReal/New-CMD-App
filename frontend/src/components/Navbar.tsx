@@ -12,36 +12,41 @@ export default function Navbar() {
   ];
 
   return (
-    <nav className="sticky top-0 z-100 bg-background/80 backdrop-blur-md border-b border-border font-sans transition-colors duration-300">
+    <nav className="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border font-sans transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
 
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 group transition-all">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-linear-to-br from-blue-600 to-cyan-500 shadow-lg shadow-blue-500/30 group-hover:scale-105 transition-transform">
-            <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2.5} strokeLinecap="round" className="w-4 h-4">
-              <rect x="3" y="3" width="18" height="18" rx="3"/>
-              <line x1="3" y1="9" x2="21" y2="9"/>
-              <line x1="9" y1="21" x2="9" y2="9"/>
+        {/* Logo & Corporate Branding */}
+        <Link to="/" className="flex items-center gap-3 group transition-all">
+          <div className="w-9 h-9 rounded-md flex items-center justify-center bg-primary text-primary-foreground shadow-xs group-hover:opacity-90 transition-opacity">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <path d="M3 9h18" />
+              <path d="M9 21V9" />
             </svg>
           </div>
-          <span className="text-lg font-bold tracking-tight text-foreground">
-            CMD<span className="text-blue-600 dark:text-blue-400">System</span>
-          </span>
+          <div className="flex flex-col">
+            <span className="text-base font-bold tracking-tight text-foreground flex items-center gap-1.5 leading-tight">
+              CMD <span className="text-primary font-bold">SYSTEM</span>
+            </span>
+            <span className="text-[10px] tracking-wider uppercase font-semibold text-muted-foreground/80">
+              Finance Wing · University of Sindh
+            </span>
+          </div>
         </Link>
 
         {/* Links & Toggle */}
-        <div className="flex items-center gap-6">
-          <div className="hidden md:flex items-center gap-1">
+        <div className="flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-1 bg-muted/70 p-1 rounded-lg border border-border">
             {links.map((link) => {
               const isActive = location.pathname === link.href;
               return (
                 <Link
                   key={link.name}
                   to={link.href}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  className={`px-3.5 py-1.5 rounded-md text-xs font-semibold tracking-wide transition-all duration-150 ${
                     isActive
-                      ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent"
+                      ? "bg-card text-foreground shadow-xs border border-border"
+                      : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   {link.name}
@@ -49,9 +54,9 @@ export default function Navbar() {
               );
             })}
           </div>
-          
-          <div className="h-8 w-px bg-border hidden md:block mx-1" />
-          
+
+          <div className="h-5 w-px bg-border hidden md:block mx-1" />
+
           <BugReportDialog />
           <ModeToggle />
         </div>

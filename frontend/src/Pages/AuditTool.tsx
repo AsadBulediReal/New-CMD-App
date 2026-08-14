@@ -281,33 +281,47 @@ export default function AuditTool() {
     [];
 
   return (
-    <main className="min-h-screen bg-background relative overflow-hidden transition-colors duration-300">
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-[-5%] left-[-5%] w-[400px] h-[400px] rounded-full bg-purple-500/5 blur-[80px]" />
-        <div className="absolute top-[20%] right-[-5%] w-[300px] h-[300px] rounded-full bg-indigo-500/5 blur-[60px]" />
-      </div>
+    <main className="min-h-screen bg-background text-foreground relative overflow-hidden transition-colors duration-300 font-sans">
+      {/* Corporate Grid texture background */}
+      <div
+        className="fixed inset-0 z-0 pointer-events-none opacity-40 dark:opacity-20"
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, currentColor 1px, transparent 1px),
+            linear-gradient(to bottom, currentColor 1px, transparent 1px)
+          `,
+          backgroundSize: "40px 40px",
+          color: "var(--border)",
+        }}
+      />
 
-      <div className="relative z-1 max-w-7xl mx-auto px-6 py-12 space-y-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-6 py-10 space-y-8">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div className="space-y-1">
-            <h1 className="text-4xl font-extrabold tracking-tight text-foreground">
-              Audit <span className="text-transparent bg-clip-text bg-linear-to-r from-purple-600 to-indigo-500">Categorizer</span>
+        <div className="border-b border-border pb-6 flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-widest">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              Audit MOD-05 · Auto-Classification & Compliance
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
+              Audit Categorizer Engine
             </h1>
-            <p className="text-muted-foreground font-medium">Auto-classify transactions into predefined collections based on Type Codes.</p>
+            <p className="text-xs sm:text-sm text-muted-foreground font-medium">
+              Auto-classify transaction records into predefined compliance collections based on Type Codes.
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <Button 
               variant="outline" 
               onClick={() => setShowHelp(true)}
-              className="border-purple-500/30 text-purple-600 hover:bg-purple-500/10 dark:text-purple-400 gap-2 h-10 px-4 rounded-xl font-bold"
+              className="border-border text-foreground hover:bg-muted gap-2 h-9 px-3.5 rounded-md font-semibold text-xs"
             >
-              <HelpCircle className="w-4 h-4" />
-              Features & Tips
+              <HelpCircle className="w-4 h-4 text-primary" />
+              Audit Guidelines
             </Button>
-            <Button asChild variant="ghost" className="text-muted-foreground hover:text-foreground h-10 rounded-xl">
-               <Link to="/" className="flex items-center gap-2">
-                 <ArrowLeft className="w-4 h-4" /> Back to Tools
+            <Button asChild variant="ghost" className="text-muted-foreground hover:text-foreground h-9 text-xs font-semibold">
+               <Link to="/" className="flex items-center gap-1.5">
+                 <ArrowLeft className="w-4 h-4" /> Back to Dashboard
                </Link>
             </Button>
           </div>

@@ -431,35 +431,47 @@ export default function MergeJson() {
   };
 
   return (
-    <main className="min-h-screen bg-background relative overflow-hidden transition-colors duration-300">
-      {/* Background effects */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-[-5%] left-[-5%] w-[400px] h-[400px] rounded-full bg-cyan-500/5 blur-[80px]" />
-        <div className="absolute bottom-[20%] right-[-5%] w-[300px] h-[300px] rounded-full bg-sky-500/5 blur-[60px]" />
-      </div>
+    <main className="min-h-screen bg-background text-foreground relative overflow-hidden font-sans">
+      {/* Corporate Grid texture background */}
+      <div
+        className="fixed inset-0 z-0 pointer-events-none opacity-40 dark:opacity-20"
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, currentColor 1px, transparent 1px),
+            linear-gradient(to bottom, currentColor 1px, transparent 1px)
+          `,
+          backgroundSize: "40px 40px",
+          color: "var(--border)",
+        }}
+      />
 
-      <div className="relative z-1 max-w-[90rem] mx-auto px-6 py-12 space-y-8">
+      <div className="relative z-10 max-w-[90rem] mx-auto px-6 py-10 space-y-8">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div className="space-y-1">
-            <h1 className="text-4xl font-extrabold tracking-tight text-foreground flex items-center gap-3">
-              <Combine className="w-10 h-10 text-cyan-500" />
-              Merge Excel <span className="text-transparent bg-clip-text bg-linear-to-r from-cyan-500 to-sky-600">Reports</span>
+        <div className="border-b border-border pb-6 flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-widest">
+              <Combine className="w-3.5 h-3.5" />
+              Consolidation MOD-03 · Workbook Report Merger
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
+              Report Consolidation Engine
             </h1>
-            <p className="text-muted-foreground font-medium">Consolidate multiple files and map matching sheets.</p>
+            <p className="text-xs sm:text-sm text-muted-foreground font-medium">
+              Combine heterogeneous Excel report slices into unified, structured master workbooks with deduplication.
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <Button 
               variant="outline" 
               onClick={() => setShowHelp(true)}
-              className="border-cyan-500/30 text-cyan-600 hover:bg-cyan-500/10 dark:text-cyan-400 gap-2 h-10 px-4 rounded-xl font-bold"
+              className="border-border text-foreground hover:bg-muted gap-2 h-9 px-3.5 rounded-md font-semibold text-xs"
             >
-              <HelpCircle className="w-4 h-4" />
-              Features & Tips
+              <HelpCircle className="w-4 h-4 text-primary" />
+              Merger Guidelines
             </Button>
-            <Button asChild variant="ghost" className="text-muted-foreground hover:text-foreground h-10 rounded-xl">
-               <Link to="/" className="flex items-center gap-2">
-                 <ArrowLeft className="w-4 h-4" /> Back to Tools
+            <Button asChild variant="ghost" className="text-muted-foreground hover:text-foreground h-9 text-xs font-semibold">
+               <Link to="/" className="flex items-center gap-1.5">
+                 <ArrowLeft className="w-4 h-4" /> Back to Dashboard
                </Link>
             </Button>
           </div>

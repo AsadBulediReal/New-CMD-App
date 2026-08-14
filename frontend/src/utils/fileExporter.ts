@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx";
 import JSZip from "jszip";
-import { decompressSheetData, type SheetData } from "./dataProcessing";
+import { decompressSheetData } from "./dataProcessing";
+import type { SheetData } from "../components/multi-sheet-viewer";
 
 export interface DownloadProgress {
   current: number;

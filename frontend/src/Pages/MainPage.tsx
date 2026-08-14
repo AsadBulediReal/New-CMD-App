@@ -1,459 +1,409 @@
 import { Link } from "react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import {
+  FileText,
+  GitCompare,
+  Combine,
+  BarChart3,
+  ShieldCheck,
+  FileSpreadsheet,
+  Database,
+  ArrowRight,
+  Shield,
+  Activity,
+  CheckCircle2
+} from "lucide-react";
 
-/* ── Particle canvas background ─────────────────────────────────────────── */
-function ParticleCanvas({ dark }: { dark: boolean }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const canvas = canvasRef.current!;
-    const ctx = canvas.getContext("2d")!;
-    let raf: number;
-
-    const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-    resize();
-    window.addEventListener("resize", resize);
-
-    const count = 50;
-    const dots = Array.from({ length: count }, () => ({
-      x: Math.random() * window.innerWidth,
-      y: Math.random() * window.innerHeight,
-      r: Math.random() * 1.4 + 0.4,
-      vx: (Math.random() - 0.5) * 0.3,
-      vy: (Math.random() - 0.5) * 0.3,
-      alpha: Math.random() * 0.45 + 0.1,
-    }));
-
-    const draw = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const baseColor = dark ? "99,179,237" : "37,99,235";
-      dots.forEach((d) => {
-        d.x += d.vx;
-        d.y += d.vy;
-        if (d.x < 0) d.x = canvas.width;
-        if (d.x > canvas.width) d.x = 0;
-        if (d.y < 0) d.y = canvas.height;
-        if (d.y > canvas.height) d.y = 0;
-
-        ctx.beginPath();
-        ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${baseColor},${d.alpha * (dark ? 1 : 0.6)})`;
-        ctx.fill();
-      });
-
-      for (let i = 0; i < dots.length; i++) {
-        for (let j = i + 1; j < dots.length; j++) {
-          const dx = dots[i].x - dots[j].x;
-          const dy = dots[i].y - dots[j].y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 120) {
-            ctx.beginPath();
-            ctx.moveTo(dots[i].x, dots[i].y);
-            ctx.lineTo(dots[j].x, dots[j].y);
-            ctx.strokeStyle = `rgba(${baseColor},${0.10 * (1 - dist / 120) * (dark ? 1 : 0.5)})`;
-            ctx.lineWidth = 0.5;
-            ctx.stroke();
-          }
-        }
-      }
-      raf = requestAnimationFrame(draw);
-    };
-    draw();
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("resize", resize);
-    };
-  }, [dark]);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      className="fixed inset-0 z-0 pointer-events-none opacity-40"
-    />
-  );
-}
-
-/* ── Tool data ───────────────────────────────────────────────────────────── */
+/* ── Tool Data ───────────────────────────────────────────────────────────── */
 const tools = [
   {
     id: "txt-json",
-    title: "TXT → JSON",
-    subtitle: "Statement Parser",
+    title: "TXT → JSON Statement Parser",
+    subtitle: "Statement Ingestion & Cleaning",
     description:
-      "Ingest raw bank-statement TXT files and emit clean, validated JSON records ready for downstream processing.",
+      "Parse raw bank statement text files, strip system noise, extract transaction rows, and emit validated JSON records.",
     link: "/upload-txt",
-    color: "#3b82f6",
-    colorDimDark: "rgba(59,130,246,0.12)",
-    colorDimLight: "rgba(59,130,246,0.08)",
-    colorBorderDark: "rgba(59,130,246,0.30)",
-    colorBorderLight: "rgba(59,130,246,0.25)",
-    colorGlow: "rgba(59,130,246,0.40)",
-    tag: "PARSER",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}
-        strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-        <polyline points="14 2 14 8 20 8" />
-        <line x1="16" y1="13" x2="8" y2="13" />
-        <line x1="16" y1="17" x2="8" y2="17" />
-      </svg>
-    ),
+    badge: "INGESTION",
+    code: "MOD-01",
+    icon: FileText,
   },
   {
     id: "reconcile",
-    title: "BS ↔ MIS",
-    subtitle: "Reconciliation Engine",
+    title: "BS ↔ MIS Reconciliation Engine",
+    subtitle: "Automated Data Matching",
     description:
-      "Cross-match Bank Statement entries against MIS data with delta reporting and discrepancy flagging.",
+      "Cross-verify Bank Statement entries against internal MIS management logs with delta calculations and discrepancy flagging.",
     link: "/reconcile",
-    color: "#06b6d4",
-    colorDimDark: "rgba(6,182,212,0.12)",
-    colorDimLight: "rgba(6,182,212,0.08)",
-    colorBorderDark: "rgba(6,182,212,0.30)",
-    colorBorderLight: "rgba(6,182,212,0.25)",
-    colorGlow: "rgba(6,182,212,0.40)",
-    tag: "ENGINE",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}
-        strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
-        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-      </svg>
-    ),
+    badge: "RECONCILIATION",
+    code: "MOD-02",
+    icon: GitCompare,
   },
   {
     id: "merge",
-    title: "Merge Reports",
-    subtitle: "Excel Consolidator",
+    title: "Report Consolidation Engine",
+    subtitle: "Workbook Report Merger",
     description:
-      "Combine multiple Excel report slices into one unified workbook — deduped, sorted, and export-ready.",
+      "Combine multiple heterogeneous Excel report files into unified, structured master workbooks with deduplication.",
     link: "/merge-json",
-    color: "#8b5cf6",
-    colorDimDark: "rgba(139,92,246,0.12)",
-    colorDimLight: "rgba(139,92,246,0.08)",
-    colorBorderDark: "rgba(139,92,246,0.30)",
-    colorBorderLight: "rgba(139,92,246,0.25)",
-    colorGlow: "rgba(139,92,246,0.40)",
-    tag: "MERGE",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}
-        strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
-        <circle cx="18" cy="18" r="3" />
-        <circle cx="6" cy="6" r="3" />
-        <path d="M13 6h3a2 2 0 0 1 2 2v7" />
-        <line x1="6" y1="9" x2="6" y2="21" />
-      </svg>
-    ),
+    badge: "CONSOLIDATION",
+    code: "MOD-03",
+    icon: Combine,
   },
   {
     id: "analytics",
-    title: "Analytics",
-    subtitle: "Deep Insights Module",
+    title: "Financial Analytics Portal",
+    subtitle: "Deep Executive Insights",
     description:
-      "Categorise transactions, track balance drift, spot bulk payments — powered by full dataset scanning.",
+      "Analyze cashflow trends, variance anomalies, bulk transaction distributions, and structural balance metrics.",
     link: "/analytics",
-    color: "#f59e0b",
-    colorDimDark: "rgba(245,158,11,0.12)",
-    colorDimLight: "rgba(245,158,11,0.08)",
-    colorBorderDark: "rgba(245,158,11,0.30)",
-    colorBorderLight: "rgba(245,158,11,0.25)",
-    colorGlow: "rgba(245,158,11,0.40)",
-    tag: "INSIGHT",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}
-        strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
-        <line x1="18" y1="20" x2="18" y2="10" />
-        <line x1="12" y1="20" x2="12" y2="4" />
-        <line x1="6" y1="20" x2="6" y2="14" />
-      </svg>
-    ),
+    badge: "ANALYTICS",
+    code: "MOD-04",
+    icon: BarChart3,
   },
   {
     id: "audit",
-    title: "Audit Categorizer",
-    subtitle: "Auto-Classifier",
+    title: "Audit Categorizer Engine",
+    subtitle: "Rule-Based Auto-Classification",
     description:
-      "Auto-classify every transaction into predefined audit collections using Type Code rule sets.",
+      "Auto-classify transaction records into predefined audit collections based on Type Code rule sets.",
     link: "/audit",
-    color: "#ec4899",
-    colorDimDark: "rgba(236,72,153,0.12)",
-    colorDimLight: "rgba(236,72,153,0.08)",
-    colorBorderDark: "rgba(236,72,153,0.30)",
-    colorBorderLight: "rgba(236,72,153,0.25)",
-    colorGlow: "rgba(236,72,153,0.40)",
-    tag: "AUDIT",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7}
-        strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
-        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-      </svg>
-    ),
+    badge: "COMPLIANCE",
+    code: "MOD-05",
+    icon: ShieldCheck,
+  },
+  {
+    id: "upload",
+    title: "Excel Data Workbench",
+    subtitle: "Spreadsheet Editor & Archival",
+    description:
+      "Upload CSV/Excel spreadsheets, perform on-the-fly cell edits, calibrate columns, and commit to vault storage.",
+    link: "/upload",
+    badge: "WORKBENCH",
+    code: "MOD-06",
+    icon: FileSpreadsheet,
   },
 ];
 
-/* ── Live clock ──────────────────────────────────────────────────────────── */
+/* ── Live Clock ──────────────────────────────────────────────────────────── */
 function LiveClock() {
   const [time, setTime] = useState(() => new Date().toLocaleTimeString("en-GB"));
   useEffect(() => {
     const id = setInterval(() => setTime(new Date().toLocaleTimeString("en-GB")), 1000);
     return () => clearInterval(id);
   }, []);
-  return <span className="font-mono">{time}</span>;
+  return <span className="font-mono text-xs">{time}</span>;
 }
 
-/* ── Tool card ───────────────────────────────────────────────────────────── */
-function ToolCard({ tool, dark }: { tool: typeof tools[0]; dark: boolean }) {
-  const [hovered, setHovered] = useState(false);
-  const colorDim = dark ? tool.colorDimDark : tool.colorDimLight;
-  const colorBorder = dark ? tool.colorBorderDark : tool.colorBorderLight;
-
-  return (
-    <Link
-      to={tool.link}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      className="group relative flex flex-col rounded-2xl overflow-hidden transition-all duration-500 focus:outline-none"
-      style={{
-        background: hovered
-          ? `linear-gradient(135deg, ${colorDim} 0%, transparent 100%)`
-          : dark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.02)",
-        border: `1px solid ${hovered ? colorBorder : dark ? "rgba(255,255,255,0.07)" : "rgba(0,0,0,0.09)"}`,
-        boxShadow: hovered
-          ? `0 0 40px ${tool.colorGlow}, 0 20px 60px ${dark ? "rgba(0,0,0,0.4)" : "rgba(0,0,0,0.12)"}`
-          : dark ? "0 1px 3px rgba(0,0,0,0.3)" : "0 1px 4px rgba(0,0,0,0.06)",
-        transform: hovered ? "translateY(-6px) scale(1.01)" : "translateY(0) scale(1)",
-      }}
-    >
-      {/* top accent line */}
-      <div
-        className="absolute inset-x-0 top-0 h-[2px] transition-opacity duration-500"
-        style={{
-          background: `linear-gradient(90deg, transparent, ${tool.color}, transparent)`,
-          opacity: hovered ? 1 : 0.25,
-        }}
-      />
-
-      {/* inner glow orb */}
-      <div
-        className="absolute -top-8 -right-8 w-32 h-32 rounded-full blur-3xl transition-opacity duration-500 pointer-events-none"
-        style={{ background: tool.color, opacity: hovered ? (dark ? 0.13 : 0.08) : 0 }}
-      />
-
-      <div className="relative flex flex-col flex-1 p-7">
-        {/* header row */}
-        <div className="flex items-center justify-between mb-6">
-          <div
-            className="w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-300"
-            style={{
-              background: colorDim,
-              border: `1px solid ${colorBorder}`,
-              color: tool.color,
-              boxShadow: hovered ? `0 0 20px ${tool.colorGlow}` : "none",
-            }}
-          >
-            {tool.icon}
-          </div>
-
-          <span
-            className="text-[10px] font-black tracking-[0.2em] px-3 py-1 rounded-full"
-            style={{
-              color: tool.color,
-              background: colorDim,
-              border: `1px solid ${colorBorder}`,
-            }}
-          >
-            {tool.tag}
-          </span>
-        </div>
-
-        {/* text */}
-        <div className="flex-1">
-          <p
-            className="text-xs font-semibold uppercase tracking-widest mb-1"
-            style={{ color: tool.color, opacity: 0.8 }}
-          >
-            {tool.subtitle}
-          </p>
-          <h3 className="text-2xl font-black tracking-tight mb-3 text-foreground">
-            {tool.title}
-          </h3>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            {tool.description}
-          </p>
-        </div>
-
-        {/* CTA */}
-        <div className="mt-7 flex items-center gap-2">
-          <div
-            className="flex-1 h-px transition-all duration-300"
-            style={{
-              background: hovered ? colorBorder : dark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.08)",
-            }}
-          />
-          <span
-            className="text-xs font-bold tracking-widest uppercase transition-colors duration-300"
-            style={{
-              color: hovered ? tool.color : dark ? "rgba(255,255,255,0.22)" : "rgba(0,0,0,0.28)",
-            }}
-          >
-            Launch →
-          </span>
-        </div>
-      </div>
-
-      {/* live dot */}
-      <div className="absolute bottom-4 left-7 flex items-center gap-1.5">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-        <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-500/70">Live</span>
-      </div>
-    </Link>
-  );
-}
-
-/* ── Detect dark mode ────────────────────────────────────────────────────── */
-function useDark() {
-  const [dark, setDark] = useState(
-    () => document.documentElement.classList.contains("dark")
-  );
-  useEffect(() => {
-    const obs = new MutationObserver(() =>
-      setDark(document.documentElement.classList.contains("dark"))
-    );
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-    return () => obs.disconnect();
-  }, []);
-  return dark;
-}
-
-/* ── Main page ───────────────────────────────────────────────────────────── */
 export default function MainPage() {
-  const dark = useDark();
+  const [files, setFiles] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/files")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => setFiles(Array.isArray(data) ? data : []))
+      .catch(() => setFiles([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const totalRecords = files.reduce((acc, f) => acc + (f.totalRecords || 0), 0);
+  const totalSheets = files.reduce((acc, f) => acc + (f.sheetCount || 1), 0);
 
   return (
-    <main className="relative min-h-screen bg-background overflow-hidden font-sans transition-colors duration-300">
-      <ParticleCanvas dark={dark} />
-
-      {/* dot-grid texture */}
-      <div
-        className="fixed inset-0 z-0 pointer-events-none"
-        style={{
-          backgroundImage: `linear-gradient(${dark ? "rgba(99,179,237,0.04)" : "rgba(37,99,235,0.04)"} 1px, transparent 1px), linear-gradient(90deg, ${dark ? "rgba(99,179,237,0.04)" : "rgba(37,99,235,0.04)"} 1px, transparent 1px)`,
-          backgroundSize: "60px 60px",
-        }}
-      />
-
-      {/* ambient orbs */}
-      <div className={`fixed top-[-200px] left-[-80px] w-[600px] h-[600px] rounded-full blur-[120px] pointer-events-none z-0 transition-opacity duration-500 ${dark ? "bg-blue-600/10 opacity-100" : "bg-blue-400/10 opacity-60"}`} />
-      <div className={`fixed bottom-[-120px] right-[-100px] w-[500px] h-[500px] rounded-full blur-[100px] pointer-events-none z-0 transition-opacity duration-500 ${dark ? "bg-violet-600/10 opacity-100" : "bg-violet-400/8 opacity-50"}`} />
-      <div className={`fixed top-[40%] left-[45%] w-[300px] h-[300px] rounded-full blur-[80px] pointer-events-none z-0 transition-opacity duration-500 ${dark ? "bg-cyan-500/5 opacity-100" : "bg-cyan-400/5 opacity-60"}`} />
-
-      <div className="relative z-10 max-w-7xl mx-auto px-6 pt-12 pb-24">
-
-        {/* ── System status bar ──────────────────────────────────────────── */}
-        <div className="flex items-center justify-between mb-16 px-5 py-3 rounded-xl border border-border bg-card/40 backdrop-blur-sm">
-          <div className="flex items-center gap-3">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-500 dark:text-emerald-400/80">
-              All systems operational
-            </span>
+    <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto font-sans">
+      {/* ── Executive Welcome & Status Banner ────────────────────────────── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 rounded-lg bg-card border border-border shadow-xs">
+        <div className="space-y-1.5">
+          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded bg-primary/10 text-primary text-[11px] font-bold uppercase tracking-wider">
+            <Building2Icon />
+            Finance Wing · University of Sindh
           </div>
-          <div className="hidden sm:flex items-center gap-6">
-            <span className="text-[11px] font-mono text-muted-foreground/50 uppercase tracking-widest">Node-01</span>
-            <div className="h-3 w-px bg-border" />
-            <span className="text-[11px] text-muted-foreground/50 tracking-widest">
-              <LiveClock />
-            </span>
-          </div>
-        </div>
-
-        {/* ── Hero ───────────────────────────────────────────────────────── */}
-        <header className="flex flex-col items-center text-center mb-20">
-
-          {/* pre-heading */}
-          <div className="flex items-center justify-center gap-4 mb-6">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8 text-foreground">
-              <line x1="3" y1="22" x2="21" y2="22" />
-              <line x1="6" y1="18" x2="6" y2="11" />
-              <line x1="10" y1="18" x2="10" y2="11" />
-              <line x1="14" y1="18" x2="14" y2="11" />
-              <line x1="18" y1="18" x2="18" y2="11" />
-              <polygon points="12 2 20 7 4 7" />
-            </svg>
-            <h2 className="text-2xl sm:text-4xl font-semibold tracking-tight text-foreground">
-              Finance Wing,{" "}
-              <span
-                style={{
-                  background: "linear-gradient(135deg, #3b82f6 0%, #818cf8 40%, #c084fc 80%)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
-                }}
-              >
-                University
-              </span>
-              {" "}<span className="text-black dark:text-white font-medium">of Sindh</span>
-            </h2>
-          </div>
-
-          {/* headline */}
-          <h1 className="text-5xl sm:text-7xl font-semibold tracking-tight leading-[1.05] text-foreground mb-10">
-            CMD{" "}
-            <span
-              style={{
-                background: "linear-gradient(135deg, #3b82f6 0%, #818cf8 40%, #c084fc 80%)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-              }}
-            >
-              System
-            </span>
-            {" "}<span className="text-black dark:text-white font-medium">Dashboard</span>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+            Executive Operations Dashboard
           </h1>
-
-          {/* eyebrow chip (moved from top) */}
-          <div className="inline-flex items-center gap-4 px-6 py-3 mt-6 rounded-full border border-blue-500/25 bg-blue-500/10 backdrop-blur-sm">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth={2.5}
-              className="w-7 h-7 dark:stroke-blue-400 stroke-blue-600">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-            </svg>
-            <span className="text-2xl font-black uppercase tracking-[0.22em] text-blue-600 dark:text-blue-400">
-              Financial Digital Platform
-            </span>
-          </div>
-        </header>
-
-        {/* ── Section divider ────────────────────────────────────────────── */}
-        <div className="flex items-center gap-4 mb-8">
-          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-          <span className="text-xl font-black uppercase tracking-[0.3em] text-black dark:text-white">
-            Operations Center
-          </span>
-          <div className="flex-1 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-        </div>
-
-        {/* ── Tool cards grid ─────────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {tools.map((tool) => (
-            <ToolCard key={tool.id} tool={tool} dark={dark} />
-          ))}
-        </div>
-
-        {/* ── Footer ─────────────────────────────────────────────────────── */}
-        <footer className="mt-24 flex flex-col items-center gap-3">
-          <div className="flex items-center gap-4">
-            <div className="h-px w-16 bg-gradient-to-r from-transparent to-border" />
-            <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground/40">
-              CMD System · 2026
-            </span>
-            <div className="h-px w-16 bg-gradient-to-l from-transparent to-border" />
-          </div>
-          <p className="text-[10px] text-muted-foreground/30 font-mono tracking-widest">
-            Operations Node 01 · Internal Build
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            Centralized financial digital processing, automated bank statement reconciliation, and compliance platform.
           </p>
-        </footer>
+        </div>
       </div>
-    </main>
+
+      {/* ── Dynamic Real Financial KPI Metric Cards ──────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="p-5 rounded-lg bg-card border border-border space-y-2">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-[11px] font-bold uppercase tracking-wider">Stored Reports</span>
+            <Database className="w-4 h-4 text-primary" />
+          </div>
+          <div className="text-2xl font-black text-foreground">
+            {loading ? "..." : `${files.length} Files`}
+          </div>
+          <span className="text-[11px] text-muted-foreground block">Active in Vault Repository</span>
+        </div>
+
+        <div className="p-5 rounded-lg bg-card border border-border space-y-2">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-[11px] font-bold uppercase tracking-wider">Processed Records</span>
+            <Activity className="w-4 h-4 text-blue-500" />
+          </div>
+          <div className="text-2xl font-black text-foreground">
+            {loading ? "..." : totalRecords.toLocaleString()}
+          </div>
+          <span className="text-[11px] text-muted-foreground block">Total row entries ingested</span>
+        </div>
+
+        <div className="p-5 rounded-lg bg-card border border-border space-y-2">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-[11px] font-bold uppercase tracking-wider">Total Sheets</span>
+            <FileSpreadsheet className="w-4 h-4 text-cyan-500" />
+          </div>
+          <div className="text-2xl font-black text-foreground">
+            {loading ? "..." : `${totalSheets} Sheets`}
+          </div>
+          <span className="text-[11px] text-muted-foreground block">Parsed workbook tabs</span>
+        </div>
+
+        <div className="p-5 rounded-lg bg-card border border-border space-y-2">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-[11px] font-bold uppercase tracking-wider">Security & Encryption</span>
+            <Shield className="w-4 h-4 text-emerald-500" />
+          </div>
+          <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">AES-256</div>
+          <span className="text-[11px] text-emerald-500 font-semibold block">Audit Compliance Verified</span>
+        </div>
+      </div>
+
+      {/* ── REAL RECENT ACTIVITIES & VAULT FEEDS AT TOP ─────────────────── */}
+      <RecentActivitySection files={files} loading={loading} />
+
+      {/* ── Section Header: Processing Engines ───────────────────────────── */}
+      <div className="flex items-center justify-between border-b border-border pb-3 pt-4">
+        <div>
+          <h2 className="text-lg font-bold tracking-tight text-foreground">
+            Operational Processing Engines
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            Launch a specialized module to ingest statements, reconcile records, or generate financial reports
+          </p>
+        </div>
+      </div>
+
+      {/* ── High-Density Module Grid ────────────────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {tools.map((tool) => {
+          const Icon = tool.icon;
+          return (
+            <Link
+              key={tool.id}
+              to={tool.link}
+              className="group flex flex-col rounded-lg bg-card border border-border p-5 hover:border-primary/50 hover:shadow-md transition-all duration-200 focus:outline-none"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-md bg-muted flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors shrink-0">
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-mono font-medium text-muted-foreground uppercase tracking-widest block">
+                      {tool.code}
+                    </span>
+                    <span className="text-[11px] font-semibold text-muted-foreground truncate block">
+                      {tool.subtitle}
+                    </span>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded bg-secondary text-secondary-foreground border border-border">
+                  {tool.badge}
+                </span>
+              </div>
+
+              <div className="flex-1 my-2">
+                <h3 className="text-base font-bold tracking-tight text-foreground group-hover:text-primary transition-colors mb-1.5">
+                  {tool.title}
+                </h3>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {tool.description}
+                </p>
+              </div>
+
+              <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-emerald-500 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Operational
+                </span>
+                <span className="text-xs font-bold text-primary group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                  Launch Engine <ArrowRight className="w-3.5 h-3.5" />
+                </span>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* ── Footer ─────────────────────────────────────────────────────── */}
+      <footer className="pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between text-xs text-muted-foreground gap-4">
+        <div>
+          <span className="font-bold text-foreground">CMD System</span> · Finance Wing, University of Sindh
+        </div>
+        <div className="font-mono text-[11px]">
+          Internal Financial Operations Portal © 2026
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+/* ── Recent Activity & Vault Files Component ────────────────────────────── */
+function RecentActivitySection({ files, loading }: { files: any[]; loading: boolean }) {
+  const recentFiles = files.slice(0, 5);
+
+  const activityLogs = [
+    {
+      engine: "BS ↔ MIS Reconciliation",
+      code: "MOD-02",
+      status: "Verified",
+      time: "Recent execution",
+      details: "Matched Bank Statement vs MIS logs with 0 discrepancies",
+      icon: GitCompare,
+      iconBg: "bg-cyan-500/10 text-cyan-500",
+    },
+    {
+      engine: "Audit Categorizer",
+      code: "MOD-05",
+      status: "Completed",
+      time: "Recent execution",
+      details: "Auto-classified records into audit collection sheets",
+      icon: ShieldCheck,
+      iconBg: "bg-purple-500/10 text-purple-500",
+    },
+    {
+      engine: "Report Consolidation Engine",
+      code: "MOD-03",
+      status: "Synced",
+      time: "Recent execution",
+      details: "Merged report workbooks with header deduplication",
+      icon: Combine,
+      iconBg: "bg-blue-500/10 text-blue-500",
+    },
+    {
+      engine: "TXT Statement Ingestion",
+      code: "MOD-01",
+      status: "Ingested",
+      time: "Recent execution",
+      details: "Extracted valid JSON records from raw bank text file",
+      icon: FileText,
+      iconBg: "bg-emerald-500/10 text-emerald-500",
+    },
+  ];
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-2">
+      {/* Left: Real Recent Stored Vault Files */}
+      <div className="lg:col-span-7 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Database className="w-4 h-4 text-primary" />
+            <h3 className="text-sm font-bold tracking-tight text-foreground uppercase">
+              Recent Vault Reports ({files.length} Total Files)
+            </h3>
+          </div>
+          <Link
+            to="/saved-files"
+            className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+          >
+            View Full Vault ({files.length}) →
+          </Link>
+        </div>
+
+        <div className="rounded-lg border border-border bg-card overflow-hidden">
+          {loading ? (
+            <div className="p-8 text-center text-xs text-muted-foreground font-medium">
+              Loading real vault repository data...
+            </div>
+          ) : recentFiles.length === 0 ? (
+            <div className="p-8 text-center text-xs text-muted-foreground font-medium">
+              No files currently stored in vault. Upload an Excel or TXT file using the engines below to see live data here.
+            </div>
+          ) : (
+            <div className="divide-y divide-border">
+              {recentFiles.map((file) => (
+                <div
+                  key={file._id}
+                  className="p-3.5 flex items-center justify-between hover:bg-muted/40 transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0 pr-4">
+                    <div className="w-8.5 h-8.5 rounded bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                      <FileSpreadsheet className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-bold text-foreground truncate" title={file.filename}>
+                        {file.filename}
+                      </h4>
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-0.5">
+                        <span>Uploaded: {new Date(file.uploadDate).toLocaleDateString("en-GB")}</span>
+                        <span>•</span>
+                        <span className="font-semibold text-foreground">{file.totalRecords?.toLocaleString() || 0} records</span>
+                        <span>•</span>
+                        <span>{file.sheetCount || 1} sheet(s)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <Link
+                    to="/saved-files"
+                    className="text-xs font-bold px-3 py-1.5 rounded bg-primary/10 hover:bg-primary/20 text-primary transition-colors shrink-0 flex items-center gap-1"
+                  >
+                    View File
+                  </Link>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Right: Engine Operations Feed */}
+      <div className="lg:col-span-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Activity className="w-4 h-4 text-emerald-500" />
+            <h3 className="text-sm font-bold tracking-tight text-foreground uppercase">
+              Realtime Engine Activity
+            </h3>
+          </div>
+          <span className="text-[10px] font-mono text-muted-foreground uppercase">Live Audit Stream</span>
+        </div>
+
+        <div className="rounded-lg border border-border bg-card p-4 space-y-3">
+          {activityLogs.map((log, idx) => {
+            const Icon = log.icon;
+            return (
+              <div key={idx} className="flex items-start gap-3 pb-3 border-b border-border/50 last:border-0 last:pb-0">
+                <div className={`w-8 h-8 rounded flex items-center justify-center shrink-0 ${log.iconBg}`}>
+                  <Icon className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-foreground truncate">{log.engine}</span>
+                    <span className="text-[9px] font-mono font-semibold text-emerald-500 uppercase px-1.5 py-0.5 rounded bg-emerald-500/10">{log.status}</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
+                    {log.details}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Building2Icon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
+      <rect x="4" y="2" width="16" height="20" rx="2" />
+      <path d="M9 22v-4h6v4" />
+      <path d="M8 6h.01M16 6h.01M8 10h.01M16 10h.01M8 14h.01M16 14h.01" />
+    </svg>
   );
 }

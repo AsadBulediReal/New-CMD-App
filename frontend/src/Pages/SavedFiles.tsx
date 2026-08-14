@@ -445,42 +445,48 @@ export default function SavedFiles() {
   const hasActiveFilters = dateFrom || dateTo;
 
   return (
-    <main className="min-h-screen bg-background relative overflow-hidden transition-colors duration-300">
-      {/* Ambient background */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full bg-blue-500/5 blur-[120px]" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-cyan-500/5 blur-[90px]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] rounded-full bg-indigo-500/3 blur-[100px]" />
-      </div>
+    <main className="min-h-screen bg-background text-foreground relative overflow-hidden font-sans">
+      {/* Corporate Grid texture background */}
+      <div
+        className="fixed inset-0 z-0 pointer-events-none opacity-40 dark:opacity-20"
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, currentColor 1px, transparent 1px),
+            linear-gradient(to bottom, currentColor 1px, transparent 1px)
+          `,
+          backgroundSize: "40px 40px",
+          color: "var(--border)",
+        }}
+      />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-12">
+      <div className="relative z-10 max-w-7xl mx-auto px-6 py-10">
 
-        {/* ── Header ── */}
-        <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+        {/* ── Corporate Header ── */}
+        <header className="mb-8 border-b border-border pb-6 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-500 text-xs font-bold uppercase tracking-widest mb-2">
-              <FileSpreadsheet className="w-3 h-3" />
-              Vault
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-widest">
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              Finance Wing · Vault Storage
             </div>
-            <h1 className="text-4xl font-extrabold tracking-tight text-foreground">
-              Saved <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-cyan-400">Files</span>
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
+              Document & Report Vault
             </h1>
-            <p className="text-muted-foreground font-medium">
-              {loading ? "Loading…" : `${files.length} document${files.length !== 1 ? "s" : ""} stored in the vault`}
+            <p className="text-xs sm:text-sm text-muted-foreground font-medium">
+              {loading ? "Accessing vault repository…" : `Repository storing ${files.length} verified financial record set${files.length !== 1 ? "s" : ""}`}
             </p>
           </div>
           <div className="flex items-center gap-3 self-start md:self-auto">
             <Button 
                variant="outline" 
                onClick={() => setShowHelp(true)}
-               className="border-blue-500/30 text-blue-600 hover:bg-blue-500/10 dark:text-blue-400 gap-2 h-10 px-4 rounded-xl font-bold"
+               className="border-border text-foreground hover:bg-muted gap-2 h-9 px-3.5 rounded-md font-semibold text-xs"
             >
-              <HelpCircle className="w-4 h-4" />
-              Features & Tips
+              <HelpCircle className="w-4 h-4 text-primary" />
+              Vault Guidelines
             </Button>
-            <Button asChild variant="ghost" className="text-muted-foreground hover:text-foreground">
-              <Link to="/" className="flex items-center gap-2">
-                <ArrowLeft className="w-4 h-4" /> Back to Tools
+            <Button asChild variant="ghost" className="text-muted-foreground hover:text-foreground h-9 text-xs font-semibold">
+              <Link to="/" className="flex items-center gap-1.5">
+                <ArrowLeft className="w-4 h-4" /> Back to Dashboard
               </Link>
             </Button>
           </div>

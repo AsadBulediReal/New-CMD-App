@@ -5,26 +5,37 @@ import { Button } from "../components/ui/button";
 
 export default function UploadeFile() {
   return (
-    <main className="min-h-screen bg-background relative overflow-hidden transition-colors duration-300">
-      {/* Background ambient effects */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-blue-500/5 blur-[100px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[300px] h-[300px] rounded-full bg-cyan-500/5 blur-[80px]" />
-      </div>
+    <main className="min-h-screen bg-background text-foreground relative overflow-hidden font-sans">
+      {/* Corporate Grid texture background */}
+      <div
+        className="fixed inset-0 z-0 pointer-events-none opacity-40 dark:opacity-20"
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, currentColor 1px, transparent 1px),
+            linear-gradient(to bottom, currentColor 1px, transparent 1px)
+          `,
+          backgroundSize: "40px 40px",
+          color: "var(--border)",
+        }}
+      />
 
-      <div className="relative z-1 max-w-7xl mx-auto px-6 py-12 space-y-8">
-        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-          <div className="space-y-1">
-            <h1 className="text-4xl font-extrabold tracking-tight text-foreground">
-              Data <span className="text-transparent bg-clip-text bg-linear-to-r from-blue-600 to-cyan-500">Editor</span> Workspace
+      <div className="relative z-10 max-w-7xl mx-auto px-6 py-10 space-y-8">
+        <header className="border-b border-border pb-6 flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-widest">
+              <Database className="w-3.5 h-3.5" />
+              Dataset Workspace · Excel & CSV Editor
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
+              Excel Data Workbench
             </h1>
-            <p className="text-muted-foreground font-medium max-w-2xl">
-              Upload CSV or Excel files, perform on-the-fly edits, and manage structured datasets before archival.
+            <p className="text-xs sm:text-sm text-muted-foreground font-medium max-w-2xl">
+              Upload CSV or Excel spreadsheets, edit values on-the-fly, calibrate columns, and commit structured datasets to the vault.
             </p>
           </div>
-          <Button asChild variant="ghost" className="text-muted-foreground hover:text-foreground">
-            <Link to="/" className="flex items-center gap-2">
-              <ArrowLeft className="w-4 h-4" /> Back to Tools
+          <Button asChild variant="ghost" className="text-muted-foreground hover:text-foreground h-9 text-xs font-semibold">
+            <Link to="/" className="flex items-center gap-1.5">
+              <ArrowLeft className="w-4 h-4" /> Back to Dashboard
             </Link>
           </Button>
         </header>

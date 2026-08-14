@@ -7,32 +7,34 @@ import Analytics from "./Pages/Analytics";
 import Reconcile from "./Pages/Reconcile";
 import AuditTool from "./Pages/AuditTool";
 import MergeJson from "./Pages/MergeJson";
-import Navbar from "./components/Navbar";
+import { Sidebar } from "./components/Sidebar";
+import { Header } from "./components/Header";
 import ScrollToTop from "./components/shared/scroll-to-top";
 import { Toaster } from "./components/ui/sonner";
-
 import { BackendGuard } from "./components/BackendGuard";
 
 function App() {
   return (
-    <div className="min-h-screen bg-transparent flex flex-col">
+    <div className="min-h-screen bg-background text-foreground flex w-full font-sans">
       <ScrollToTop />
       <Toaster position="top-center" expand={false} richColors />
-      <Navbar />
-      <div className="flex-1">
-        <BackendGuard>
-          <Routes>
-            <Route path="/" element={<MainPage />} />
-            <Route path="/upload" element={<UploadeFile />} />
-            <Route path="/upload-txt" element={<UploadTxtFile />} />
-            <Route path="/saved-files" element={<SavedFiles />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/reconcile" element={<Reconcile />} />
-            <Route path="/audit" element={<AuditTool />} />
-            <Route path="/merge-json" element={<MergeJson />} />
-            <Route path="/about" element={<div>About Page</div>} />
-          </Routes>
-        </BackendGuard>
+      <Sidebar />
+      <div className="flex-1 flex flex-col min-w-0">
+        <Header />
+        <div className="flex-1">
+          <BackendGuard>
+            <Routes>
+              <Route path="/" element={<MainPage />} />
+              <Route path="/upload" element={<UploadeFile />} />
+              <Route path="/upload-txt" element={<UploadTxtFile />} />
+              <Route path="/saved-files" element={<SavedFiles />} />
+              <Route path="/analytics" element={<Analytics />} />
+              <Route path="/reconcile" element={<Reconcile />} />
+              <Route path="/audit" element={<AuditTool />} />
+              <Route path="/merge-json" element={<MergeJson />} />
+            </Routes>
+          </BackendGuard>
+        </div>
       </div>
     </div>
   );
