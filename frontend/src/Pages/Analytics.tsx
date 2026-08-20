@@ -26,7 +26,7 @@ import {
 import { Link } from "react-router";
 import { HelpDialog } from "../components/shared/help-dialog";
 import { AdvancedFileSelector, type DateFilter, type StoredFileMeta } from "../components/shared/advanced-file-selector";
-import { getApiUrl } from "../utils/api";
+import { getApiUrl, saveFileToDatabase } from "../utils/api";
 
 // ── Required analytics fields ──────────────────────────────────────────────
 const REQUIRED_FIELDS: { key: string; label: string; description: string }[] = [
@@ -221,15 +221,10 @@ export default function Analytics() {
     const compressedSheets = compressSheetData(sheets);
 
     try {
-      const res = await fetch(getApiUrl("/api/files"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename: newFilename.trim(), sheets: compressedSheets }),
+      await saveFileToDatabase({
+        filename: newFilename.trim(),
+        sheets: compressedSheets,
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `HTTP ${res.status}`);
-      }
       setSaveMessage("✓ Saved successfully!");
       fetchFiles();
     } catch (e) {

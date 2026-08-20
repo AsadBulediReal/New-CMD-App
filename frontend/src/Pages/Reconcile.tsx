@@ -22,7 +22,7 @@ import {
 import { Link } from "react-router";
 import { HelpDialog } from "../components/shared/help-dialog";
 import { AdvancedFileSelector, type DateFilter, type StoredFileMeta } from "../components/shared/advanced-file-selector";
-import { getApiUrl } from "../utils/api";
+import { getApiUrl, saveFileToDatabase } from "../utils/api";
 
 // ── Required fields for BS and MIS ───────────────────────────────────────────
 const BS_REQUIRED_FIELDS = [
@@ -247,15 +247,7 @@ export default function Reconcile() {
     setIsSaving(true);
     setSaveMessage("");
     try {
-      const res = await fetch(getApiUrl("/api/files"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename: newFilename.trim(), sheets }),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `HTTP ${res.status}`);
-      }
+      await saveFileToDatabase({ filename: newFilename.trim(), sheets });
       setSaveMessage("✓ Reconciliation saved!");
       fetchFiles();
     } catch (e) {

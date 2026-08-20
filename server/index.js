@@ -559,6 +559,126 @@ app.post("/api/files", async (req, res) => {
   }
 });
 
+// 1.1 Init chunked file save (bypasses Vercel 4.5MB payload limit)
+app.post("/api/files/init", async (req, res) => {
+  try {
+    const { filename, sheets } = req.body;
+    if (!filename) return res.status(400).json({ error: "Filename is required" });
+
+    const existingFile = await StoredFile.findOne({ filename: filename.trim() });
+    if (existingFile) {
+      return res.status(400).json({ error: "File already saved" });
+    }
+
+    const initialSheets = (sheets || []).map(s => ({
+      name: s.name,
+      headers: s.headers || [],
+      rows: []
+    }));
+
+    const newFile = new StoredFile({
+      filename: filename.trim(),
+      headers: initialSheets[0]?.headers || [],
+      hasChunks: true,
+      sheets: initialSheets,
+      rows: []
+    });
+
+    await newFile.save();
+    res.status(201).json({ fileId: newFile._id });
+  } catch (error) {
+    console.error("Error initializing chunked file upload:", error);
+    res.status(500).json({ error: "Failed to initialize file upload" });
+  }
+});
+
+// 1.2 Save a chunk of rows for a file
+app.post("/api/files/:id/chunk", async (req, res) => {
+  try {
+    const { sheetName, chunkIndex, rows } = req.body;
+    const fileId = req.params.id;
+
+    if (!mongoose.Types.ObjectId.isValid(fileId)) {
+      return res.status(400).json({ error: "Invalid file ID" });
+    }
+
+    await new FileChunk({
+      fileId,
+      sheetName,
+      chunkIndex,
+      rows: rows || []
+    }).save();
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error("Error saving file chunk:", error);
+    res.status(500).json({ error: "Failed to save file chunk" });
+  }
+});
+
+// 1.3 Finalize chunked file save (computes metadata & date ranges)
+app.post("/api/files/:id/finalize", async (req, res) => {
+  try {
+    const fileId = req.params.id;
+    const file = await getFileWithChunks(fileId);
+    if (!file) return res.status(404).json({ error: "File not found" });
+
+    const sheets = file.sheets && file.sheets.length > 0 ? file.sheets : (
+      file.rows && file.rows.length > 0
+        ? [{ name: "Sheet1", headers: file.headers || [], rows: file.rows }]
+        : []
+    );
+
+    const castedSheets = sheets.map(s => detectAndCastSheet(s));
+    const { start: minDate, end: maxDate } = extractDateRange(castedSheets);
+    const { totalRecords, columnCount, sheetCount, sheetMeta, financialSummary } = extractMetadata(castedSheets);
+
+    await StoredFile.updateOne(
+      { _id: fileId },
+      {
+        $set: {
+          recordDateRange: { start: minDate, end: maxDate },
+          totalRecords,
+          columnCount,
+          sheetCount,
+          sheetMeta,
+          financialSummary,
+          sheets: castedSheets.map(s => ({
+            name: s.name,
+            headers: s.headers,
+            rows: []
+          }))
+        }
+      }
+    );
+
+    // Delete existing FileChunks and re-write with casted values
+    await FileChunk.deleteMany({ fileId });
+
+    const CHUNK_SIZE = 5000;
+    const chunkPromises = [];
+    let chunkIndex = 0;
+
+    for (const sheet of castedSheets) {
+      const rows = sheet.rows || [];
+      for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
+        chunkPromises.push(new FileChunk({
+          fileId,
+          sheetName: sheet.name,
+          chunkIndex: chunkIndex++,
+          rows: rows.slice(i, i + CHUNK_SIZE)
+        }).save());
+      }
+    }
+
+    await Promise.all(chunkPromises);
+    res.status(200).json({ message: "File successfully saved", fileId });
+  } catch (error) {
+    console.error("Error finalizing file upload:", error);
+    res.status(500).json({ error: "Failed to finalize file upload" });
+  }
+});
+
 // 1.5 Parse TXT content string to JSON format
 app.post("/api/parse-txt", (req, res) => {
   try {
