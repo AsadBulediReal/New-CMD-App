@@ -109,34 +109,43 @@ export function FileUpload({
 
     if (password) {
       try {
-        let binary = '';
-        const bytes = new Uint8Array(arrayBuffer);
-        const len = bytes.byteLength;
-        for (let i = 0; i < len; i++) {
-          binary += String.fromCharCode(bytes[i]);
-        }
-        const base64 = btoa(binary);
+        // Fast native base64 conversion using FileReader
+        const base64: string = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const result = reader.result as string;
+            resolve(result.split(",")[1] || "");
+          };
+          reader.onerror = () => reject(new Error("Failed to encode file data"));
+          reader.readAsDataURL(file);
+        });
 
         let decryptedBase64 = '';
-        const CHUNK_SIZE = 2 * 1024 * 1024; // 2MB chunks (safe under Vercel 4.5MB limit)
+        const CHUNK_SIZE = 3 * 1024 * 1024; // 3MB chunks (~3MB Base64 per request, fast & safe under Vercel 4.5MB limit)
 
         if (base64.length > CHUNK_SIZE) {
           const uploadId = `dec_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
           const totalChunks = Math.ceil(base64.length / CHUNK_SIZE);
 
+          // Upload all chunks in parallel for maximum speed
+          const uploadPromises = [];
           for (let i = 0; i < totalChunks; i++) {
             const chunkData = base64.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-            const chunkRes = await fetch(getApiUrl("/api/files/decrypt-excel-chunk"), {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ uploadId, chunkIndex: i, totalChunks, chunkData }),
-            });
-
-            if (!chunkRes.ok) {
-              const errJson = await chunkRes.json().catch(() => ({}));
-              throw new Error(errJson.error || `Failed to upload chunk ${i + 1} of ${totalChunks}`);
-            }
+            uploadPromises.push(
+              fetch(getApiUrl("/api/files/decrypt-excel-chunk"), {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ uploadId, chunkIndex: i, totalChunks, chunkData }),
+              }).then(async (chunkRes) => {
+                if (!chunkRes.ok) {
+                  const errJson = await chunkRes.json().catch(() => ({}));
+                  throw new Error(errJson.error || `Failed to upload chunk ${i + 1} of ${totalChunks}`);
+                }
+              })
+            );
           }
+
+          await Promise.all(uploadPromises);
 
           const finishRes = await fetch(getApiUrl("/api/files/decrypt-excel-finish"), {
             method: "POST",
@@ -164,8 +173,9 @@ export function FileUpload({
         }
 
         const decBinary = atob(decryptedBase64);
-        const decBytes = new Uint8Array(decBinary.length);
-        for (let i = 0; i < decBinary.length; i++) {
+        const len = decBinary.length;
+        const decBytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
           decBytes[i] = decBinary.charCodeAt(i);
         }
         dataBuffer = decBytes;
