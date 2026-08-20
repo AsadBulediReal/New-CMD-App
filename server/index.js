@@ -1,4 +1,4 @@
-     require("dotenv").config();
+require("dotenv").config();
 const express = require("express");
 const nodemailer = require("nodemailer");
 const mongoose = require("mongoose");
@@ -6,29 +6,13 @@ const cors = require("cors");
 const StoredFile = require("./models/StoredFile");
 const FileChunk = require("./models/FileChunk");
 
-const allowedFrontend = process.env.FRONTEND_URL || "http://localhost:5173,http://localhost:3000";
+const allowedFrontend = process.env.FRONTEND_URL || "http://localhost:5173";
 
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin) return callback(null, true);
-    
-    // Check if origin matches allowed FRONTEND_URL or its subdomains
-    const isAllowed = allowedFrontend.split(",").some((allowed) => {
-      const clean = allowed.trim().replace(/\/+$/, "");
-      if (clean === "*" || clean === origin) return true;
-      try {
-        const allowedHost = new URL(clean).hostname;
-        const incomingHost = new URL(origin).hostname;
-        return incomingHost === allowedHost || incomingHost.endsWith(`.${allowedHost}`);
-      } catch {
-        return false;
-      }
-    });
-
-    if (isAllowed) return callback(null, true);
-    callback(new Error(`CORS blocked for origin: ${origin}`));
-  },
-  credentials: true
+  origin: allowedFrontend,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
 }));
 
 app.use(express.json({ limit: '500mb' })); // Increase limit for massive payloads since DB chunks resolve 16MB BSON barrier
@@ -92,7 +76,7 @@ const decompressRow = (row, headers) => {
 };
 
 // Shared: parse a cell value that might be a date string, return Date or null
-const MONTH_MAP = { jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11 };
+const MONTH_MAP = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
 function parseDateFromCell(val) {
   if (!val) return null;
   let dVal = String(val).trim();
@@ -113,7 +97,7 @@ function parseDateFromCell(val) {
   if (slashDate) {
     const p1 = parseInt(slashDate[1], 10);
     const p2 = parseInt(slashDate[2], 10);
-    let yr  = parseInt(slashDate[3], 10);
+    let yr = parseInt(slashDate[3], 10);
     if (yr < 100) yr += 2000;
     if (yr >= 1900 && yr <= 2100) {
       // p1 > 12 → unambiguously DD/MM/YYYY (e.g. "24/04/2026")
@@ -151,7 +135,7 @@ function detectColumnTypes(headers, rows) {
       if (val === undefined || val === null || String(val).trim() === "") {
         continue;
       }
-      
+
       hasVal = true;
       const sVal = String(val).trim();
 
@@ -284,15 +268,15 @@ function extractMetadata(sheets) {
     totalRecords += recCount;
     if (i === 0) columnCount = hdrs.length;
 
-    sheetMeta.push({ 
-      name: sheet.name || `Sheet ${i+1}`, 
-      recordCount: recCount, 
+    sheetMeta.push({
+      name: sheet.name || `Sheet ${i + 1}`,
+      recordCount: recCount,
       columnCount: hdrs.length,
       columnTypes: sheet.columnTypes || []
     });
 
     // Detect debit / credit columns (case-insensitive)
-    const debitCol  = hdrs.find(h => /^debit$/i.test(h.trim()));
+    const debitCol = hdrs.find(h => /^debit$/i.test(h.trim()));
     const creditCol = hdrs.find(h => /^credit$/i.test(h.trim()));
 
     if (debitCol || creditCol) {
@@ -314,9 +298,9 @@ function extractMetadata(sheets) {
   }
 
   const financialSummary = hasFinancialData ? {
-    totalDebit:  Math.round(totalDebit  * 100) / 100,
+    totalDebit: Math.round(totalDebit * 100) / 100,
     totalCredit: Math.round(totalCredit * 100) / 100,
-    netFlow:     Math.round((totalCredit - totalDebit) * 100) / 100,
+    netFlow: Math.round((totalCredit - totalDebit) * 100) / 100,
     debitCount,
     creditCount,
     hasFinancialData: true,
@@ -329,10 +313,10 @@ function extractMetadata(sheets) {
 function applyDateFilter(rows, headers, dateFilter) {
   if (!dateFilter || !dateFilter.column || (!dateFilter.start && !dateFilter.end)) return rows;
   const colIdx = headers.indexOf(dateFilter.column);
-  
+
   // If column doesn't exist, just return all rows
   if (colIdx === -1 && !headers.includes(dateFilter.column)) return rows;
-  
+
   const start = dateFilter.start ? new Date(dateFilter.start) : null;
   const end = dateFilter.end ? new Date(dateFilter.end) : null;
   if (start) start.setHours(0, 0, 0, 0);
@@ -357,10 +341,10 @@ async function getFileWithChunks(id) {
 
   const file = await StoredFile.findById(id).lean();
   if (!file) return null;
-  
+
   if (file.hasChunks) {
     const chunks = await FileChunk.find({ fileId: id }).sort({ chunkIndex: 1 }).lean();
-    
+
     // Build a mutable map of sheets so we can push rows into them
     if (!file.sheets) file.sheets = [];
     if (!file.rows) file.rows = [];
@@ -393,7 +377,7 @@ async function getFileWithChunks(id) {
 app.post("/api/files", async (req, res) => {
   try {
     const { filename, headers, rows, sheets } = req.body;
-    
+
     if (!filename) {
       return res.status(400).json({ error: "Filename is required" });
     }
@@ -406,7 +390,7 @@ app.post("/api/files", async (req, res) => {
     let primaryHeaders = headers || [];
     let primaryRows = rows || [];
     let finalSheets = (sheets && sheets.length > 0) ? sheets : [];
-    
+
     // Normalize: Ensure sheets always has at least one entry for consistency
     if (finalSheets.length > 0) {
       if (primaryHeaders.length === 0) primaryHeaders = finalSheets[0].headers || [];
@@ -480,7 +464,7 @@ app.post("/api/parse-txt", (req, res) => {
     if (!textContent) {
       return res.status(400).json({ error: "Text content is required" });
     }
-    
+
     const parsedData = parse_txt_content_to_json(textContent);
     res.status(200).json(parsedData);
   } catch (error) {
@@ -576,7 +560,7 @@ app.get("/api/files/:id", async (req, res) => {
   try {
     const file = await getFileWithChunks(req.params.id);
     if (!file) return res.status(404).json({ error: "File not found" });
-    
+
     res.status(200).json(file);
   } catch (error) {
     console.error("Error fetching file details:", error);
@@ -604,7 +588,7 @@ app.patch("/api/files/:id/rename", async (req, res) => {
   try {
     const { newFilename } = req.body;
     if (!newFilename) return res.status(400).json({ error: "newFilename is required" });
-    
+
     const trimmedName = newFilename.trim();
     const existingFile = await StoredFile.findOne({ filename: trimmedName });
     if (existingFile) {
@@ -669,17 +653,19 @@ app.post("/api/files/recompute-meta", async (req, res) => {
         const castedSheets = sheets.map(sheet => detectAndCastSheet(sheet));
         const { start, end } = extractDateRange(castedSheets);
         const { totalRecords, columnCount, sheetCount, sheetMeta, financialSummary } = extractMetadata(castedSheets);
-        
+
         await StoredFile.updateOne(
           { _id: meta._id },
-          { $set: { 
-            recordDateRange: { start, end },
-            totalRecords,
-            columnCount,
-            sheetCount,
-            sheetMeta,
-            financialSummary
-          } }
+          {
+            $set: {
+              recordDateRange: { start, end },
+              totalRecords,
+              columnCount,
+              sheetCount,
+              sheetMeta,
+              financialSummary
+            }
+          }
         );
 
         // Delete existing FileChunks and re-write them with casted values
@@ -733,7 +719,7 @@ app.post("/api/analyze-saved-file", async (req, res) => {
 
     // Extract sheets
     const allSheets = file.sheets || [];
-    
+
     // Select transaction sheet: either use explicitly requested sheetName, or find 'Transactions', 
     // or fallback to '1Bill Records'/'Auto Records' if specifically present.
     let transactionsSheet;
@@ -743,13 +729,13 @@ app.post("/api/analyze-saved-file", async (req, res) => {
       transactionsSheet = allSheets.find(s => s.name === "Transactions");
     }
 
-    const summarySheet   = allSheets.find(s => s.name === "Summary Details");
-    const headerSheet    = allSheets.find(s => s.name === "Header Details");
+    const summarySheet = allSheets.find(s => s.name === "Summary Details");
+    const headerSheet = allSheets.find(s => s.name === "Header Details");
 
     if (!transactionsSheet) {
       // Fallback: legacy single-sheet files or first sheet if none matched
       if (allSheets.length > 0) {
-          transactionsSheet = allSheets[0];
+        transactionsSheet = allSheets[0];
       } else if (file.rows && file.rows.length > 0) {
         transactionsSheet = { name: "Transactions", headers: file.headers || [], rows: file.rows };
       } else {
@@ -763,10 +749,10 @@ app.post("/api/analyze-saved-file", async (req, res) => {
       return rows.map(r => {
         const row = decompressRow(r, headers);
         if (!map || Object.keys(map).length === 0) return row;
-        const out = { ...row }; 
+        const out = { ...row };
         for (const [requiredField, sourceField] of Object.entries(map)) {
           if (sourceField && sourceField !== requiredField) {
-            out[requiredField] = row[sourceField]; 
+            out[requiredField] = row[sourceField];
           }
         }
         return out;
@@ -807,10 +793,10 @@ app.post("/api/analyze-saved-file", async (req, res) => {
       resultingSheets.push({ name: "Header Details", headers: headerSheet.headers, rows: headerSheet.rows });
     }
 
-    if (ValidTransactions.length > 0)   resultingSheets.push({ name: "Valid Transactions",   headers: txHeaders, rows: ValidTransactions });
+    if (ValidTransactions.length > 0) resultingSheets.push({ name: "Valid Transactions", headers: txHeaders, rows: ValidTransactions });
     if (InvalidTransactions.length > 0) resultingSheets.push({ name: "Invalid Transactions", headers: txHeaders, rows: InvalidTransactions });
-    if (BalanceOrder.length > 0)        resultingSheets.push({ name: "Balance Order",         headers: txHeaders, rows: BalanceOrder });
-    if (BulkPayments.length > 0)        resultingSheets.push({ name: "Bulk Payments",         headers: txHeaders, rows: BulkPayments });
+    if (BalanceOrder.length > 0) resultingSheets.push({ name: "Balance Order", headers: txHeaders, rows: BalanceOrder });
+    if (BulkPayments.length > 0) resultingSheets.push({ name: "Bulk Payments", headers: txHeaders, rows: BulkPayments });
 
     if (ChallanRepeatStats.length > 0) {
       const statsHeaders = ["challan no.", "challan debited", "challan credited", "Remaing Credit Challan", "Debit Amount"];
@@ -826,7 +812,7 @@ app.post("/api/analyze-saved-file", async (req, res) => {
       for (const [section, items] of [["Debit Transactions", Summary["Debit Transactions"]], ["Credit Transactions", Summary["Credit Transactions"]]]) {
         if (items) {
           for (const [key, details] of Object.entries(items)) {
-            summRows.push({ Category: section, Metric: `${key} Count`,  Value: details.Count  });
+            summRows.push({ Category: section, Metric: `${key} Count`, Value: details.Count });
             summRows.push({ Category: section, Metric: `${key} Amount`, Value: details.Amount });
           }
         }
@@ -845,7 +831,7 @@ app.post("/api/analyze-saved-file", async (req, res) => {
 app.post("/api/reconcile-bs-mis", async (req, res) => {
   try {
     const { bsFileId, misFileId, bsMapping = {}, misMapping = {}, misSheetName, bsSheetName, bsDateFilter, misDateFilter } = req.body;
-    
+
     if (!bsFileId || !misFileId) {
       return res.status(400).json({ error: "Both bsFileId and misFileId are required" });
     }
@@ -927,9 +913,9 @@ app.post("/api/reconcile-bs-mis", async (req, res) => {
     ];
     resultingSheets.push({ name: "Summary", headers: ["Metric", "Value"], rows: summRows });
 
-    res.status(200).json({ 
-      filename: `Reconciliation-${bsFile.filename}-vs-${misFile.filename}`, 
-      sheets: resultingSheets 
+    res.status(200).json({
+      filename: `Reconciliation-${bsFile.filename}-vs-${misFile.filename}`,
+      sheets: resultingSheets
     });
   } catch (error) {
     console.error("Error in reconciliation:", error);
@@ -940,7 +926,7 @@ app.post("/api/reconcile-bs-mis", async (req, res) => {
 app.post("/api/audit-saved-file", async (req, res) => {
   try {
     const { fileId, sheetName, fieldMap, categories, validationMode, dateFilter } = req.body;
-    
+
     if (!fileId) {
       return res.status(400).json({ error: "fileId is required" });
     }
@@ -960,7 +946,7 @@ app.post("/api/audit-saved-file", async (req, res) => {
     }
 
     if (!targetSheet && (!file.rows || file.rows.length === 0)) {
-       return res.status(400).json({ error: "No data found to audit." });
+      return res.status(400).json({ error: "No data found to audit." });
     }
 
     const rowsData = targetSheet ? targetSheet.rows : file.rows;
@@ -974,7 +960,7 @@ app.post("/api/audit-saved-file", async (req, res) => {
         if (!map || Object.keys(map).length === 0) return row;
         for (const [requiredField, sourceField] of Object.entries(map)) {
           if (sourceField && sourceField !== requiredField) {
-            row[requiredField] = row[sourceField]; 
+            row[requiredField] = row[sourceField];
           }
         }
         return row;
@@ -988,8 +974,8 @@ app.post("/api/audit-saved-file", async (req, res) => {
 
     // Free the raw massive payload from DB
     if (file) {
-       file.rows = null;
-       file.sheets = null;
+      file.rows = null;
+      file.sheets = null;
     }
 
     const {
@@ -999,7 +985,7 @@ app.post("/api/audit-saved-file", async (req, res) => {
     } = audit_transactions(mappedRows, categories || [], validationMode || "strict");
 
     const resultingSheets = [];
-    
+
     // Add Summary sheet first
     if (summaryRows.length > 0) {
       resultingSheets.push({
@@ -1016,7 +1002,7 @@ app.post("/api/audit-saved-file", async (req, res) => {
         const keys = new Set();
         catRows.forEach(r => Object.keys(r).forEach(k => keys.add(k)));
         const catHeaders = Array.from(keys);
-        
+
         resultingSheets.push({
           name: catName,
           headers: catHeaders.length > 0 ? catHeaders : headersData,
@@ -1027,15 +1013,15 @@ app.post("/api/audit-saved-file", async (req, res) => {
 
     // Add nullData sheet if unmapped/invalid TYPE_CODE records exist
     if (nullData.length > 0) {
-       const keys = new Set();
-       nullData.forEach(r => Object.keys(r).forEach(k => keys.add(k)));
-       const nullHeaders = Array.from(keys);
+      const keys = new Set();
+      nullData.forEach(r => Object.keys(r).forEach(k => keys.add(k)));
+      const nullHeaders = Array.from(keys);
 
-       resultingSheets.push({
-         name: "nullData",
-         headers: nullHeaders.length > 0 ? nullHeaders : headersData,
-         rows: nullData
-       });
+      resultingSheets.push({
+        name: "nullData",
+        headers: nullHeaders.length > 0 ? nullHeaders : headersData,
+        rows: nullData
+      });
     }
 
     res.status(200).json({
