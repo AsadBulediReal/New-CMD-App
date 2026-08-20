@@ -86,7 +86,7 @@ export function BackendGuard({ children }: { children: React.ReactNode }) {
     // Immediate initial probe
     probeBackend();
 
-    // Periodic heartbeat every 10 seconds when ready
+    // Periodic heartbeat every 1 minute (60,000 ms) when ready
     heartbeatId = setInterval(() => {
       if (isMountedRef.current) {
         fetch(getApiUrl("/api/health"), { cache: "no-store" })
@@ -106,7 +106,7 @@ export function BackendGuard({ children }: { children: React.ReactNode }) {
             }
           });
       }
-    }, 10000);
+    }, 60000);
 
     return () => {
       isMountedRef.current = false;
