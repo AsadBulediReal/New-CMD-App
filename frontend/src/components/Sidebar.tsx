@@ -51,7 +51,11 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
     <aside className="w-full bg-sidebar border-r border-sidebar-border flex flex-col h-full select-none font-sans">
       {/* ── Institutional Header Branding ── */}
       <div className="p-4 border-b border-sidebar-border flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
+        <Link
+          to="/"
+          onClick={() => onMobileClose?.()}
+          className="flex items-center gap-3 min-w-0 hover:opacity-85 transition-opacity"
+        >
           <div className="w-9 h-9 rounded-md bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground shadow-xs shrink-0">
             <Building2 className="w-5 h-5" />
           </div>
@@ -63,7 +67,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
               University of Sindh
             </span>
           </div>
-        </div>
+        </Link>
         {/* Mobile close button */}
         {onMobileClose && (
           <button
