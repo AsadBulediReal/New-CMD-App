@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router";
 import { HelpDialog } from "../components/shared/help-dialog";
+import { getApiUrl } from "../utils/api";
 
 interface StoredFile {
   _id: string;
@@ -130,7 +131,7 @@ export default function MergeJson() {
   const fetchFiles = async () => {
     try {
       setLoadingFiles(true);
-      const res = await fetch("/api/files");
+      const res = await fetch(getApiUrl("/api/files"));
       if (!res.ok) throw new Error("Failed to fetch files");
       setFiles(await res.json());
     } catch (e) {
@@ -302,7 +303,7 @@ export default function MergeJson() {
     setSaveMessage("");
 
     try {
-      const response = await fetch("/api/merge-files", {
+      const response = await fetch(getApiUrl("/api/merge-files"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -341,7 +342,7 @@ export default function MergeJson() {
     const compressedSheets = compressSheetData(mergedSheets);
 
     try {
-      const res = await fetch("/api/files", {
+      const res = await fetch(getApiUrl("/api/files"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ filename: newFilename.trim(), sheets: compressedSheets }),
@@ -364,7 +365,7 @@ export default function MergeJson() {
     e.stopPropagation();
     try {
       setLoadingId(id);
-      const res = await fetch(`/api/files/${id}`);
+      const res = await fetch(getApiUrl(`/api/files/${id}`));
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.error || `Server error: ${res.status} ${res.statusText}`);
@@ -395,7 +396,7 @@ export default function MergeJson() {
   const executeDelete = async () => {
     if (!fileToDelete) return;
     try {
-      const res = await fetch(`/api/files/${fileToDelete.id}`, { method: "DELETE" });
+      const res = await fetch(getApiUrl(`/api/files/${fileToDelete.id}`), { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete file");
       setFiles(files.filter(f => f._id !== fileToDelete.id));
       setSelectedFileIds(prev => prev.filter(id => id !== fileToDelete.id));
@@ -410,7 +411,7 @@ export default function MergeJson() {
     if (!fileToRename || !renameValue.trim()) return;
     setIsRenaming(true);
     try {
-      const res = await fetch(`/api/files/${fileToRename.id}/rename`, {
+      const res = await fetch(getApiUrl(`/api/files/${fileToRename.id}/rename`), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ newFilename: renameValue }),

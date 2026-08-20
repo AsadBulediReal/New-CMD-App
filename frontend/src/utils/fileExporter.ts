@@ -2,6 +2,7 @@ import * as XLSX from "xlsx";
 import JSZip from "jszip";
 import { decompressSheetData } from "./dataProcessing";
 import type { SheetData } from "../components/multi-sheet-viewer";
+import { getApiUrl } from "./api";
 
 export interface DownloadProgress {
   current: number;
@@ -115,7 +116,7 @@ export function triggerBlobDownload(blob: Blob, filename: string) {
  * Downloads a single saved file as an .xlsx file.
  */
 export async function downloadSingleSavedFile(id: string, filename: string): Promise<void> {
-  const res = await fetch(`/api/files/${id}`);
+  const res = await fetch(getApiUrl(`/api/files/${id}`));
   if (!res.ok) {
     throw new Error(`Failed to load file (${res.statusText})`);
   }
@@ -150,7 +151,7 @@ export async function downloadBulkSavedFilesAsZip(
       });
     }
 
-    const res = await fetch(`/api/files/${file.id}`);
+    const res = await fetch(getApiUrl(`/api/files/${file.id}`));
     if (!res.ok) {
       throw new Error(`Failed to fetch file "${file.filename}"`);
     }

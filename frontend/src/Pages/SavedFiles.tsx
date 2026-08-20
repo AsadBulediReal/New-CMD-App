@@ -45,6 +45,7 @@ import {
   downloadBulkSavedFilesAsZip,
   type DownloadProgress
 } from "../utils/fileExporter";
+import { getApiUrl } from "../utils/api";
 
 interface StoredFile {
   _id: string;
@@ -222,7 +223,7 @@ export default function SavedFiles() {
     try {
       setLoading(true);
       setRescanMsg(null);
-      const res = await fetch("/api/files");
+      const res = await fetch(getApiUrl("/api/files"));
       if (!res.ok) throw new Error(`Failed to fetch files: ${res.statusText}`);
       const text = await res.text();
       const data = text ? JSON.parse(text) : [];
@@ -241,7 +242,7 @@ export default function SavedFiles() {
     try {
       // Ensure the "Scanning..." state stays active for at least 1 second for visual feedback
       const [res] = await Promise.all([
-        fetch("/api/files/recompute-meta", {
+        fetch(getApiUrl("/api/files/recompute-meta"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ all: true }),
@@ -262,7 +263,7 @@ export default function SavedFiles() {
   const handleLoadFile = async (id: string, filename: string) => {
     try {
       setLoadingId(id);
-      const res = await fetch(`/api/files/${id}`);
+      const res = await fetch(getApiUrl(`/api/files/${id}`));
       if (!res.ok) throw new Error(`Failed to load file: ${res.statusText}`);
       const data = await res.json();
       if (data) {
@@ -299,7 +300,7 @@ export default function SavedFiles() {
   const executeDelete = async () => {
     if (!fileToDelete) return;
     try {
-      const res = await fetch(`/api/files/${fileToDelete.id}`, { method: "DELETE" });
+      const res = await fetch(getApiUrl(`/api/files/${fileToDelete.id}`), { method: "DELETE" });
       if (!res.ok) throw new Error(`Failed to delete file`);
       setFiles(files.filter(f => f._id !== fileToDelete.id));
       setSelectedIds(prev => { const n = new Set(prev); n.delete(fileToDelete.id); return n; });
@@ -313,7 +314,7 @@ export default function SavedFiles() {
     setBulkDeleting(true);
     try {
       const ids = Array.from(selectedIds);
-      const res = await fetch("/api/files/bulk-delete", {
+      const res = await fetch(getApiUrl("/api/files/bulk-delete"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids }),

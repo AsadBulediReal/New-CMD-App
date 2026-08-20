@@ -22,6 +22,7 @@ import {
 import { Link } from "react-router";
 import { HelpDialog } from "../components/shared/help-dialog";
 import { AdvancedFileSelector, type DateFilter, type StoredFileMeta } from "../components/shared/advanced-file-selector";
+import { getApiUrl } from "../utils/api";
 
 // ── Required fields for BS and MIS ───────────────────────────────────────────
 const BS_REQUIRED_FIELDS = [
@@ -100,7 +101,7 @@ export default function Reconcile() {
 
   const fetchFiles = async () => {
     try {
-      const res = await fetch("/api/files");
+      const res = await fetch(getApiUrl("/api/files"));
       if (!res.ok) throw new Error("Failed to fetch files");
       setFiles(await res.json());
     } catch (e) {
@@ -210,7 +211,7 @@ export default function Reconcile() {
     setSaveMessage("");
 
     try {
-      const response = await fetch("/api/reconcile-bs-mis", {
+      const response = await fetch(getApiUrl("/api/reconcile-bs-mis"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -246,7 +247,7 @@ export default function Reconcile() {
     setIsSaving(true);
     setSaveMessage("");
     try {
-      const res = await fetch("/api/files", {
+      const res = await fetch(getApiUrl("/api/files"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ filename: newFilename.trim(), sheets }),

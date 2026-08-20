@@ -8,8 +8,7 @@ const FileChunk = require("./models/FileChunk");
 
 const app = express();
 
-app.use(cors(
-     const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")
+const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
@@ -31,6 +30,14 @@ mongoose
   .connect(process.env.MONGODB_URI || "mongodb://localhost:27017/cmd_app")
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("MongoDB connection error:", err));
+
+mongoose.connection.on("disconnected", () => {
+  console.warn("MongoDB connection lost. Driver will attempt reconnection...");
+});
+
+mongoose.connection.on("reconnected", () => {
+  console.log("MongoDB connection restored.");
+});
 
 // API Routes
 
@@ -1175,10 +1182,23 @@ ${JSON.stringify(metadata, null, 2)}
 // 10. Health Check / Initialization
 app.get("/api/health", async (req, res) => {
   try {
-    const dbStatus = mongoose.connection.readyState === 1 ? "connected" : "disconnected";
+    const dbState = mongoose.connection.readyState;
+    // readyState: 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
+    const dbStatus = dbState === 1 ? "connected" : dbState === 2 ? "connecting" : "disconnected";
+
+    if (dbState !== 1) {
+      return res.status(503).json({
+        status: "connecting",
+        database: dbStatus,
+        message: dbState === 2 ? "Database connection in progress" : "Database disconnected",
+        timestamp: new Date().toISOString(),
+        version: "1.0.0"
+      });
+    }
+
     res.status(200).json({
       status: "ok",
-      database: dbStatus,
+      database: "connected",
       timestamp: new Date().toISOString(),
       version: "1.0.0"
     });

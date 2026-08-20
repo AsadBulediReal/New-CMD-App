@@ -20,24 +20,24 @@ export function Sidebar() {
     {
       title: "Main Workspace",
       items: [
-        { name: "Dashboard Overview", href: "/", icon: LayoutDashboard, tag: "HOME" },
-        { name: "Document Vault", href: "/saved-files", icon: Database, tag: "STORAGE" },
+        { name: "Dashboard Overview", href: "/", icon: LayoutDashboard, tag: "HOME" as string | undefined, code: undefined as string | undefined },
+        { name: "Document Vault", href: "/saved-files", icon: Database, tag: "STORAGE" as string | undefined, code: undefined as string | undefined },
       ],
     },
     {
       title: "Data Processing Engines",
       items: [
-        { name: "TXT Statement Ingestion", href: "/upload-txt", icon: FileText, code: "MOD-01" },
-        { name: "BS ↔ MIS Reconciliation", href: "/reconcile", icon: GitCompare, code: "MOD-02" },
-        { name: "Report Consolidation", href: "/merge-json", icon: Combine, code: "MOD-03" },
+        { name: "TXT Statement Ingestion", href: "/upload-txt", icon: FileText, code: "MOD-01" as string | undefined, tag: undefined as string | undefined },
+        { name: "BS ↔ MIS Reconciliation", href: "/reconcile", icon: GitCompare, code: "MOD-02" as string | undefined, tag: undefined as string | undefined },
+        { name: "Report Consolidation", href: "/merge-json", icon: Combine, code: "MOD-03" as string | undefined, tag: undefined as string | undefined },
       ],
     },
     {
       title: "Analytics & Compliance",
       items: [
-        { name: "Financial Analytics", href: "/analytics", icon: BarChart3, code: "MOD-04" },
-        { name: "Audit Categorizer", href: "/audit", icon: ShieldCheck, code: "MOD-05" },
-        { name: "Excel Workbench", href: "/upload", icon: FileSpreadsheet, code: "MOD-06" },
+        { name: "Financial Analytics", href: "/analytics", icon: BarChart3, code: "MOD-04" as string | undefined, tag: undefined as string | undefined },
+        { name: "Audit Categorizer", href: "/audit", icon: ShieldCheck, code: "MOD-05" as string | undefined, tag: undefined as string | undefined },
+        { name: "Excel Workbench", href: "/upload", icon: FileSpreadsheet, code: "MOD-06" as string | undefined, tag: undefined as string | undefined },
       ],
     },
   ];

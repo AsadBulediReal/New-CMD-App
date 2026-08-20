@@ -1,8 +1,0 @@
-{
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "https://new-cmd-app-uv6r.vercel.app/api/:path*"
-    }
-  ]
-}

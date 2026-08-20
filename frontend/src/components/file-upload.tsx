@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { HelpCircle, Info, Lock, Eye, EyeOff, KeyRound, AlertCircle, Loader2 } from "lucide-react"
 import type { SheetData } from "./multi-sheet-viewer"
 import { detectAndCastSheet } from "../utils/dataProcessing"
+import { getApiUrl } from "../utils/api"
 
 interface RawSheetData {
   name: string;
@@ -116,8 +117,7 @@ export function FileUpload({
         }
         const base64 = btoa(binary);
 
-        const backendUrl = import.meta.env.VITE_API_URL || "http://localhost:5000";
-        const res = await fetch(`${backendUrl}/api/files/decrypt-excel`, {
+        const res = await fetch(getApiUrl("/api/files/decrypt-excel"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ fileBuffer: base64, password })

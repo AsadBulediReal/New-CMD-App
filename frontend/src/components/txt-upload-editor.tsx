@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Loader2, Save, FileText, RefreshCcw } from "lucide-react"
+import { getApiUrl } from "../utils/api"
 
 export function TxtUploadEditor() {
   const [sheets, setSheets] = useState<SheetData[] | null>(null)
@@ -36,7 +37,7 @@ export function TxtUploadEditor() {
           }
           
           setIsLoading(true)
-          const response = await fetch("/api/parse-txt", {
+          const response = await fetch(getApiUrl("/api/parse-txt"), {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -233,7 +234,7 @@ export function TxtUploadEditor() {
 
       const compressedSheets = compressSheetData(sheets)
 
-      const response = await fetch("/api/files", {
+      const response = await fetch(getApiUrl("/api/files"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -26,6 +26,7 @@ import {
 import { Link } from "react-router";
 import { HelpDialog } from "../components/shared/help-dialog";
 import { AdvancedFileSelector, type DateFilter, type StoredFileMeta } from "../components/shared/advanced-file-selector";
+import { getApiUrl } from "../utils/api";
 
 // ── Required mappings for Audit ──────────────────────────────────────────────
 const ALL_FIELDS = [
@@ -112,7 +113,7 @@ export default function AuditTool() {
   const fetchFiles = async () => {
     try {
       setLoadingFiles(true);
-      const res = await fetch("/api/files");
+      const res = await fetch(getApiUrl("/api/files"));
       if (!res.ok) throw new Error("Failed to fetch files");
       setFiles(await res.json());
     } catch (e) {
@@ -210,7 +211,7 @@ export default function AuditTool() {
     }
 
     try {
-      const response = await fetch("/api/audit-saved-file", {
+      const response = await fetch(getApiUrl("/api/audit-saved-file"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -254,7 +255,7 @@ export default function AuditTool() {
     const compressedSheets = compressSheetData(sheets);
 
     try {
-      const res = await fetch("/api/files", {
+      const res = await fetch(getApiUrl("/api/files"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ filename: newFilename.trim(), sheets: compressedSheets }),

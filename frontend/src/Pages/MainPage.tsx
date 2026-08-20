@@ -13,6 +13,7 @@ import {
   Activity,
   CheckCircle2
 } from "lucide-react";
+import { getApiUrl } from "../utils/api";
 
 /* ── Tool Data ───────────────────────────────────────────────────────────── */
 const tools = [
@@ -99,7 +100,7 @@ export default function MainPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/files")
+    fetch(getApiUrl("/api/files"))
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => setFiles(Array.isArray(data) ? data : []))
       .catch(() => setFiles([]))

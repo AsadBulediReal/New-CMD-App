@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Bug, Camera, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { getApiUrl } from "@/utils/api";
 
 export function BugReportDialog() {
   const [open, setOpen] = useState(false);
@@ -51,7 +52,7 @@ export function BugReportDialog() {
 
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:5000/api/report-bug", {
+      const response = await fetch(getApiUrl("/api/report-bug"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

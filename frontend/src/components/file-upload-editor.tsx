@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Loader2, Save, FileText, RefreshCcw } from "lucide-react"
 import { separateRecordsByChannel, compressSheetData } from "../utils/dataProcessing"
+import { getApiUrl } from "../utils/api"
 
 export function FileUploadEditor() {
   const [sheets, setSheets] = useState<SheetData[] | null>(null)
@@ -263,7 +264,7 @@ export function FileUploadEditor() {
       const sheetsToSave = mappedDateCol ? applyDateColumnMapping(sheets, mappedDateCol) : sheets;
       const compressedSheets = compressSheetData(sheetsToSave);
 
-      const response = await fetch("/api/files", {
+      const response = await fetch(getApiUrl("/api/files"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

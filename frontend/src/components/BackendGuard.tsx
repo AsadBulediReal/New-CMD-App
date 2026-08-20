@@ -1,199 +1,227 @@
-import { useState, useEffect } from "react";
-import { RefreshCw, ShieldAlert, ShieldCheck, Database, Server } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { RefreshCw, Server, Database, WifiOff } from "lucide-react";
+import { getApiUrl } from "@/utils/api";
 
-interface BackendStatus {
+interface BackendHealthResponse {
   status: string;
   database: string;
-  version: string;
+  version?: string;
+  message?: string;
 }
 
 export function BackendGuard({ children }: { children: React.ReactNode }) {
-  const [isInitialized, setIsInitialized] = useState(() => {
-    return sessionStorage.getItem("cmd_backend_initialized") === "true";
-  });
-  const [loading, setLoading] = useState(!isInitialized);
-  const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<BackendStatus | null>(null);
+  const [isReady, setIsReady] = useState(false);
+  const [apiConnected, setApiConnected] = useState(false);
+  const [dbConnected, setDbConnected] = useState(false);
+  const [attempts, setAttempts] = useState(0);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isReconnecting, setIsReconnecting] = useState(false);
+  const [version, setVersion] = useState<string>("1.0.0");
+
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
-    if (isInitialized) return;
+    isMountedRef.current = true;
+    let timerId: NodeJS.Timeout | null = null;
+    let heartbeatId: NodeJS.Timeout | null = null;
 
-    const checkBackend = async (retries = 3) => {
+    const probeBackend = async () => {
+      if (!isMountedRef.current) return;
+      setAttempts(prev => prev + 1);
+
       try {
-        setLoading(true);
-        const start = Date.now();
-        
-        const response = await fetch("/api/health");
-        
-        // If we get a proxy error or server not ready, it might throw or return non-ok
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 6000);
+
+        const response = await fetch(getApiUrl("/api/health"), {
+          signal: controller.signal,
+          cache: "no-store",
+        });
+        clearTimeout(timeout);
+
         if (!response.ok) {
-           throw new Error(`System reported status: ${response.status}`);
+          const data: BackendHealthResponse = await response.json().catch(() => ({}));
+          setApiConnected(true);
+          setDbConnected(false);
+          setErrorMessage(data.message || `Backend returned HTTP ${response.status}`);
+          setIsReady(false);
+          timerId = setTimeout(probeBackend, 2000);
+          return;
         }
 
-        const data = await response.json();
+        const data: BackendHealthResponse = await response.json();
+        if (data.version) setVersion(data.version);
 
-        const elapsed = Date.now() - start;
-        if (elapsed < 1200) {
-          await new Promise(resolve => setTimeout(resolve, 1200 - elapsed));
-        }
+        const isDbOk = data.database === "connected";
+        const isAppOk = data.status === "ok" && isDbOk;
 
-        if (data.status === "ok") {
-          if (data.database !== "connected") {
-            throw new Error("Core database is unreachable.");
-          }
-          setStatus(data);
-          setIsInitialized(true);
-          sessionStorage.setItem("cmd_backend_initialized", "true");
+        setApiConnected(true);
+        setDbConnected(isDbOk);
+
+        if (isAppOk) {
+          setErrorMessage(null);
+          setIsReady(true);
+          setIsReconnecting(false);
         } else {
-          throw new Error(data.message || "Unexpected response from control node.");
+          setErrorMessage(data.message || "Database connection in progress...");
+          setIsReady(false);
+          timerId = setTimeout(probeBackend, 2000);
         }
       } catch (err: any) {
-        if (retries > 0) {
-          console.log(`Backend probe failed, retrying... (${retries} left)`);
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          return checkBackend(retries - 1);
+        if (!isMountedRef.current) return;
+        setApiConnected(false);
+        setDbConnected(false);
+        setIsReady(false);
+
+        if (err.name === "AbortError") {
+          setErrorMessage("Connection timed out. Waiting for backend response...");
+        } else {
+          setErrorMessage(err.message || "Backend server unreachable");
         }
-        setError(err.message || "Secure link to backend could not be established.");
-      } finally {
-        setLoading(false);
+
+        timerId = setTimeout(probeBackend, 2500);
       }
     };
 
-    checkBackend();
-  }, [isInitialized]);
+    // Immediate initial probe
+    probeBackend();
 
-  if (loading) {
+    // Periodic heartbeat every 10 seconds when ready
+    heartbeatId = setInterval(() => {
+      if (isMountedRef.current) {
+        fetch(getApiUrl("/api/health"), { cache: "no-store" })
+          .then(async res => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const data: BackendHealthResponse = await res.json();
+            if (data.status !== "ok" || data.database !== "connected") {
+              throw new Error(data.message || "Database disconnected");
+            }
+          })
+          .catch(err => {
+            if (isMountedRef.current) {
+              console.warn("Heartbeat lost:", err.message);
+              setIsReady(false);
+              setIsReconnecting(true);
+              probeBackend();
+            }
+          });
+      }
+    }, 10000);
+
+    return () => {
+      isMountedRef.current = false;
+      if (timerId) clearTimeout(timerId);
+      if (heartbeatId) clearInterval(heartbeatId);
+    };
+  }, []);
+
+  // Connection / Reconnection Screen
+  if (!isReady) {
     return (
-      <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background overflow-hidden">
-        {/* Animated Background Elements */}
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-blue-500/10 blur-[120px] animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-cyan-500/10 blur-[120px] animate-pulse" />
-        
-        <div className="relative flex flex-col items-center max-w-md w-full px-6 text-center">
-          <div className="relative mb-8">
+      <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background px-6 overflow-hidden select-none font-sans">
+        {/* Ambient glow background */}
+        <div className="absolute top-[-10%] left-[-10%] w-[45%] h-[45%] rounded-full bg-blue-500/10 blur-[130px] animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] rounded-full bg-cyan-500/10 blur-[130px] animate-pulse" />
+
+        <div className="relative flex flex-col items-center max-w-md w-full text-center z-10">
+          <div className="relative mb-6">
             <div className="absolute inset-0 bg-blue-500/20 blur-2xl rounded-full animate-pulse" />
             <div className="relative w-20 h-20 rounded-2xl bg-card border border-border flex items-center justify-center shadow-2xl">
-              <RefreshCw className="w-10 h-10 text-blue-500 animate-spin" />
+              {isReconnecting ? (
+                <WifiOff className="w-9 h-9 text-amber-500 animate-bounce" />
+              ) : (
+                <RefreshCw className="w-9 h-9 text-blue-500 animate-spin" />
+              )}
             </div>
           </div>
 
-          <h2 className="text-2xl font-bold tracking-tight text-foreground mb-3">
-            Initializing System
+          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground mb-2">
+            {isReconnecting ? "Connection Lost" : "Connecting to Backend"}
           </h2>
-          <p className="text-muted-foreground text-sm leading-relaxed mb-8">
-            Establishing secure handshake with the core processing node and synchronizing datasets.
+          <p className="text-muted-foreground text-xs sm:text-sm leading-relaxed mb-6 max-w-sm">
+            {isReconnecting
+              ? "Backend connection dropped. Automatically attempting to reconnect..."
+              : "Verifying connection with backend processing node and database repository."}
           </p>
 
-          <div className="w-full space-y-4">
-            <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-card/50 backdrop-blur-sm">
+          <div className="w-full space-y-3 mb-6">
+            {/* API Node Status */}
+            <div className={`flex items-center justify-between p-3.5 rounded-xl border backdrop-blur-sm transition-all ${
+              apiConnected
+                ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400"
+                : "border-border bg-card/60"
+            }`}>
               <div className="flex items-center gap-3">
-                <Server className="w-4 h-4 text-blue-500" />
-                <span className="text-xs font-semibold text-foreground">API Node-01</span>
+                <Server className={`w-4 h-4 ${apiConnected ? "text-emerald-500" : "text-blue-500 animate-pulse"}`} />
+                <span className="text-xs font-bold text-foreground">API Node Server</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Connecting</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                <span className={`text-[10px] font-extrabold uppercase tracking-wider ${
+                  apiConnected ? "text-emerald-500" : "text-blue-500"
+                }`}>
+                  {apiConnected ? "Connected" : "Connecting"}
+                </span>
+                <span className={`w-2 h-2 rounded-full ${
+                  apiConnected ? "bg-emerald-500" : "bg-blue-500 animate-ping"
+                }`} />
               </div>
             </div>
 
-            <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-card/50 backdrop-blur-sm opacity-50">
+            {/* Database Status */}
+            <div className={`flex items-center justify-between p-3.5 rounded-xl border backdrop-blur-sm transition-all ${
+              dbConnected
+                ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400"
+                : apiConnected
+                ? "border-amber-500/30 bg-amber-500/5"
+                : "border-border bg-card/60 opacity-60"
+            }`}>
               <div className="flex items-center gap-3">
-                <Database className="w-4 h-4 text-muted-foreground" />
-                <span className="text-xs font-semibold text-muted-foreground">Main Repository</span>
+                <Database className={`w-4 h-4 ${
+                  dbConnected ? "text-emerald-500" : apiConnected ? "text-amber-500 animate-pulse" : "text-muted-foreground"
+                }`} />
+                <span className="text-xs font-bold text-foreground">Database Repository</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Pending</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-muted" />
+                <span className={`text-[10px] font-extrabold uppercase tracking-wider ${
+                  dbConnected ? "text-emerald-500" : apiConnected ? "text-amber-500" : "text-muted-foreground"
+                }`}>
+                  {dbConnected ? "Connected" : apiConnected ? "Connecting" : "Pending"}
+                </span>
+                <span className={`w-2 h-2 rounded-full ${
+                  dbConnected ? "bg-emerald-500" : apiConnected ? "bg-amber-500 animate-ping" : "bg-muted"
+                }`} />
               </div>
             </div>
           </div>
-        </div>
-        
-        <div className="absolute bottom-12 text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground/30">
-          CMD SYSTEM · v{status?.version || "1.0.0"}
-        </div>
-      </div>
-    );
-  }
 
-  if (error) {
-    return (
-      <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background px-6">
-        <div className="max-w-md w-full bg-card border border-destructive/20 rounded-3xl p-8 text-center shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-destructive/30" />
-          
-          <div className="w-16 h-16 rounded-2xl bg-destructive/10 border border-destructive/20 flex items-center justify-center mx-auto mb-6">
-            <ShieldAlert className="w-8 h-8 text-destructive" />
+          {/* Diagnostics / Probe info */}
+          <div className="w-full p-3 rounded-xl bg-muted/40 border border-border/60 text-xs font-medium text-muted-foreground space-y-1 mb-6">
+            <div className="flex justify-between items-center text-[11px] font-mono">
+              <span>Status Probe:</span>
+              <span className="font-bold text-foreground">Attempt #{attempts}</span>
+            </div>
+            {errorMessage && (
+              <p className="text-[11px] font-mono text-amber-600 dark:text-amber-400 truncate" title={errorMessage}>
+                {errorMessage}
+              </p>
+            )}
           </div>
 
-          <h2 className="text-2xl font-bold tracking-tight text-foreground mb-3">
-            Connection Barrier
-          </h2>
-          <p className="text-muted-foreground text-sm leading-relaxed mb-8">
-            The system was unable to establish a connection with the backend services. 
-            <span className="block mt-2 font-mono text-[11px] bg-muted/50 p-2 rounded-lg text-destructive/80">
-              {error}
-            </span>
-          </p>
-
-          <div className="grid grid-cols-2 gap-3 mb-8">
-            <div className="p-3 rounded-xl border border-border bg-muted/30 text-left">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Status</p>
-              <p className="text-xs font-bold text-destructive flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
-                Offline
-              </p>
-            </div>
-            <div className="p-3 rounded-xl border border-border bg-muted/30 text-left">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Database</p>
-              <p className="text-xs font-bold text-muted-foreground flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-muted" />
-                Unknown
-              </p>
-            </div>
-          </div>
-
-          <button 
+          <button
             onClick={() => window.location.reload()}
-            className="w-full py-3.5 rounded-xl bg-foreground text-background font-bold text-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+            className="w-full py-3 rounded-xl bg-foreground text-background font-bold text-xs uppercase tracking-wider hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95"
           >
-            <RefreshCw className="w-4 h-4" />
-            Retry Connection
+            <RefreshCw className="w-3.5 h-3.5" />
+            Reload Page
           </button>
         </div>
-        
-        <p className="mt-8 text-[11px] text-muted-foreground/50 font-medium">
-          Contact System Administrator if the issue persists.
-        </p>
+
+        <div className="absolute bottom-8 text-[10px] font-mono uppercase tracking-[0.25em] text-muted-foreground/40">
+          CMD SYSTEM · v{version}
+        </div>
       </div>
     );
   }
 
-  return (
-    <>
-      {children}
-      {/* Subtle Success Indicator (Optional) */}
-      {!sessionStorage.getItem("cmd_notified_init") && (
-        <div className="fixed bottom-6 right-6 z-[100] animate-in fade-in slide-in-from-bottom-10 duration-700">
-           <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-emerald-500 text-white shadow-2xl shadow-emerald-500/20 border border-white/10">
-              <ShieldCheck className="w-5 h-5" />
-              <div>
-                <p className="text-xs font-bold leading-none">System Active</p>
-                <p className="text-[10px] opacity-80 leading-none mt-1">Verified connection to Node-01</p>
-              </div>
-              <button 
-                onClick={() => {
-                  sessionStorage.setItem("cmd_notified_init", "true");
-                  const el = document.getElementById("init-toast");
-                  if (el) el.style.display = "none";
-                }}
-                className="ml-2 hover:opacity-70"
-              >
-                <RefreshCw className="w-3 h-3 rotate-45" />
-              </button>
-           </div>
-        </div>
-      )}
-    </>
-  );
+  return <>{children}</>;
 }
