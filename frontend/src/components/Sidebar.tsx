@@ -48,7 +48,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   ];
 
   const sidebarContent = (
-    <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col h-full select-none font-sans shrink-0">
+    <aside className="w-full bg-sidebar border-r border-sidebar-border flex flex-col h-full select-none font-sans">
       {/* ── Institutional Header Branding ── */}
       <div className="p-4 border-b border-sidebar-border flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
@@ -150,7 +150,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   return (
     <>
       {/* Desktop Sidebar */}
-      <div className="hidden lg:flex h-screen sticky top-0 z-40 shrink-0">
+      <div className="hidden lg:flex h-screen sticky top-0 z-40 shrink-0 w-64">
         {sidebarContent}
       </div>
 
@@ -163,7 +163,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
             onClick={onMobileClose}
           />
           {/* Drawer container */}
-          <div className="relative z-50 flex flex-col h-full max-w-xs w-full shadow-2xl animate-in slide-in-from-left duration-200">
+          <div className="relative z-50 flex flex-col h-full w-64 max-w-[80vw] shadow-2xl animate-in slide-in-from-left duration-200">
             {sidebarContent}
           </div>
         </div>
