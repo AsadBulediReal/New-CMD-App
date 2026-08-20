@@ -6,6 +6,8 @@ const cors = require("cors");
 const StoredFile = require("./models/StoredFile");
 const FileChunk = require("./models/FileChunk");
 
+const app = express();
+
 const allowedFrontend = process.env.FRONTEND_URL || "http://localhost:5173";
 
 app.use(cors({
