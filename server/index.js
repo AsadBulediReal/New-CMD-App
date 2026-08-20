@@ -8,13 +8,34 @@ const FileChunk = require("./models/FileChunk");
 
 const app = express();
 
-const allowedFrontend = process.env.FRONTEND_URL || "http://localhost:5173";
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "https://new-cmd-app-amber.vercel.app",
+];
+
+if (process.env.FRONTEND_URL) {
+  const envUrl = process.env.FRONTEND_URL.replace(/\/$/, "");
+  if (!allowedOrigins.includes(envUrl)) {
+    allowedOrigins.push(envUrl);
+  }
+}
 
 app.use(cors({
-  origin: allowedFrontend,
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, server-to-server)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin) || /\.vercel\.app$/.test(origin)) {
+      return callback(null, true);
+    }
+    
+    return callback(null, true);
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 200,
 }));
 
 app.use(express.json({ limit: '500mb' })); // Increase limit for massive payloads since DB chunks resolve 16MB BSON barrier
