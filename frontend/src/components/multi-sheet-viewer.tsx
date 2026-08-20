@@ -128,15 +128,15 @@ export function MultiSheetViewer({
 
   return (
     <div className="flex flex-col relative w-full h-full">
-      <div className="flex justify-between items-center border-b border-border">
-        <div className="flex overflow-x-auto hide-scrollbar flex-1">
+      <div className="flex justify-between items-center border-b border-border bg-card/50">
+        <div className="flex overflow-x-auto touch-pan-x scrollbar-none flex-1 py-0.5">
           {sheets.map((sheet, index) => (
             <button
               key={index}
               onClick={() => setActiveTab(index)}
-              className={`whitespace-nowrap py-3 px-6 text-sm font-medium transition-colors border-b-2 focus:outline-none ${
+              className={`whitespace-nowrap py-2.5 px-4 sm:px-6 text-xs sm:text-sm font-semibold transition-colors border-b-2 focus:outline-none shrink-0 ${
                 activeTab === index
-                  ? "border-indigo-500 text-indigo-500 bg-indigo-500/10"
+                  ? "border-indigo-500 text-indigo-500 bg-indigo-500/10 font-bold"
                   : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted"
               }`}
             >
@@ -149,19 +149,20 @@ export function MultiSheetViewer({
           onClick={handleDownload}
           disabled={isExporting}
           title="Download as Microsoft Excel"
-          className={`ml-4 mr-2 mb-1 hidden sm:flex items-center gap-2 whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+          className={`ml-2 mr-2 my-1 flex items-center gap-1.5 whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 sm:px-3 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors shrink-0 ${
             isExporting ? "opacity-70 cursor-not-allowed" : "cursor-pointer"
           }`}
         >
           {isExporting ? (
-            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <svg className="animate-spin h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
           ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
           )}
-          {isExporting ? "Exporting..." : "Export Excel"}
+          <span className="hidden sm:inline">{isExporting ? "Exporting..." : "Export Excel"}</span>
+          <span className="sm:hidden">{isExporting ? "Exporting" : "Export"}</span>
         </button>
       </div>
       

@@ -15,9 +15,10 @@ import {
   ShieldCheck,
   FileSpreadsheet,
   ArrowRight,
+  Menu,
   X
 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Dialog, DialogContent, DialogHeader } from "./ui/dialog";
 
 function LiveClock() {
   const [time, setTime] = useState(() => new Date().toLocaleTimeString("en-GB"));
@@ -39,7 +40,11 @@ const searchItems = [
   { name: "Excel Dataset Workbench", path: "/upload", code: "MOD-06", category: "Workbench", icon: FileSpreadsheet, desc: "CSV/Excel on-the-fly spreadsheet editor" },
 ];
 
-export function Header() {
+interface HeaderProps {
+  onMobileMenuToggle?: () => void;
+}
+
+export function Header({ onMobileMenuToggle }: HeaderProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -73,37 +78,56 @@ export function Header() {
   const getPageTitle = (path: string) => {
     switch (path) {
       case "/": return "Executive Dashboard";
-      case "/saved-files": return "Document & Report Vault";
-      case "/upload-txt": return "TXT Statement Ingestion";
+      case "/saved-files": return "Document Vault";
+      case "/upload-txt": return "TXT Ingestion";
       case "/reconcile": return "BS ↔ MIS Reconciliation";
-      case "/merge-json": return "Report Consolidation Engine";
-      case "/analytics": return "Financial Statement Analytics";
-      case "/audit": return "Audit Categorizer Engine";
-      case "/upload": return "Excel Dataset Workbench";
+      case "/merge-json": return "Report Consolidation";
+      case "/analytics": return "Financial Analytics";
+      case "/audit": return "Audit Categorizer";
+      case "/upload": return "Excel Workbench";
       default: return "Portal Module";
     }
   };
 
   return (
     <>
-      <header className="sticky top-0 z-30 h-14 bg-card/90 backdrop-blur-md border-b border-border px-6 flex items-center justify-between font-sans shrink-0">
-        {/* ── Left Breadcrumb & Page Context ── */}
-        <div className="flex items-center gap-2 text-xs font-semibold">
-          <span className="text-muted-foreground">Finance Wing</span>
-          <ChevronRight className="w-3 h-3 text-muted-foreground/50" />
-          <span className="text-foreground font-bold">{getPageTitle(location.pathname)}</span>
+      <header className="sticky top-0 z-30 h-14 bg-card/90 backdrop-blur-md border-b border-border px-3 sm:px-6 flex items-center justify-between font-sans shrink-0">
+        {/* ── Left Navigation Toggle & Breadcrumb ── */}
+        <div className="flex items-center gap-2 text-xs font-semibold min-w-0">
+          {/* Mobile hamburger menu toggle */}
+          <button
+            onClick={onMobileMenuToggle}
+            className="lg:hidden p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shrink-0"
+            title="Open navigation menu"
+          >
+            <Menu className="w-5 h-5 text-foreground" />
+          </button>
+
+          <span className="text-muted-foreground hidden sm:inline truncate">Finance Wing</span>
+          <ChevronRight className="w-3 h-3 text-muted-foreground/50 hidden sm:inline shrink-0" />
+          <span className="text-foreground font-bold truncate">{getPageTitle(location.pathname)}</span>
         </div>
 
         {/* ── Right Actions & Status ── */}
-        <div className="flex items-center gap-4">
-          {/* Functional Global Search Trigger */}
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+          {/* Desktop Search Trigger */}
           <button
             onClick={() => setOpen(true)}
             className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/60 hover:bg-muted border border-border text-xs text-muted-foreground transition-colors cursor-pointer select-none"
           >
             <Search className="w-3.5 h-3.5 text-primary" />
-            <span>Search modules, tools, or pages...</span>
+            <span className="hidden md:inline">Search modules, tools, or pages...</span>
+            <span className="md:hidden">Search...</span>
             <kbd className="ml-2 font-mono text-[10px] bg-background px-1.5 py-0.5 rounded border border-border">Ctrl K</kbd>
+          </button>
+
+          {/* Mobile Search Trigger Icon */}
+          <button
+            onClick={() => setOpen(true)}
+            className="sm:hidden p-2 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            title="Search"
+          >
+            <Search className="w-4 h-4 text-primary" />
           </button>
 
           <div className="h-4 w-px bg-border hidden sm:block" />

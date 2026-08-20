@@ -259,22 +259,22 @@ export default function Analytics() {
         }}
       />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-10 space-y-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8">
         {/* Header */}
-        <div className="border-b border-border pb-6 flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div className="border-b border-border pb-6 flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-widest">
               <BarChart3 className="w-3.5 h-3.5" />
               Analytics MOD-04 · Executive Financial Insights
             </div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">
               Statement Analytics Portal
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground font-medium">
               Perform high-level financial reconciliation, cashflow variance detection, and bulk payment analysis.
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 self-start md:self-auto">
             <Button 
               variant="outline" 
               onClick={() => setShowHelp(true)}
@@ -300,10 +300,10 @@ export default function Analytics() {
         />
 
         {/* Configuration Card */}
-        <Card className="p-8 border-border bg-card/40 backdrop-blur-xl shadow-2xl relative group">
+        <Card className="p-4 sm:p-8 border-border bg-card/40 backdrop-blur-xl shadow-2xl relative group">
           <div className="absolute top-0 inset-x-0 h-1 bg-linear-to-r from-blue-600 to-cyan-500 opacity-20" />
           
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-10">
             {/* Left: Selection */}
             <div className="lg:col-span-5 space-y-6">
                <AdvancedFileSelector
@@ -326,7 +326,7 @@ export default function Analytics() {
             {/* Right: Mapping & Action */}
             <div className="lg:col-span-7">
                {selectedFileId ? (
-                 <div className="h-full flex flex-col justify-between space-y-8">
+                 <div className="h-full flex flex-col justify-between space-y-6 sm:space-y-8">
                     <div className="space-y-5">
                       <div className="flex items-center gap-2 text-foreground font-bold text-sm uppercase tracking-widest opacity-60">
                          <MapIcon className="w-4 h-4 text-blue-500" />
@@ -362,19 +362,19 @@ export default function Analytics() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
                        <Button
                         variant="ghost"
                         onClick={openMappingModal}
                         disabled={isAnalyzing}
-                        className="flex-1 rounded-xl h-12 font-bold text-foreground border border-border hover:bg-muted"
+                        className="flex-1 rounded-xl h-11 sm:h-12 font-bold text-foreground border border-border hover:bg-muted text-xs sm:text-sm"
                       >
                         {needsMapping ? "⚠️ Resolve Mappings" : "Adjust Calibration"}
                       </Button>
                       <Button
                         onClick={handleAnalyze}
                         disabled={!allMapped || isAnalyzing}
-                        className="flex-[1.5] rounded-xl h-12 font-black text-white bg-linear-to-r from-blue-600 to-cyan-500 shadow-xl shadow-blue-500/20 active:scale-95 transition-all"
+                        className="flex-[1.5] rounded-xl h-11 sm:h-12 font-black text-white bg-linear-to-r from-blue-600 to-cyan-500 shadow-xl shadow-blue-500/20 active:scale-95 transition-all text-xs sm:text-sm"
                       >
                         {isAnalyzing ? (
                           <>

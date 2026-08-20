@@ -460,16 +460,16 @@ export default function SavedFiles() {
         }}
       />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-10">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
 
         {/* ── Corporate Header ── */}
-        <header className="mb-8 border-b border-border pb-6 flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <header className="mb-6 sm:mb-8 border-b border-border pb-6 flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-widest">
               <FileSpreadsheet className="w-3.5 h-3.5" />
               Finance Wing · Vault Storage
             </div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">
               Document & Report Vault
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground font-medium">
@@ -502,9 +502,9 @@ export default function SavedFiles() {
         />
 
         {/* ── Toolbar ── */}
-        <div className="bg-card/40 backdrop-blur-xl rounded-2xl border border-border p-4 mb-4 space-y-3 transition-all">
+        <div className="bg-card/40 backdrop-blur-xl rounded-2xl border border-border p-3.5 sm:p-4 mb-4 space-y-3 transition-all">
           {/* Row 1: Search + View + Refresh */}
-          <div className="flex flex-col sm:flex-row items-center gap-3">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
             <div className="relative flex-1 w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
@@ -520,13 +520,13 @@ export default function SavedFiles() {
                 </button>
               )}
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 flex-wrap shrink-0">
               {/* Filter toggle */}
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowFilters(v => !v)}
-                className={`gap-2 border-border/60 text-foreground transition-all ${showFilters || hasActiveFilters ? "bg-blue-500/10 border-blue-500/30 text-blue-500" : "hover:bg-muted"}`}
+                className={`gap-2 border-border/60 text-foreground transition-all text-xs ${showFilters || hasActiveFilters ? "bg-blue-500/10 border-blue-500/30 text-blue-500" : "hover:bg-muted"}`}
               >
                 <Filter className="w-4 h-4" />
                 Filters
@@ -538,14 +538,14 @@ export default function SavedFiles() {
               <div className="flex border border-border/60 rounded-xl overflow-hidden">
                 <button
                   onClick={() => setViewMode("grid")}
-                  className={`p-2.5 transition-colors ${viewMode === "grid" ? "bg-blue-600 text-white" : "bg-background text-muted-foreground hover:text-foreground"}`}
+                  className={`p-2 sm:p-2.5 transition-colors ${viewMode === "grid" ? "bg-blue-600 text-white" : "bg-background text-muted-foreground hover:text-foreground"}`}
                   title="Grid view"
                 >
                   <LayoutGrid className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => setViewMode("list")}
-                  className={`p-2.5 transition-colors ${viewMode === "list" ? "bg-blue-600 text-white" : "bg-background text-muted-foreground hover:text-foreground"}`}
+                  className={`p-2 sm:p-2.5 transition-colors ${viewMode === "list" ? "bg-blue-600 text-white" : "bg-background text-muted-foreground hover:text-foreground"}`}
                   title="List view"
                 >
                   <List className="w-4 h-4" />
@@ -555,32 +555,32 @@ export default function SavedFiles() {
                 variant="outline"
                 size="sm"
                 onClick={fetchFiles}
-                className="gap-2 border-border/60 hover:bg-muted text-foreground"
+                className="gap-2 border-border/60 hover:bg-muted text-foreground text-xs"
               >
                 <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-                Refresh
+                <span className="hidden sm:inline">Refresh</span>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleRescanDates}
                 disabled={rescanLoading}
-                className="gap-2 border-border/60 hover:bg-muted text-foreground"
+                className="gap-2 border-border/60 hover:bg-muted text-foreground text-xs"
                 title="Scan existing files to extract and save their records counts, layouts, and date ranges."
               >
                 <Zap className={`w-4 h-4 ${rescanLoading ? "animate-pulse text-yellow-500" : ""}`} />
-                {rescanLoading ? "Scanning…" : "Re-scan Metadata"}
+                <span>{rescanLoading ? "Scanning…" : "Re-scan"}</span>
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleBulkDownloadAll}
                 disabled={bulkDownloading || processedFiles.length === 0}
-                className="gap-2 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 font-semibold"
+                className="gap-2 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 font-semibold text-xs"
                 title="Download all currently visible files in a single ZIP archive"
               >
                 <Download className={`w-4 h-4 ${bulkDownloading ? "animate-bounce" : ""}`} />
-                {bulkDownloading ? "Exporting..." : "Download All (ZIP)"}
+                <span>{bulkDownloading ? "Exporting..." : "Export All (ZIP)"}</span>
               </Button>
             </div>
           </div>
@@ -856,7 +856,7 @@ export default function SavedFiles() {
           </div>
         ) : (
           // ── List View ──
-          <div className="bg-card/40 backdrop-blur-xl border border-border rounded-2xl overflow-hidden">
+          <div className="bg-card/40 backdrop-blur-xl border border-border rounded-2xl overflow-x-auto touch-pan-x">
             {/* List Header */}
             <div className="flex items-center gap-4 px-5 py-3 border-b border-border/60 bg-muted/30">
               <button onClick={toggleSelectAll} className="shrink-0">

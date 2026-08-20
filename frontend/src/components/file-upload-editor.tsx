@@ -359,27 +359,27 @@ export function FileUploadEditor() {
       ) : (
         <>
           <Card className="border-border bg-card/40 backdrop-blur-xl shadow-2xl overflow-hidden rounded-3xl">
-            <div className="flex flex-col md:flex-row justify-between items-center p-6 border-b border-border gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-center p-4 sm:p-6 border-b border-border gap-4">
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 shrink-0">
                   <FileText className="w-6 h-6" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-black text-foreground">Document Preview</h2>
+                  <h2 className="text-base sm:text-lg font-black text-foreground">Document Preview</h2>
                   <p className="text-xs font-bold text-muted-foreground truncate max-w-[200px] md:max-w-none">{sheets?.length} Sheet(s) extracted</p>
                 </div>
               </div>
               
-              <div className="flex flex-wrap justify-end items-center gap-4 w-full md:w-auto">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 w-full md:w-auto">
                 {submitMessage && (
-                   <span className={`text-sm font-bold mr-2 ${submitMessage.includes("✓") ? "text-emerald-500" : "text-red-500"}`}>
+                   <span className={`text-xs sm:text-sm font-bold text-center sm:text-left ${submitMessage.includes("✓") ? "text-emerald-500" : "text-red-500"}`}>
                      {submitMessage}
                    </span>
                 )}
                 <Button 
                   variant="outline" 
                   onClick={() => setSheets(null)}
-                  className="rounded-xl font-bold border-border hover:bg-muted gap-2"
+                  className="rounded-xl font-bold border-border hover:bg-muted gap-2 text-xs sm:text-sm"
                 >
                   <RefreshCcw className="w-4 h-4" />
                   Upload New
@@ -387,7 +387,7 @@ export function FileUploadEditor() {
                 <Button 
                   onClick={handleOpenSubmitModal} 
                   disabled={isSubmitting} 
-                  className="w-full md:w-auto px-6 rounded-xl font-bold bg-foreground text-background hover:opacity-90 gap-2 shadow-lg active:scale-95 transition-all"
+                  className="w-full sm:w-auto px-6 rounded-xl font-bold bg-foreground text-background hover:opacity-90 gap-2 shadow-lg active:scale-95 transition-all text-xs sm:text-sm"
                 >
                   {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   Save in Vault

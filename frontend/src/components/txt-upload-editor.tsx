@@ -268,15 +268,15 @@ export function TxtUploadEditor() {
       )}
 
       {!sheets ? (
-        <Card className="p-8 border-2 border-indigo-200 dark:border-indigo-800 bg-white dark:bg-zinc-900 shadow-lg">
+        <Card className="p-4 sm:p-8 border-2 border-indigo-200 dark:border-indigo-800 bg-white dark:bg-zinc-900 shadow-lg">
           <div className="text-center space-y-6">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Upload Bank Statement (TXT)</h2>
-              <p className="text-gray-600 dark:text-gray-400">Only plain text (.txt) files are supported here</p>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Upload Bank Statement (TXT)</h2>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Only plain text (.txt) files are supported here</p>
             </div>
 
             <div
-              className={`border-2 border-dashed rounded-lg p-12 cursor-pointer ${isDragging ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30" : "border-indigo-300 dark:border-indigo-700 bg-indigo-50/50 dark:bg-indigo-900/10"}`}
+              className={`border-2 border-dashed rounded-lg p-6 sm:p-12 cursor-pointer ${isDragging ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30" : "border-indigo-300 dark:border-indigo-700 bg-indigo-50/50 dark:bg-indigo-900/10"}`}
               onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
               onDragLeave={() => setIsDragging(false)}
               onDrop={handleDrop}
@@ -284,37 +284,37 @@ export function TxtUploadEditor() {
             >
               <input ref={fileInputRef} type="file" accept=".txt" onChange={handleChange} className="hidden" />
               <div className="space-y-2">
-                <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">Drag and drop your file</p>
+                <p className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100">Drag and drop your file</p>
               </div>
             </div>
 
-            {error && <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-400 text-sm">{error}</div>}
+            {error && <div className="bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-700 dark:text-red-400 text-xs sm:text-sm">{error}</div>}
           </div>
         </Card>
       ) : (
         <>
           <Card className="border-border bg-card/40 backdrop-blur-xl shadow-2xl overflow-hidden rounded-3xl">
-            <div className="flex flex-col md:flex-row justify-between items-center p-6 border-b border-border gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-center p-4 sm:p-6 border-b border-border gap-4">
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 shrink-0">
                   <FileText className="w-6 h-6" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-black text-foreground">Document Preview</h2>
+                  <h2 className="text-base sm:text-lg font-black text-foreground">Document Preview</h2>
                   <p className="text-xs font-bold text-muted-foreground truncate max-w-[200px] md:max-w-none">{sheets?.length} Sheet(s) extracted</p>
                 </div>
               </div>
               
-              <div className="flex flex-wrap justify-end items-center gap-4 w-full md:w-auto">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 w-full md:w-auto">
                 {submitMessage && (
-                   <span className={`text-sm font-bold mr-2 ${submitMessage.includes("✓") ? "text-emerald-500" : "text-red-500"}`}>
+                   <span className={`text-xs sm:text-sm font-bold text-center sm:text-left ${submitMessage.includes("✓") ? "text-emerald-500" : "text-red-500"}`}>
                      {submitMessage}
                    </span>
                 )}
                 <Button 
                   variant="outline" 
                   onClick={resetUploader}
-                  className="rounded-xl font-bold border-border hover:bg-muted gap-2"
+                  className="rounded-xl font-bold border-border hover:bg-muted gap-2 text-xs sm:text-sm"
                 >
                   <RefreshCcw className="w-4 h-4" />
                   Upload New
@@ -322,7 +322,7 @@ export function TxtUploadEditor() {
                 <Button 
                   onClick={handleOpenSubmitModal} 
                   disabled={isSubmitting} 
-                  className="w-full md:w-auto px-6 rounded-xl font-bold bg-foreground text-background hover:opacity-90 gap-2 shadow-lg active:scale-95 transition-all"
+                  className="w-full sm:w-auto px-6 rounded-xl font-bold bg-foreground text-background hover:opacity-90 gap-2 shadow-lg active:scale-95 transition-all text-xs sm:text-sm"
                 >
                   {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   Save in Vault

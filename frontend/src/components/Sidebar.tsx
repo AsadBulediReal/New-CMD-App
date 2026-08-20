@@ -13,7 +13,12 @@ import {
   Activity
 } from "lucide-react";
 
-export function Sidebar() {
+interface SidebarProps {
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
+}
+
+export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const location = useLocation();
 
   const navigationGroups = [
@@ -42,21 +47,36 @@ export function Sidebar() {
     },
   ];
 
-  return (
-    <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col h-screen sticky top-0 z-40 select-none font-sans shrink-0">
+  const sidebarContent = (
+    <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col h-full select-none font-sans shrink-0">
       {/* ── Institutional Header Branding ── */}
-      <div className="p-4 border-b border-sidebar-border flex items-center gap-3">
-        <div className="w-9 h-9 rounded-md bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground shadow-xs shrink-0">
-          <Building2 className="w-5 h-5" />
+      <div className="p-4 border-b border-sidebar-border flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-9 h-9 rounded-md bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground shadow-xs shrink-0">
+            <Building2 className="w-5 h-5" />
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-extrabold tracking-tight text-sidebar-foreground truncate flex items-center gap-1">
+              CMD <span className="text-primary font-bold">FINANCE</span>
+            </span>
+            <span className="text-[10px] tracking-wider uppercase font-semibold text-muted-foreground truncate">
+              University of Sindh
+            </span>
+          </div>
         </div>
-        <div className="flex flex-col min-w-0">
-          <span className="text-sm font-extrabold tracking-tight text-sidebar-foreground truncate flex items-center gap-1">
-            CMD <span className="text-primary font-bold">FINANCE</span>
-          </span>
-          <span className="text-[10px] tracking-wider uppercase font-semibold text-muted-foreground truncate">
-            University of Sindh
-          </span>
-        </div>
+        {/* Mobile close button */}
+        {onMobileClose && (
+          <button
+            onClick={onMobileClose}
+            className="lg:hidden p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
+            title="Close navigation"
+          >
+            <Activity className="w-4 h-4 hidden" />
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* ── Navigation Menu Groups ── */}
@@ -74,6 +94,7 @@ export function Sidebar() {
                 <Link
                   key={item.href}
                   to={item.href}
+                  onClick={() => onMobileClose?.()}
                   className={`group flex items-center justify-between px-2.5 py-2 rounded-md text-xs font-semibold transition-all duration-150 ${
                     isActive
                       ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-xs font-bold"
@@ -125,4 +146,29 @@ export function Sidebar() {
       </div>
     </aside>
   );
+
+  return (
+    <>
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:flex h-screen sticky top-0 z-40 shrink-0">
+        {sidebarContent}
+      </div>
+
+      {/* Mobile Drawer Overlay */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden flex">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-background/80 backdrop-blur-sm transition-opacity"
+            onClick={onMobileClose}
+          />
+          {/* Drawer container */}
+          <div className="relative z-50 flex flex-col h-full max-w-xs w-full shadow-2xl animate-in slide-in-from-left duration-200">
+            {sidebarContent}
+          </div>
+        </div>
+      )}
+    </>
+  );
 }
+

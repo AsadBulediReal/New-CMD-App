@@ -45,21 +45,21 @@ export default function UploadTxtFile() {
         }}
       />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-10 space-y-8">
-        <header className="border-b border-border pb-6 flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8">
+        <header className="border-b border-border pb-6 flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-widest">
               <FileText className="w-3.5 h-3.5" />
               Ingestion MOD-01 · Statement Parser
             </div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">
               TXT Bank Statement Ingestion
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground font-medium max-w-2xl">
               Upload raw bank-statement files. Automatically strip noise, extract transactions, and output structured JSON records.
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 self-start md:self-auto">
             <Button 
               variant="outline" 
               onClick={() => setShowHelp(true)}

@@ -291,22 +291,22 @@ export default function AuditTool() {
         }}
       />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-6 py-10 space-y-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8">
         {/* Header */}
-        <div className="border-b border-border pb-6 flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div className="border-b border-border pb-6 flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-widest">
               <ShieldCheck className="w-3.5 h-3.5" />
               Audit MOD-05 · Auto-Classification & Compliance
             </div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">
               Audit Categorizer Engine
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground font-medium">
               Auto-classify transaction records into predefined compliance collections based on Type Codes.
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 self-start md:self-auto">
             <Button 
               variant="outline" 
               onClick={() => setShowHelp(true)}
@@ -331,9 +331,9 @@ export default function AuditTool() {
           features={features}
         />
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
           
-          <Card className="lg:col-span-4 p-8 border-border bg-card/40 backdrop-blur-xl shadow-2xl relative group">
+          <Card className="lg:col-span-4 p-4 sm:p-8 border-border bg-card/40 backdrop-blur-xl shadow-2xl relative group">
             <div className="absolute top-0 inset-x-0 h-1 bg-linear-to-r from-purple-600 to-indigo-500 opacity-20" />
             
             <div className="space-y-6">
@@ -367,7 +367,7 @@ export default function AuditTool() {
             </div>
           </Card>
 
-          <Card className="lg:col-span-8 p-8 border-border bg-card/40 backdrop-blur-xl shadow-2xl relative overflow-hidden">
+          <Card className="lg:col-span-8 p-4 sm:p-8 border-border bg-card/40 backdrop-blur-xl shadow-2xl relative overflow-hidden">
             <div className="absolute top-0 inset-x-0 h-1 bg-linear-to-r from-purple-600 to-indigo-500 opacity-20" />
             
              {selectedFileId ? (

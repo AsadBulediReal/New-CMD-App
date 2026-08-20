@@ -198,7 +198,7 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
 
   return (
     <div className="flex-1 flex flex-col h-full space-y-4 overflow-hidden p-4">
-      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between text-sm text-muted-foreground mb-4">
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between text-xs sm:text-sm text-muted-foreground mb-4">
         <span>
           {totalFilteredRows} rows found (Total: {data.rows.length}) × {data.headers.length} columns
         </span>
@@ -206,7 +206,7 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
              {!readonly && (
                <HoverCard>
                   <HoverCardTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-indigo-600">
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-indigo-600 shrink-0">
                           <span className="sr-only">Help</span>
                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle-help"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
                       </Button>
@@ -245,26 +245,26 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
                 placeholder="Search all columns..." 
                 value={searchTerm}
                 onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                className="max-w-xs"
+                className="w-full sm:max-w-xs text-xs sm:text-sm"
              />
         </div>
       </div>
 
-      <div className="flex-1 border border-border rounded-xl shadow-inner overflow-auto relative bg-background/50 backdrop-blur-sm">
-        <table className="border-collapse w-full">
+      <div className="flex-1 border border-border rounded-xl shadow-inner overflow-auto touch-pan-x touch-pan-y relative bg-background backdrop-blur-sm max-w-full">
+        <table className="border-collapse w-full text-left">
           <thead>
-            <tr className="bg-muted/50 border-b border-border sticky top-0 z-20 shadow-sm">
-              <th className="px-4 py-3 text-left text-sm font-semibold text-foreground bg-muted border-r border-border sticky left-0 z-30 w-12 flex-shrink-0">
+            <tr className="bg-muted border-b border-border sticky top-0 z-20 shadow-xs">
+              <th className="px-3 py-3 text-center text-xs sm:text-sm font-semibold text-foreground bg-muted border-r border-border sticky left-0 z-30 w-16 min-w-[64px] shrink-0">
                 #
               </th>
               {data.headers.map((header, idx) => (
                 <th
                   key={header}
-                  className="px-4 py-3 text-left text-sm font-bold text-foreground bg-muted/30 border-r border-border flex-shrink-0 cursor-pointer hover:bg-muted/50 transition-colors"
-                  style={{ minWidth: "150px" }}
+                  className="px-4 py-3 text-left text-xs sm:text-sm font-bold text-foreground bg-muted/95 backdrop-blur-sm border-r border-border shrink-0 cursor-pointer hover:bg-muted transition-colors"
+                  style={{ minWidth: "180px" }}
                   onClick={() => handleSort(header)}
                 >
-                  <div className="flex items-center justify-between gap-2 group w-full">
+                  <div className="flex items-center justify-between gap-2 group w-full min-w-0">
                     {editingHeader === header ? (
                       <Input
                         autoFocus
@@ -282,28 +282,28 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
                         className="h-7 text-xs px-2"
                       />
                     ) : (
-                      <div className="flex items-center gap-1 flex-1 overflow-hidden" title="Click to sort">
+                      <div className="flex items-center gap-1 min-w-0 flex-1 overflow-hidden" title="Click to sort">
                         <span className="truncate">
                             {header}
                         </span>
                         {data.columnTypes && data.columnTypes[idx] && data.columnTypes[idx] !== 'string' && (
-                            <span className="text-[10px] bg-muted-foreground/10 text-muted-foreground px-1.5 py-0.5 rounded uppercase font-bold ml-1">
+                            <span className="text-[10px] bg-muted-foreground/10 text-muted-foreground px-1.5 py-0.5 rounded uppercase font-bold shrink-0 ml-1">
                                 {data.columnTypes[idx]}
                             </span>
                         )}
                         {sortConfig?.key === header ? (
-                            <span className="text-xs text-indigo-600 font-bold ml-1">
+                            <span className="text-xs text-indigo-600 font-bold shrink-0 ml-1">
                                 {sortConfig?.direction === "asc" ? "↑" : "↓"}
                             </span>
                         ) : (
-                            <span className="text-xs text-muted-foreground/30 font-bold ml-1 transition-opacity">
+                            <span className="text-xs text-muted-foreground/40 font-bold shrink-0 ml-1">
                                 ↕
                             </span>
                         )}
                       </div>
                     )}
                     {!readonly && (
-                      <div className="flex items-center gap-1 flex-shrink-0">
+                      <div className="flex items-center gap-1 shrink-0">
                           {editingHeader !== header && (
                               <Button
                               onClick={(e) => {
@@ -338,7 +338,7 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
           <tbody>
             {paginatedRows.length === 0 ? (
               <tr>
-                <td colSpan={data.headers.length + 1} className="px-4 py-8 text-center text-muted-foreground">
+                <td colSpan={data.headers.length + 1} className="px-4 py-8 text-center text-muted-foreground text-xs sm:text-sm">
                   No data matches your search
                 </td>
               </tr>
@@ -369,8 +369,8 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
                       </tr>
                     )}
                     {/* Using a composite key or object reference if available would be better, but index is okay for display-only mostly */}
-                    <tr key={index} className="border-b border-border hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 text-sm text-muted-foreground bg-muted/20 font-medium text-center border-r border-border sticky left-0 z-10 w-12 flex-shrink-0">
+                    <tr key={index} className="border-b border-border/60 hover:bg-muted/30 transition-colors">
+                      <td className="px-3 py-3 text-xs sm:text-sm text-muted-foreground bg-card font-semibold text-center border-r border-border sticky left-0 z-10 w-16 min-w-[64px] shrink-0">
                         <div className="flex items-center justify-between gap-1">
                           <span>{displayIndex}</span>
                           {!readonly && (
@@ -378,7 +378,7 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
                               onClick={() => handleRemoveRowByRef(row)}
                               variant="ghost"
                               size="sm"
-                              className="h-5 w-5 p-0 text-muted-foreground/50 hover:text-red-600 hover:bg-destructive/10"
+                              className="h-5 w-5 p-0 text-muted-foreground/40 hover:text-red-600 hover:bg-destructive/10"
                               title="Remove row"
                             >
                               ✕
@@ -389,8 +389,8 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
                       {data.headers.map((header) => (
                         <td
                           key={`${index}-${header}`}
-                          className="px-4 py-3 text-sm text-foreground/80 border-r border-border break-words flex-shrink-0"
-                          style={{ minWidth: "150px" }}
+                          className="px-4 py-3 text-xs sm:text-sm text-foreground/90 border-r border-border/60 whitespace-pre-wrap break-words leading-relaxed shrink-0 align-top"
+                          style={{ minWidth: "180px" }}
                         >
                           {formatCellValue(row[header], header)}
                         </td>
@@ -405,8 +405,8 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
       </div>
 
       {totalFilteredRows > RECORDS_PER_PAGE && (
-        <div className="flex items-center justify-between pt-4 border-t border-border">
-          <div className="text-sm text-muted-foreground">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-border text-xs sm:text-sm">
+          <div className="text-muted-foreground text-center sm:text-left">
             Page <span className="font-semibold">{currentPage}</span> of{" "}
             <span className="font-semibold">{maxPage}</span>
             {" | "}
@@ -416,12 +416,13 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
             </span>
           </div>
 
-          <div className="flex gap-2 items-center">
+          <div className="flex flex-wrap gap-1.5 items-center justify-center">
             <Button
               onClick={() => setCurrentPage(1)}
               variant="outline"
+              size="sm"
               disabled={currentPage === 1 || isLoadingMore}
-              className="px-3"
+              className="px-2 sm:px-3 text-xs"
               title="Go to first page"
             >
               {"<<"}
@@ -430,10 +431,11 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
             <Button
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               variant="outline"
+              size="sm"
               disabled={currentPage === 1 || isLoadingMore}
-              className="px-3"
+              className="px-2 sm:px-3 text-xs"
             >
-              Previous
+              Prev
             </Button>
 
             <div className="flex gap-1">
@@ -449,7 +451,8 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
                     key={pageNum}
                     onClick={() => setCurrentPage(pageNum)}
                     variant={currentPage === pageNum ? "default" : "outline"}
-                    className={`w-8 h-8 p-0 ${
+                    size="sm"
+                    className={`w-7 h-7 sm:w-8 sm:h-8 p-0 text-xs ${
                       currentPage === pageNum ? "bg-indigo-600 text-white" : "bg-background text-foreground border-border"
                     }`}
                     disabled={isLoadingMore}
@@ -463,8 +466,9 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
             <Button
               onClick={() => setCurrentPage(Math.min(maxPage, currentPage + 1))}
               variant="outline"
+              size="sm"
               disabled={currentPage === maxPage || isLoadingMore}
-              className="px-3"
+              className="px-2 sm:px-3 text-xs"
             >
               Next
             </Button>
@@ -472,8 +476,9 @@ export function DataTable({ data, onDataUpdate, isLoadingMore = false, readonly 
             <Button
               onClick={() => setCurrentPage(maxPage)}
               variant="outline"
+              size="sm"
               disabled={currentPage === maxPage || isLoadingMore}
-              className="px-3"
+              className="px-2 sm:px-3 text-xs"
               title="Go to last page"
             >
               {">>"}

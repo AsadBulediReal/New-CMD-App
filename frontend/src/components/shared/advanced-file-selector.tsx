@@ -398,7 +398,7 @@ export function AdvancedFileSelector({
               </div>
 
               {/* Date range pickers */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">From</label>
                   <DatePicker

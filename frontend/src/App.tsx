@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Routes, Route } from "react-router";
 import UploadeFile from "./Pages/UploadeFile";
 import UploadTxtFile from "./Pages/UploadTxtFile";
@@ -14,14 +15,16 @@ import { Toaster } from "./components/ui/sonner";
 import { BackendGuard } from "./components/BackendGuard";
 
 function App() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+
   return (
-    <div className="min-h-screen bg-background text-foreground flex w-full font-sans">
+    <div className="min-h-screen bg-background text-foreground flex w-full font-sans overflow-x-hidden">
       <ScrollToTop />
       <Toaster position="top-center" expand={false} richColors />
-      <Sidebar />
+      <Sidebar mobileOpen={mobileOpen} onMobileClose={() => setMobileOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0">
-        <Header />
-        <div className="flex-1">
+        <Header onMobileMenuToggle={() => setMobileOpen(prev => !prev)} />
+        <div className="flex-1 min-w-0">
           <BackendGuard>
             <Routes>
               <Route path="/" element={<MainPage />} />
@@ -41,3 +44,4 @@ function App() {
 }
 
 export default App;
+

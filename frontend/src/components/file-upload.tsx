@@ -406,23 +406,23 @@ export function FileUpload({
     const currentConfig = configs[configStepIndex];
 
     return (
-      <Card className="p-8 border-2 border-indigo-200 dark:border-indigo-800 bg-white dark:bg-zinc-900 shadow-lg animate-in fade-in zoom-in duration-300">
+      <Card className="p-4 sm:p-8 border-2 border-indigo-200 dark:border-indigo-800 bg-white dark:bg-zinc-900 shadow-lg animate-in fade-in zoom-in duration-300">
         <div className="space-y-6">
           <div className="flex justify-between items-center border-b border-border pb-4">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Configure Data Structure</h2>
-              <p className="text-muted-foreground">Sheet {configStepIndex + 1} of {rawSheets.length}: <span className="font-semibold text-indigo-600 dark:text-indigo-400">{currentSheet.name}</span></p>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100">Configure Data Structure</h2>
+              <p className="text-xs sm:text-sm text-muted-foreground">Sheet {configStepIndex + 1} of {rawSheets.length}: <span className="font-semibold text-indigo-600 dark:text-indigo-400">{currentSheet.name}</span></p>
             </div>
           </div>
           
           <div className="space-y-4">
-            <div className="bg-blue-50/50 dark:bg-blue-900/10 p-5 rounded-2xl border border-blue-100 dark:border-blue-800/30">
+            <div className="bg-blue-50/50 dark:bg-blue-900/10 p-4 sm:p-5 rounded-2xl border border-blue-100 dark:border-blue-800/30">
                <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">Step 1: Select Column Names Row</h3>
-               <p className="text-sm text-blue-700/80 dark:text-blue-300/80 mb-4">
+               <p className="text-xs sm:text-sm text-blue-700/80 dark:text-blue-300/80 mb-4">
                   Click on the row below that contains your table's column headers (e.g. Date, Description, Amount).
                </p>
                
-               <div className="max-h-[350px] overflow-auto border border-border rounded-xl bg-card shadow-inner">
+               <div className="max-h-[350px] overflow-auto touch-pan-x touch-pan-y border border-border rounded-xl bg-card shadow-inner max-w-full">
                  <table className="w-full text-sm text-left">
                    <thead className="bg-muted/80 backdrop-blur-md sticky top-0 z-10 shadow-sm">
                      <tr>
@@ -514,87 +514,87 @@ export function FileUpload({
           </div>
 
           <div className="space-y-4 pt-6 border-t border-border mt-6">
-            <div className="flex flex-col sm:flex-row justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <Button 
-                variant="outline" 
-                className="px-6 rounded-xl border-border hover:bg-muted"
-                onClick={() => {
-                  setRawSheets(null);
-                  setConfigs([]);
-                }}
-              >
-                Cancel
-              </Button>
-              {rawSheets.length > 1 && (
-                <div className="flex items-center gap-2">
+            <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 sm:flex-initial px-4 sm:px-6 rounded-xl border-border hover:bg-muted text-xs sm:text-sm h-10"
+                  onClick={() => {
+                    setRawSheets(null);
+                    setConfigs([]);
+                  }}
+                >
+                  Cancel
+                </Button>
+                {rawSheets.length > 1 && (
+                  <div className="flex items-center gap-1.5 flex-1 sm:flex-initial">
+                    <Button 
+                      variant="outline" 
+                      className="flex-1 sm:flex-initial px-4 sm:px-6 rounded-xl border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-900 dark:text-amber-400 dark:hover:bg-amber-900/30 text-xs sm:text-sm h-10"
+                      onClick={() => {
+                        const newConfigs = [...configs];
+                        newConfigs[configStepIndex].skipped = true;
+                        setConfigs(newConfigs);
+                        if (configStepIndex < rawSheets.length - 1) {
+                          setConfigStepIndex(configStepIndex + 1);
+                        } else {
+                          confirmConfiguration();
+                        }
+                      }}
+                    >
+                      Skip Sheet
+                    </Button>
+                    <TooltipProvider delayDuration={0}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="w-4 h-4 text-muted-foreground hover:text-foreground cursor-help transition-colors shrink-0" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="max-w-xs">Completely ignore the current sheet and exclude it from your final dataset.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
+                <div className="flex items-center gap-1.5 flex-1 sm:flex-initial">
                   <Button 
-                    variant="outline" 
-                    className="px-6 rounded-xl border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-900 dark:text-amber-400 dark:hover:bg-amber-900/30"
+                    variant="secondary"
+                    className="flex-1 sm:flex-initial px-4 sm:px-6 rounded-xl font-semibold text-xs sm:text-sm h-10"
                     onClick={() => {
-                      const newConfigs = [...configs];
-                      newConfigs[configStepIndex].skipped = true;
-                      setConfigs(newConfigs);
-                      if (configStepIndex < rawSheets.length - 1) {
-                        setConfigStepIndex(configStepIndex + 1);
-                      } else {
-                        confirmConfiguration();
-                      }
+                      // Bypass remaining configuration and use current configs
+                      confirmConfiguration();
                     }}
                   >
-                    Skip Sheet
+                    Skip Config & Process All
                   </Button>
                   <TooltipProvider delayDuration={0}>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Info className="w-4 h-4 text-muted-foreground hover:text-foreground cursor-help transition-colors" />
+                        <Info className="w-4 h-4 text-muted-foreground hover:text-foreground cursor-help transition-colors shrink-0" />
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p className="max-w-xs">Completely ignore the current sheet and exclude it from your final dataset.</p>
+                        <p className="max-w-xs">Instantly process this and all remaining sheets using the system's best guesses.</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>
-              )}
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
                 <Button 
-                  variant="secondary"
-                  className="px-6 rounded-xl font-semibold"
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 sm:px-8 rounded-xl font-bold shadow-md shadow-indigo-500/20 active:scale-95 transition-all text-xs sm:text-sm h-10 shrink-0"
                   onClick={() => {
-                    // Bypass remaining configuration and use current configs
-                    confirmConfiguration();
+                    if (configStepIndex < rawSheets.length - 1) {
+                      setConfigStepIndex(configStepIndex + 1);
+                    } else {
+                      confirmConfiguration();
+                    }
                   }}
                 >
-                  Skip Config & Process All
+                  {configStepIndex < rawSheets.length - 1 ? "Next Sheet" : "Confirm Configuration"}
                 </Button>
-                <TooltipProvider delayDuration={0}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="w-4 h-4 text-muted-foreground hover:text-foreground cursor-help transition-colors" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p className="max-w-xs">Instantly process this and all remaining sheets using the system's best guesses.</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
               </div>
-              <Button 
-                className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 rounded-xl font-bold shadow-md shadow-indigo-500/20 active:scale-95 transition-all"
-                onClick={() => {
-                  if (configStepIndex < rawSheets.length - 1) {
-                    setConfigStepIndex(configStepIndex + 1);
-                  } else {
-                    confirmConfiguration();
-                  }
-                }}
-              >
-                {configStepIndex < rawSheets.length - 1 ? "Next Sheet" : "Confirm Configuration"}
-              </Button>
             </div>
           </div>
-        </div>
         </div>
       </Card>
     )
@@ -602,15 +602,15 @@ export function FileUpload({
 
   return (
     <>
-      <Card className="p-8 border-2 border-indigo-200 dark:border-indigo-800 bg-white dark:bg-zinc-900 shadow-lg rounded-3xl">
+      <Card className="p-4 sm:p-8 border-2 border-indigo-200 dark:border-indigo-800 bg-white dark:bg-zinc-900 shadow-lg rounded-3xl">
         <div className="text-center space-y-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Upload Your Data File</h2>
-            <p className="text-muted-foreground font-medium">Support for CSV and Excel files (.xlsx, .xls)</p>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Upload Your Data File</h2>
+            <p className="text-xs sm:text-sm text-muted-foreground font-medium">Support for CSV and Excel files (.xlsx, .xls)</p>
           </div>
 
           <div
-            className={`border-2 border-dashed rounded-2xl p-12 transition-all duration-300 cursor-pointer ${
+            className={`border-2 border-dashed rounded-2xl p-6 sm:p-12 transition-all duration-300 cursor-pointer ${
               isDragging
                 ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 scale-[1.02]"
                 : "border-indigo-300 dark:border-indigo-700 bg-indigo-50/50 dark:bg-indigo-900/10 hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-indigo-50/80"

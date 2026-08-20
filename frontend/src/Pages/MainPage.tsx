@@ -111,15 +111,15 @@ export default function MainPage() {
   const totalSheets = files.reduce((acc, f) => acc + (f.sheetCount || 1), 0);
 
   return (
-    <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto font-sans">
+    <div className="p-4 sm:p-6 md:p-8 space-y-6 sm:space-y-8 max-w-7xl mx-auto font-sans">
       {/* ── Executive Welcome & Status Banner ────────────────────────────── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 p-6 rounded-lg bg-card border border-border shadow-xs">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 p-5 sm:p-6 rounded-lg bg-card border border-border shadow-xs">
         <div className="space-y-1.5">
           <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded bg-primary/10 text-primary text-[11px] font-bold uppercase tracking-wider">
             <Building2Icon />
             Finance Wing · University of Sindh
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight text-foreground">
             Executive Operations Dashboard
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground">
@@ -129,46 +129,46 @@ export default function MainPage() {
       </div>
 
       {/* ── Dynamic Real Financial KPI Metric Cards ──────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-lg bg-card border border-border space-y-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="p-4 sm:p-5 rounded-lg bg-card border border-border space-y-2">
           <div className="flex items-center justify-between text-muted-foreground">
             <span className="text-[11px] font-bold uppercase tracking-wider">Stored Reports</span>
             <Database className="w-4 h-4 text-primary" />
           </div>
-          <div className="text-2xl font-black text-foreground">
+          <div className="text-xl sm:text-2xl font-black text-foreground">
             {loading ? "..." : `${files.length} Files`}
           </div>
           <span className="text-[11px] text-muted-foreground block">Active in Vault Repository</span>
         </div>
 
-        <div className="p-5 rounded-lg bg-card border border-border space-y-2">
+        <div className="p-4 sm:p-5 rounded-lg bg-card border border-border space-y-2">
           <div className="flex items-center justify-between text-muted-foreground">
             <span className="text-[11px] font-bold uppercase tracking-wider">Processed Records</span>
             <Activity className="w-4 h-4 text-blue-500" />
           </div>
-          <div className="text-2xl font-black text-foreground">
+          <div className="text-xl sm:text-2xl font-black text-foreground">
             {loading ? "..." : totalRecords.toLocaleString()}
           </div>
           <span className="text-[11px] text-muted-foreground block">Total row entries ingested</span>
         </div>
 
-        <div className="p-5 rounded-lg bg-card border border-border space-y-2">
+        <div className="p-4 sm:p-5 rounded-lg bg-card border border-border space-y-2">
           <div className="flex items-center justify-between text-muted-foreground">
             <span className="text-[11px] font-bold uppercase tracking-wider">Total Sheets</span>
             <FileSpreadsheet className="w-4 h-4 text-cyan-500" />
           </div>
-          <div className="text-2xl font-black text-foreground">
+          <div className="text-xl sm:text-2xl font-black text-foreground">
             {loading ? "..." : `${totalSheets} Sheets`}
           </div>
           <span className="text-[11px] text-muted-foreground block">Parsed workbook tabs</span>
         </div>
 
-        <div className="p-5 rounded-lg bg-card border border-border space-y-2">
+        <div className="p-4 sm:p-5 rounded-lg bg-card border border-border space-y-2">
           <div className="flex items-center justify-between text-muted-foreground">
             <span className="text-[11px] font-bold uppercase tracking-wider">Security & Encryption</span>
             <Shield className="w-4 h-4 text-emerald-500" />
           </div>
-          <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">AES-256</div>
+          <div className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400">AES-256</div>
           <span className="text-[11px] text-emerald-500 font-semibold block">Audit Compliance Verified</span>
         </div>
       </div>
@@ -179,7 +179,7 @@ export default function MainPage() {
       {/* ── Section Header: Processing Engines ───────────────────────────── */}
       <div className="flex items-center justify-between border-b border-border pb-3 pt-4">
         <div>
-          <h2 className="text-lg font-bold tracking-tight text-foreground">
+          <h2 className="text-base sm:text-lg font-bold tracking-tight text-foreground">
             Operational Processing Engines
           </h2>
           <p className="text-xs text-muted-foreground">
@@ -189,7 +189,7 @@ export default function MainPage() {
       </div>
 
       {/* ── High-Density Module Grid ────────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
         {tools.map((tool) => {
           const Icon = tool.icon;
           return (
@@ -212,7 +212,7 @@ export default function MainPage() {
                     </span>
                   </div>
                 </div>
-                <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded bg-secondary text-secondary-foreground border border-border">
+                <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded bg-secondary text-secondary-foreground border border-border shrink-0">
                   {tool.badge}
                 </span>
               </div>
@@ -240,7 +240,7 @@ export default function MainPage() {
       </div>
 
       {/* ── Footer ─────────────────────────────────────────────────────── */}
-      <footer className="pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between text-xs text-muted-foreground gap-4">
+      <footer className="pt-6 border-t border-border flex flex-col sm:flex-row items-center justify-between text-xs text-muted-foreground gap-3 text-center sm:text-left">
         <div>
           <span className="font-bold text-foreground">CMD System</span> · Finance Wing, University of Sindh
         </div>
@@ -288,10 +288,10 @@ function RecentActivitySection({ files, loading }: { files: any[]; loading: bool
 
   return (
     <div className="space-y-4 pt-2">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Database className="w-4 h-4 text-primary" />
-          <h3 className="text-sm font-bold tracking-tight text-foreground uppercase">
+          <Database className="w-4 h-4 text-primary shrink-0" />
+          <h3 className="text-xs sm:text-sm font-bold tracking-tight text-foreground uppercase">
             Recent Vault Reports ({files.length} Total Files Stored)
           </h3>
         </div>
@@ -317,22 +317,22 @@ function RecentActivitySection({ files, loading }: { files: any[]; loading: bool
             {recentFiles.map((file) => (
               <div
                 key={file._id}
-                className="p-4 flex items-center justify-between hover:bg-muted/40 transition-colors"
+                className="p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-muted/40 transition-colors"
               >
-                <div className="flex items-center gap-3 min-w-0 pr-4">
+                <div className="flex items-center gap-3 min-w-0 pr-2">
                   <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center text-primary shrink-0">
                     <FileSpreadsheet className="w-4.5 h-4.5" />
                   </div>
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h4 className="text-xs font-bold text-foreground truncate" title={file.filename}>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="text-xs font-bold text-foreground truncate max-w-[180px] sm:max-w-xs" title={file.filename}>
                         {file.filename}
                       </h4>
                       <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary shrink-0">
                         {formatTimeAgo(file.uploadDate)}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-1">
+                    <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] text-muted-foreground mt-1 flex-wrap">
                       <span>Date: {new Date(file.uploadDate).toLocaleDateString("en-GB")}</span>
                       <span>•</span>
                       <span className="font-semibold text-foreground">{file.totalRecords?.toLocaleString() || 0} records</span>
@@ -344,7 +344,7 @@ function RecentActivitySection({ files, loading }: { files: any[]; loading: bool
 
                 <Link
                   to="/saved-files"
-                  className="text-xs font-bold px-3.5 py-1.5 rounded bg-primary/10 hover:bg-primary/20 text-primary transition-colors shrink-0 flex items-center gap-1"
+                  className="text-xs font-bold px-3 py-1 rounded bg-primary/10 hover:bg-primary/20 text-primary transition-colors shrink-0 flex items-center justify-center gap-1 self-end sm:self-center"
                 >
                   Open File
                 </Link>

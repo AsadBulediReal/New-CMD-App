@@ -441,22 +441,22 @@ export default function MergeJson() {
         }}
       />
 
-      <div className="relative z-10 max-w-[90rem] mx-auto px-6 py-10 space-y-8">
+      <div className="relative z-10 max-w-[90rem] mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8">
         {/* Header */}
-        <div className="border-b border-border pb-6 flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div className="border-b border-border pb-6 flex flex-col md:flex-row md:items-end justify-between gap-4 sm:gap-6">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-widest">
               <Combine className="w-3.5 h-3.5" />
               Consolidation MOD-03 · Workbook Report Merger
             </div>
-            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">
               Report Consolidation Engine
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground font-medium">
               Combine heterogeneous Excel report slices into unified, structured master workbooks with deduplication.
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 self-start md:self-auto">
             <Button 
               variant="outline" 
               onClick={() => setShowHelp(true)}
@@ -474,10 +474,10 @@ export default function MergeJson() {
         </div>
 
         {/* Form Container */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
           
           {/* Files Selection (Left Column) */}
-          <div className="lg:col-span-4 space-y-4 flex flex-col max-h-[800px]">
+          <div className="lg:col-span-4 space-y-4 flex flex-col max-h-[500px] lg:max-h-[800px]">
              <Card className="p-4 border-border bg-card/40 backdrop-blur-xl shadow-2xl relative flex flex-col flex-1 overflow-hidden">
                 <div className="absolute top-0 inset-x-0 h-1 bg-linear-to-r from-cyan-500 to-sky-600 opacity-20" />
                 
@@ -620,20 +620,20 @@ export default function MergeJson() {
 
           {/* Mapping & Action (Right Column) */}
           <div className="lg:col-span-8 flex flex-col">
-             <Card className="p-6 border-border bg-card/40 backdrop-blur-xl shadow-2xl relative flex-1 flex flex-col min-h-[600px]">
+             <Card className="p-4 sm:p-6 border-border bg-card/40 backdrop-blur-xl shadow-2xl relative flex-1 flex flex-col min-h-[500px] sm:min-h-[600px]">
                 <div className="absolute top-0 inset-x-0 h-1 bg-linear-to-r from-cyan-500 to-sky-600 opacity-20" />
                 
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
                   <div className="flex items-center gap-2 text-foreground font-bold text-sm uppercase tracking-widest opacity-60">
                      <MapIcon className="w-4 h-4 text-cyan-500" />
                      Sheet Mapping Configuration
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
                     <Button 
                       variant="outline" 
                       size="sm" 
                       onClick={autoMapSheets}
-                      className="h-8 gap-1.5 font-bold border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400"
+                      className="flex-1 sm:flex-initial h-8 gap-1.5 font-bold border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400 text-xs"
                       disabled={selectedFileIds.length === 0}
                       title="Automatically map exactly matching sheets together"
                     >
@@ -644,11 +644,11 @@ export default function MergeJson() {
                       variant="outline" 
                       size="sm" 
                       onClick={addMappingRow}
-                      className="h-8 gap-1.5 font-bold border-cyan-500/30 text-cyan-600 hover:bg-cyan-500/10 dark:text-cyan-400"
+                      className="flex-1 sm:flex-initial h-8 gap-1.5 font-bold border-cyan-500/30 text-cyan-600 hover:bg-cyan-500/10 dark:text-cyan-400 text-xs"
                       disabled={selectedFileIds.length === 0}
                     >
                        <Plus className="w-3.5 h-3.5" />
-                       Add Merged Output
+                       Add Output
                     </Button>
                   </div>
                 </div>
@@ -662,7 +662,7 @@ export default function MergeJson() {
                   <div className="flex-1 flex flex-col items-center justify-center text-center opacity-40 space-y-3">
                      <MapIcon className="w-12 h-12 mb-2" />
                      <p className="text-sm font-bold uppercase tracking-widest">No mappings defined</p>
-                     <div className="flex gap-3">
+                     <div className="flex flex-wrap justify-center gap-3">
                        <Button variant="ghost" onClick={autoMapSheets} className="font-bold gap-2">
                          <Wand2 className="w-4 h-4"/> Auto-Map matching sheets
                        </Button>
@@ -674,21 +674,21 @@ export default function MergeJson() {
                 ) : (
                   <div className="space-y-6 mb-8 flex-1 overflow-y-auto pr-2">
                      {mappings.map((mapping, mIndex) => (
-                       <div key={mIndex} className="p-5 rounded-2xl border border-border bg-background shadow-inner">
-                         <div className="flex items-center justify-between mb-4 pb-4 border-b border-border">
+                       <div key={mIndex} className="p-4 sm:p-5 rounded-2xl border border-border bg-background shadow-inner">
+                         <div className="flex items-center justify-between mb-4 pb-4 border-b border-border gap-2">
                             <input 
                                value={mapping.outputSheetName}
                                onChange={e => updateMappingName(mIndex, e.target.value)}
-                               className="bg-transparent border-none text-lg font-black text-foreground focus:outline-none focus:ring-0 placeholder-muted-foreground/40 w-full max-w-[300px]"
+                               className="bg-transparent border-none text-base sm:text-lg font-black text-foreground focus:outline-none focus:ring-0 placeholder-muted-foreground/40 w-full max-w-[300px]"
                                placeholder="Target Sheet Name"
                             />
-                            <Button variant="ghost" size="icon" onClick={() => removeMappingRow(mIndex)} className="text-red-500 hover:text-red-600 hover:bg-red-500/10">
+                            <Button variant="ghost" size="icon" onClick={() => removeMappingRow(mIndex)} className="text-red-500 hover:text-red-600 hover:bg-red-500/10 shrink-0">
                                <Trash2 className="w-4 h-4" />
                             </Button>
                          </div>
 
                          <div className="space-y-3">
-                            <div className="grid grid-cols-12 gap-4 text-xs font-bold uppercase tracking-wider text-muted-foreground/60 px-2">
+                            <div className="hidden sm:grid grid-cols-12 gap-4 text-xs font-bold uppercase tracking-wider text-muted-foreground/60 px-2">
                                <div className="col-span-5">Source File</div>
                                <div className="col-span-7">Source Sheet to Include</div>
                             </div>
@@ -701,15 +701,15 @@ export default function MergeJson() {
                                const currentSelectedSheet = mapping.sources.find(s => s.fileId === file._id)?.sheetName || "";
                                
                                return (
-                                 <div key={file._id} className="grid grid-cols-12 gap-4 items-center bg-muted/20 p-2 rounded-lg border border-transparent hover:border-border transition-colors">
-                                    <div className="col-span-5 text-sm font-semibold truncate px-2" title={file.filename}>
+                                 <div key={file._id} className="flex flex-col sm:grid sm:grid-cols-12 gap-2 sm:gap-4 items-stretch sm:items-center bg-muted/20 p-2.5 sm:p-2 rounded-lg border border-transparent hover:border-border transition-colors">
+                                    <div className="sm:col-span-5 text-xs sm:text-sm font-semibold truncate px-1" title={file.filename}>
                                        {file.filename}
                                     </div>
-                                    <div className="col-span-7">
+                                    <div className="sm:col-span-7">
                                        <select
                                           value={currentSelectedSheet}
                                           onChange={e => updateSourceSheet(mIndex, file._id, e.target.value)}
-                                          className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
+                                          className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
                                        >
                                           <option value="">-- Exclude from this sheet --</option>
                                           {fileSheets.map(s => (
