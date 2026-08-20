@@ -62,7 +62,19 @@ const { analyze_transactions } = require("./utils/bsDataAnalytics");
 const { reconcile_bs_vs_mis } = require("./utils/reconcileHelper");
 const { audit_transactions, auditCategories } = require("./utils/auditHelper");
 
-// Endpoint to decrypt password-protected Excel files
+// In-memory store for chunked Excel decryption uploads (auto-cleaned after 10 minutes)
+const decryptUploadSessions = new Map();
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, session] of decryptUploadSessions.entries()) {
+    if (now - session.createdAt > 10 * 60 * 1000) {
+      decryptUploadSessions.delete(id);
+    }
+  }
+}, 5 * 60 * 1000);
+
+// Endpoint to decrypt password-protected Excel files (single payload for small files)
 app.post("/api/files/decrypt-excel", async (req, res) => {
   try {
     const { fileBuffer, password } = req.body;
@@ -80,6 +92,73 @@ app.post("/api/files/decrypt-excel", async (req, res) => {
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
     console.error("Excel decryption error:", errorMsg);
+    if (errorMsg.toLowerCase().includes("password") || errorMsg.toLowerCase().includes("incorrect")) {
+      return res.status(401).json({ error: "Incorrect password. Please try again." });
+    }
+    return res.status(400).json({ error: errorMsg || "Failed to decrypt file." });
+  }
+});
+
+// Endpoint to receive a chunk of an encrypted Excel file (bypasses Vercel 4.5MB limit)
+app.post("/api/files/decrypt-excel-chunk", (req, res) => {
+  try {
+    const { uploadId, chunkIndex, totalChunks, chunkData } = req.body;
+    if (!uploadId || chunkIndex === undefined || !totalChunks || !chunkData) {
+      return res.status(400).json({ error: "Missing required chunk parameters." });
+    }
+
+    if (!decryptUploadSessions.has(uploadId)) {
+      decryptUploadSessions.set(uploadId, {
+        totalChunks,
+        chunks: new Array(totalChunks),
+        receivedCount: 0,
+        createdAt: Date.now(),
+      });
+    }
+
+    const session = decryptUploadSessions.get(uploadId);
+    if (!session.chunks[chunkIndex]) {
+      session.chunks[chunkIndex] = chunkData;
+      session.receivedCount++;
+    }
+
+    res.json({ success: true, received: session.receivedCount, total: totalChunks });
+  } catch (err) {
+    console.error("Error receiving decryption chunk:", err);
+    res.status(500).json({ error: "Failed to process file chunk." });
+  }
+});
+
+// Endpoint to assemble chunks and decrypt password-protected Excel file
+app.post("/api/files/decrypt-excel-finish", async (req, res) => {
+  try {
+    const { uploadId, password } = req.body;
+    if (!uploadId || !password) {
+      return res.status(400).json({ error: "Upload ID and password are required." });
+    }
+
+    const session = decryptUploadSessions.get(uploadId);
+    if (!session) {
+      return res.status(404).json({ error: "Upload session expired or not found. Please try again." });
+    }
+
+    if (session.receivedCount < session.totalChunks) {
+      return res.status(400).json({ error: `Incomplete upload. Received ${session.receivedCount}/${session.totalChunks} chunks.` });
+    }
+
+    const fullBase64 = session.chunks.join("");
+    decryptUploadSessions.delete(uploadId);
+
+    const buffer = Buffer.from(fullBase64, "base64");
+    const decryptedBuffer = await officeCrypto.decrypt(buffer, { password });
+
+    res.json({
+      success: true,
+      decryptedBuffer: decryptedBuffer.toString("base64")
+    });
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error("Excel decryption finish error:", errorMsg);
     if (errorMsg.toLowerCase().includes("password") || errorMsg.toLowerCase().includes("incorrect")) {
       return res.status(401).json({ error: "Incorrect password. Please try again." });
     }

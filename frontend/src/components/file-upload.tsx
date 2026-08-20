@@ -117,18 +117,53 @@ export function FileUpload({
         }
         const base64 = btoa(binary);
 
-        const res = await fetch(getApiUrl("/api/files/decrypt-excel"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fileBuffer: base64, password })
-        });
+        let decryptedBase64 = '';
+        const CHUNK_SIZE = 2 * 1024 * 1024; // 2MB chunks (safe under Vercel 4.5MB limit)
 
-        const json = await res.json();
-        if (!res.ok || !json.success) {
-          throw new Error(json.error || "Incorrect password. Please try again.");
+        if (base64.length > CHUNK_SIZE) {
+          const uploadId = `dec_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+          const totalChunks = Math.ceil(base64.length / CHUNK_SIZE);
+
+          for (let i = 0; i < totalChunks; i++) {
+            const chunkData = base64.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+            const chunkRes = await fetch(getApiUrl("/api/files/decrypt-excel-chunk"), {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ uploadId, chunkIndex: i, totalChunks, chunkData }),
+            });
+
+            if (!chunkRes.ok) {
+              const errJson = await chunkRes.json().catch(() => ({}));
+              throw new Error(errJson.error || `Failed to upload chunk ${i + 1} of ${totalChunks}`);
+            }
+          }
+
+          const finishRes = await fetch(getApiUrl("/api/files/decrypt-excel-finish"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ uploadId, password }),
+          });
+
+          const finishJson = await finishRes.json();
+          if (!finishRes.ok || !finishJson.success) {
+            throw new Error(finishJson.error || "Incorrect password. Please try again.");
+          }
+          decryptedBase64 = finishJson.decryptedBuffer;
+        } else {
+          const res = await fetch(getApiUrl("/api/files/decrypt-excel"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ fileBuffer: base64, password })
+          });
+
+          const json = await res.json();
+          if (!res.ok || !json.success) {
+            throw new Error(json.error || "Incorrect password. Please try again.");
+          }
+          decryptedBase64 = json.decryptedBuffer;
         }
 
-        const decBinary = atob(json.decryptedBuffer);
+        const decBinary = atob(decryptedBase64);
         const decBytes = new Uint8Array(decBinary.length);
         for (let i = 0; i < decBinary.length; i++) {
           decBytes[i] = decBinary.charCodeAt(i);
