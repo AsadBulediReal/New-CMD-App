@@ -8,20 +8,69 @@ const FileChunk = require("./models/FileChunk");
 
 const app = express();
 
-const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:5173")
+const rawFrontendUrls = (
+  process.env.FRONTEND_URL || "http://localhost:5173,http://localhost:3000,http://127.0.0.1:5173"
+)
   .split(",")
-  .map((origin) => origin.trim())
+  .map((url) => url.trim())
   .filter(Boolean);
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
+const allowedOrigins = rawFrontendUrls.map((url) => {
+  if (url === "*") return "*";
+  try {
+    return new URL(url).origin;
+  } catch {
+    return url.replace(/\/+$/, "");
+  }
+});
 
-    return callback(new Error("Origin is not allowed by CORS"));
-  },
-}));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, cURL, server-to-server)
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      // If FRONTEND_URL is set to '*' or includes '*'
+      if (process.env.FRONTEND_URL === "*" || allowedOrigins.includes("*")) {
+        return callback(null, true);
+      }
+
+      const cleanOrigin = origin.replace(/\/+$/, "");
+
+      // 1. Direct match in allowedOrigins
+      if (allowedOrigins.includes(cleanOrigin)) {
+        return callback(null, true);
+      }
+
+      // 2. Subdomain / Sub-URI matching (e.g. app.domain.com or preview-xyz.vercel.app)
+      const isAllowedDomainOrSubdomain = allowedOrigins.some((allowed) => {
+        try {
+          const allowedHost = new URL(allowed).hostname;
+          const incomingHost = new URL(cleanOrigin).hostname;
+
+          return (
+            incomingHost === allowedHost ||
+            incomingHost.endsWith(`.${allowedHost}`)
+          );
+        } catch {
+          return false;
+        }
+      });
+
+      if (isAllowedDomainOrSubdomain) {
+        return callback(null, true);
+      }
+
+      console.warn(`[CORS Blocked] Origin: ${origin}. Configured allowedOrigins:`, allowedOrigins);
+      return callback(new Error(`Origin ${origin} is not allowed by CORS`));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  })
+);
 
 app.use(express.json({ limit: '500mb' })); // Increase limit for massive payloads since DB chunks resolve 16MB BSON barrier
 
