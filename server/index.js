@@ -6,11 +6,28 @@ const cors = require("cors");
 const StoredFile = require("./models/StoredFile");
 const FileChunk = require("./models/FileChunk");
 
-const app = express();
+const allowedFrontend = process.env.FRONTEND_URL || "http://localhost:5173,http://localhost:3000";
 
-// Enable CORS for all origins, subdomains, and sub-URIs
 app.use(cors({
-  origin: true,
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    
+    // Check if origin matches allowed FRONTEND_URL or its subdomains
+    const isAllowed = allowedFrontend.split(",").some((allowed) => {
+      const clean = allowed.trim().replace(/\/+$/, "");
+      if (clean === "*" || clean === origin) return true;
+      try {
+        const allowedHost = new URL(clean).hostname;
+        const incomingHost = new URL(origin).hostname;
+        return incomingHost === allowedHost || incomingHost.endsWith(`.${allowedHost}`);
+      } catch {
+        return false;
+      }
+    });
+
+    if (isAllowed) return callback(null, true);
+    callback(new Error(`CORS blocked for origin: ${origin}`));
+  },
   credentials: true
 }));
 
