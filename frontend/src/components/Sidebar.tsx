@@ -163,7 +163,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
             onClick={onMobileClose}
           />
           {/* Drawer container */}
-          <div className="relative z-50 flex flex-col h-full w-64 max-w-[80vw] shadow-2xl animate-in slide-in-from-left duration-200">
+          <div className="relative z-50 flex flex-col h-[100dvh] w-64 max-w-[80vw] shadow-2xl animate-in slide-in-from-left duration-200">
             {sidebarContent}
           </div>
         </div>

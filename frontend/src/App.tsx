@@ -18,11 +18,11 @@ function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex w-full font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-background text-foreground flex w-full font-sans">
       <ScrollToTop />
       <Toaster position="top-center" expand={false} richColors />
       <Sidebar mobileOpen={mobileOpen} onMobileClose={() => setMobileOpen(false)} />
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
         <Header onMobileMenuToggle={() => setMobileOpen(prev => !prev)} />
         <div className="flex-1 min-w-0">
           <BackendGuard>
