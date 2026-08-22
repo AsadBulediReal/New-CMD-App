@@ -1,14 +1,18 @@
 const express = require("express");
 const StoredFile = require("../models/StoredFile");
 const FileChunk = require("../models/FileChunk");
+const { optionalAuth } = require("../utils/authMiddleware");
+const { logUserActivity } = require("../utils/logger");
 const {
   detectAndCastSheet,
   extractDateRange,
   extractMetadata,
-  getFileWithChunks
+  getFileWithChunks,
+  recomputeAllFilesMeta
 } = require("../utils/metaHelpers");
 
 const router = express.Router();
+router.use(optionalAuth);
 
 // 1. Save uploaded file data with a custom filename
 router.post("/files", async (req, res) => {
@@ -58,6 +62,8 @@ router.post("/files", async (req, res) => {
       sheetCount,
       sheetMeta,
       financialSummary,
+      uploadedBy: req.user ? req.user._id : null,
+      uploadedByName: req.user ? req.user.name : "System",
       rows: [],
       sheets: castedSheets.map(s => ({
         name: s.name,
@@ -87,6 +93,16 @@ router.post("/files", async (req, res) => {
     if (chunkDocs.length > 0) {
       await FileChunk.insertMany(chunkDocs, { ordered: false });
     }
+
+    // Log upload activity
+    logUserActivity({
+      req,
+      action: "UPLOAD_FILE",
+      resourceType: "StoredFile",
+      resourceId: newFile._id,
+      details: { filename: newFile.filename, totalRecords, sheetCount }
+    });
+
     res.status(201).json({ message: "File saved successfully", fileId: newFile._id });
   } catch (error) {
     console.error("Error saving file:", error);
@@ -105,6 +121,10 @@ router.get("/files", async (req, res) => {
           recordDateRange: 1,
           sheetMeta: 1,
           financialSummary: 1,
+          uploadedBy: 1,
+          uploadedByName: 1,
+          isPendingDeletion: 1,
+          deletionRequestId: 1,
           totalRecords: {
             $ifNull: [
               "$totalRecords",
@@ -154,6 +174,15 @@ router.get("/files/:id", async (req, res) => {
   try {
     const file = await getFileWithChunks(req.params.id);
     if (!file) return res.status(404).json({ error: "File not found" });
+
+    logUserActivity({
+      req,
+      action: "VIEW_FILE",
+      resourceType: "StoredFile",
+      resourceId: req.params.id,
+      details: { filename: file.filename }
+    });
+
     res.status(200).json(file);
   } catch (error) {
     console.error("Error fetching file details:", error);
@@ -161,12 +190,21 @@ router.get("/files/:id", async (req, res) => {
   }
 });
 
-// 4. Delete a specific file by ID
+// 4. Delete a specific file by ID (Direct Delete)
 router.delete("/files/:id", async (req, res) => {
   try {
     const file = await StoredFile.findByIdAndDelete(req.params.id);
     if (!file) return res.status(404).json({ error: "File not found" });
     await FileChunk.deleteMany({ fileId: req.params.id });
+
+    logUserActivity({
+      req,
+      action: "DELETE_FILE",
+      resourceType: "StoredFile",
+      resourceId: req.params.id,
+      details: { filename: file.filename }
+    });
+
     res.status(200).json({ message: "File deleted" });
   } catch (error) {
     console.error("Error deleting file:", error);
@@ -188,6 +226,15 @@ router.patch("/files/:id/rename", async (req, res) => {
 
     const file = await StoredFile.findByIdAndUpdate(req.params.id, { filename: trimmedName }, { new: true });
     if (!file) return res.status(404).json({ error: "File not found" });
+
+    logUserActivity({
+      req,
+      action: "RENAME_FILE",
+      resourceType: "StoredFile",
+      resourceId: req.params.id,
+      details: { oldFilename: file.filename, newFilename: trimmedName }
+    });
+
     res.status(200).json({ message: "File renamed", file });
   } catch (error) {
     console.error("Error renaming file:", error);
@@ -204,6 +251,14 @@ router.post("/files/bulk-delete", async (req, res) => {
     }
     await StoredFile.deleteMany({ _id: { $in: ids } });
     await FileChunk.deleteMany({ fileId: { $in: ids } });
+
+    logUserActivity({
+      req,
+      action: "BULK_DELETE_FILES",
+      resourceType: "StoredFile",
+      details: { deletedCount: ids.length, ids }
+    });
+
     res.status(200).json({ message: "Files deleted" });
   } catch (error) {
     console.error("Error in bulk delete:", error);
@@ -215,77 +270,9 @@ router.post("/files/bulk-delete", async (req, res) => {
 router.post("/files/recompute-meta", async (req, res) => {
   try {
     const { all = false } = req.body;
-    const query = all ? {} : {
-      $or: [
-        { "recordDateRange.start": null },
-        { "recordDateRange.start": { $exists: false } },
-        { "totalRecords": null },
-        { "totalRecords": { $exists: false } },
-        { "totalRecords": 0 }
-      ]
-    };
-    const fileMetas = await StoredFile.find(query, "_id filename").lean();
-    let updated = 0;
-    let failed = 0;
-
-    for (const meta of fileMetas) {
-      try {
-        const file = await getFileWithChunks(meta._id.toString());
-        if (!file) continue;
-        const sheets = file.sheets && file.sheets.length > 0 ? file.sheets : (
-          file.rows && file.rows.length > 0
-            ? [{ name: "Sheet1", headers: file.headers || [], rows: file.rows }]
-            : []
-        );
-        if (sheets.length === 0) continue;
-        const castedSheets = sheets.map(sheet => detectAndCastSheet(sheet));
-        const { start, end } = extractDateRange(castedSheets);
-        const { totalRecords, columnCount, sheetCount, sheetMeta, financialSummary } = extractMetadata(castedSheets);
-
-        await StoredFile.updateOne(
-          { _id: meta._id },
-          {
-            $set: {
-              recordDateRange: { start, end },
-              totalRecords,
-              columnCount,
-              sheetCount,
-              sheetMeta,
-              financialSummary
-            }
-          }
-        );
-
-        await FileChunk.deleteMany({ fileId: meta._id });
-
-        const CHUNK_SIZE = 5000;
-        const chunkDocs = [];
-        let chunkIndex = 0;
-
-        for (const sheet of castedSheets) {
-          const sRows = sheet.rows || [];
-          for (let i = 0; i < sRows.length; i += CHUNK_SIZE) {
-            chunkDocs.push({
-              fileId: meta._id,
-              sheetName: sheet.name,
-              chunkIndex: chunkIndex++,
-              rows: sRows.slice(i, i + CHUNK_SIZE)
-            });
-          }
-        }
-
-        if (chunkDocs.length > 0) {
-          await FileChunk.insertMany(chunkDocs, { ordered: false });
-        }
-        updated++;
-      } catch (e) {
-        console.error(`Failed to recompute meta for ${meta.filename}:`, e.message);
-        failed++;
-      }
-    }
-
+    const result = await recomputeAllFilesMeta(all);
     res.status(200).json({
-      message: `Recomputed. Updated: ${updated}, Failed: ${failed}`
+      message: `Recomputed. Updated: ${result.updated}, Failed: ${result.failed}`
     });
   } catch (error) {
     console.error("Error in recompute-meta:", error);

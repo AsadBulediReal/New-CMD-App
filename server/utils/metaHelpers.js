@@ -180,6 +180,80 @@ async function getFileWithChunks(id, targetSheetNames = null) {
   return file;
 }
 
+/**
+ * Recompute metadata and rebuild chunks for files
+ */
+async function recomputeAllFilesMeta(all = false) {
+  const query = all ? {} : {
+    $or: [
+      { "recordDateRange.start": null },
+      { "recordDateRange.start": { $exists: false } },
+      { "totalRecords": null },
+      { "totalRecords": { $exists: false } },
+      { "totalRecords": 0 }
+    ]
+  };
+  const fileMetas = await StoredFile.find(query, "_id filename").lean();
+  let updated = 0;
+  let failed = 0;
+
+  for (const meta of fileMetas) {
+    try {
+      const file = await getFileWithChunks(meta._id.toString());
+      if (!file) continue;
+      const sheets = file.sheets && file.sheets.length > 0 ? file.sheets : (
+        file.rows && file.rows.length > 0
+          ? [{ name: "Sheet1", headers: file.headers || [], rows: file.rows }]
+          : []
+      );
+      if (sheets.length === 0) continue;
+      const castedSheets = sheets.map(sheet => detectAndCastSheet(sheet));
+      const { start, end } = extractDateRange(castedSheets);
+      const { totalRecords, columnCount, sheetCount, sheetMeta, financialSummary } = extractMetadata(castedSheets);
+
+      await StoredFile.updateOne(
+        { _id: meta._id },
+        {
+          $set: {
+            recordDateRange: { start, end },
+            totalRecords,
+            columnCount,
+            sheetCount,
+            sheetMeta,
+            financialSummary
+          }
+        }
+      );
+
+      await FileChunk.deleteMany({ fileId: meta._id });
+      const CHUNK_SIZE = 5000;
+      const chunkDocs = [];
+      let chunkIndex = 0;
+
+      for (const sheet of castedSheets) {
+        const sRows = sheet.rows || [];
+        for (let i = 0; i < sRows.length; i += CHUNK_SIZE) {
+          chunkDocs.push({
+            fileId: meta._id,
+            sheetName: sheet.name,
+            chunkIndex: chunkIndex++,
+            rows: sRows.slice(i, i + CHUNK_SIZE)
+          });
+        }
+      }
+
+      if (chunkDocs.length > 0) {
+        await FileChunk.insertMany(chunkDocs, { ordered: false });
+      }
+      updated++;
+    } catch (e) {
+      console.error(`Failed to recompute meta for ${meta.filename}:`, e.message);
+      failed++;
+    }
+  }
+  return { updated, failed };
+}
+
 module.exports = {
   decompressRow,
   parseDateFromCell,
@@ -189,5 +263,6 @@ module.exports = {
   extractDateRange,
   extractMetadata,
   applyDateFilter,
-  getFileWithChunks
+  getFileWithChunks,
+  recomputeAllFilesMeta,
 };

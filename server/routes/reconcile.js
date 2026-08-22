@@ -1,5 +1,7 @@
 const express = require("express");
 const { reconcile_bs_vs_mis } = require("../utils/reconcileHelper");
+const { optionalAuth } = require("../utils/authMiddleware");
+const { logUserActivity } = require("../utils/logger");
 const {
   decompressRow,
   applyDateFilter,
@@ -7,6 +9,7 @@ const {
 } = require("../utils/metaHelpers");
 
 const router = express.Router();
+router.use(optionalAuth);
 
 // 6. Reconcile BS vs MIS
 router.post("/reconcile-bs-mis", async (req, res) => {
@@ -91,6 +94,19 @@ router.post("/reconcile-bs-mis", async (req, res) => {
       { Metric: "Total Unverified (MIS) Amount", Value: summary.unverified_mis_total.toFixed(2) },
     ];
     resultingSheets.push({ name: "Summary", headers: ["Metric", "Value"], rows: summRows });
+
+    logUserActivity({
+      req,
+      action: "RUN_RECONCILIATION",
+      resourceType: "Reconciliation",
+      details: {
+        bsFile: bsFile.filename,
+        misFile: misFile.filename,
+        verifiedCount: summary.verified_mis_count,
+        unverifiedBS: summary.not_verified_bs_count,
+        unverifiedMIS: summary.not_verified_mis_count
+      }
+    });
 
     res.status(200).json({
       filename: `Reconciliation-${bsFile.filename}-vs-${misFile.filename}`,
