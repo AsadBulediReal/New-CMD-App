@@ -91,11 +91,11 @@ export const Login: React.FC = () => {
       <div className="w-full max-w-md space-y-6">
         {/* Branding */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 text-primary mb-2 shadow-sm">
-            <Lock className="w-7 h-7" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-card border border-border p-1 mb-2 shadow-xs">
+            <img src="/favicon.svg" alt="University of Sindh Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">CMD Finance Portal</h1>
-          <p className="text-sm text-muted-foreground">Sign in to access your financial tools and document vault</p>
+          <p className="text-sm text-muted-foreground">Finance Wing · University of Sindh, Jamshoro</p>
         </div>
 
         {/* Status Alerts */}

@@ -9,7 +9,6 @@ import {
   BarChart3,
   ShieldCheck,
   FileSpreadsheet,
-  Building2,
   Shield,
   LogOut
 } from "lucide-react";
@@ -62,10 +61,10 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
         <Link
           to="/"
           onClick={() => onMobileClose?.()}
-          className="flex items-center gap-3 min-w-0 hover:opacity-85 transition-opacity"
+          className="flex items-center gap-3 min-w-0 hover:opacity-90 transition-opacity"
         >
-          <div className="w-9 h-9 rounded-md bg-sidebar-primary flex items-center justify-center text-sidebar-primary-foreground shadow-xs shrink-0">
-            <Building2 className="w-5 h-5" />
+          <div className="w-9 h-9 rounded-full bg-card border border-sidebar-border flex items-center justify-center p-0.5 shadow-xs shrink-0 overflow-hidden">
+            <img src="/favicon.svg" alt="University of Sindh Logo" className="w-full h-full object-contain" />
           </div>
           <div className="flex flex-col min-w-0">
             <span className="text-sm font-extrabold tracking-tight text-sidebar-foreground truncate flex items-center gap-1">
