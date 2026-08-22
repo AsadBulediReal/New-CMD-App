@@ -5,7 +5,10 @@ import { ProtectedRoute, AdminRoute, PublicOnlyRoute } from "./components/Guards
 
 import Login from "./Pages/Auth/Login";
 import Register from "./Pages/Auth/Register";
+import ForgotPassword from "./Pages/Auth/ForgotPassword";
+import ResetPassword from "./Pages/Auth/ResetPassword";
 import PendingApproval from "./Pages/Auth/PendingApproval";
+import Profile from "./Pages/Profile";
 import AdminDashboard from "./Pages/Admin/AdminDashboard";
 
 import UploadeFile from "./Pages/UploadeFile";
@@ -42,6 +45,7 @@ function WorkspaceLayout() {
               <Route path="/reconcile" element={<Reconcile />} />
               <Route path="/audit" element={<AuditTool />} />
               <Route path="/merge-json" element={<MergeJson />} />
+              <Route path="/profile" element={<Profile />} />
               <Route
                 path="/admin"
                 element={
@@ -82,6 +86,15 @@ function App() {
             </PublicOnlyRoute>
           }
         />
+        <Route
+          path="/forgot-password"
+          element={
+            <PublicOnlyRoute>
+              <ForgotPassword />
+            </PublicOnlyRoute>
+          }
+        />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/pending-approval" element={<PendingApproval />} />
 
         {/* Protected workspace routes */}

@@ -152,6 +152,27 @@ async function sendDeletionStatusEmail(userEmail, targetName, isApproved, adminN
   return sendMailSafe({ to: userEmail, subject, html, text: `Your deletion request for ${targetName} was ${isApproved ? 'Approved' : 'Rejected'}.` });
 }
 
+/**
+ * 6. Send Password Reset Link / OTP Email
+ */
+async function sendPasswordResetEmail(user, resetToken) {
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  const resetLink = `${frontendUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(user.email)}`;
+  const subject = `Password Reset Request — ${APP_NAME}`;
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+      <h2 style="color: #0f172a; margin-top: 0;">Password Reset Request</h2>
+      <p style="color: #334155; font-size: 15px;">Hello <strong>${user.name}</strong>,</p>
+      <p style="color: #334155; font-size: 15px;">We received a request to reset your password for your <strong>${APP_NAME}</strong> account.</p>
+      <div style="margin: 25px 0; text-align: center;">
+        <a href="${resetLink}" style="background-color: #0284c7; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Reset Password</a>
+      </div>
+      <p style="color: #64748b; font-size: 13px;">This link will expire in 1 hour. If you did not request this, you can safely ignore this message.</p>
+    </div>
+  `;
+  return sendMailSafe({ to: user.email, subject, html, text: `Password reset link: ${resetLink}` });
+}
+
 module.exports = {
   sendMailSafe,
   sendAdminNewUserAlert,
@@ -159,4 +180,5 @@ module.exports = {
   sendAccountRejectedEmail,
   sendAdminDeletionAlert,
   sendDeletionStatusEmail,
+  sendPasswordResetEmail,
 };

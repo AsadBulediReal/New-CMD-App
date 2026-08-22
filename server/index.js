@@ -14,6 +14,7 @@ const authRouter = require("./routes/auth");
 const adminUsersRouter = require("./routes/adminUsers");
 const adminAuditRouter = require("./routes/adminAudit");
 const adminDeletionsRouter = require("./routes/adminDeletions");
+const passwordResetRouter = require("./routes/passwordReset");
 
 const app = express();
 
@@ -54,6 +55,7 @@ app.use(dbMiddleware);
 
 // Mount modular API routers
 app.use("/api", authRouter);
+app.use("/api", passwordResetRouter);
 app.use("/api", adminUsersRouter);
 app.use("/api", adminAuditRouter);
 app.use("/api", adminDeletionsRouter);

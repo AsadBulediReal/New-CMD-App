@@ -142,7 +142,12 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
       {user && (
         <div className="p-3 border-t border-sidebar-border bg-sidebar-accent/30 space-y-2">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 min-w-0">
+            <Link
+              to="/profile"
+              onClick={() => onMobileClose?.()}
+              className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity"
+              title="View Profile Settings"
+            >
               <div className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">
                 {user.name.charAt(0).toUpperCase()}
               </div>
@@ -150,7 +155,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
                 <div className="text-xs font-bold text-foreground truncate">{user.name}</div>
                 <div className="text-[10px] text-muted-foreground truncate capitalize">{user.role}</div>
               </div>
-            </div>
+            </Link>
             <button
               onClick={logout}
               title="Sign Out"
