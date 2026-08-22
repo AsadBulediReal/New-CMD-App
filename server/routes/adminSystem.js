@@ -8,6 +8,7 @@ const DeletionRequest = require("../models/DeletionRequest");
 const Notification = require("../models/Notification");
 const { authenticateToken, requireAdmin } = require("../utils/authMiddleware");
 const { logUserActivity } = require("../utils/logger");
+const { verifySmtpConnection } = require("../utils/mailer");
 
 const router = express.Router();
 router.use("/admin", authenticateToken, requireAdmin);
@@ -29,6 +30,7 @@ router.get("/admin/system-health", async (req, res) => {
       totalAuditLogs,
       totalDeletionRequests,
       totalNotifications,
+      smtpStatus,
     ] = await Promise.all([
       StoredFile.countDocuments(),
       FileChunk.countDocuments(),
@@ -36,6 +38,7 @@ router.get("/admin/system-health", async (req, res) => {
       AuditLog.countDocuments(),
       DeletionRequest.countDocuments(),
       Notification.countDocuments(),
+      verifySmtpConnection(),
     ]);
 
     const mem = process.memoryUsage();
@@ -65,6 +68,7 @@ router.get("/admin/system-health", async (req, res) => {
           heapUsedMb: Math.round(mem.heapUsed / 1024 / 1024),
         },
       },
+      smtp: smtpStatus,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {

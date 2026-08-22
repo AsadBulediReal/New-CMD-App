@@ -13,25 +13,31 @@ export const AdminDashboard: React.FC = () => {
     pendingUsers: 0,
     pendingDeletions: 0,
     totalLogsToday: 0,
+    smtpConnected: false,
+    smtpConfigured: false,
   });
 
   useEffect(() => {
     const loadOverview = async () => {
       try {
-        const [usersRes, delRes, auditRes] = await Promise.all([
+        const [usersRes, delRes, auditRes, healthRes] = await Promise.all([
           authFetch("/api/admin/users?status=pending&limit=1"),
           authFetch("/api/admin/deletion-requests?status=pending&limit=1"),
           authFetch("/api/admin/audit-logs/stats"),
+          authFetch("/api/admin/system-health"),
         ]);
 
         const usersData = usersRes.ok ? await usersRes.json() : { total: 0 };
         const delData = delRes.ok ? await delRes.json() : { total: 0 };
         const auditData = auditRes.ok ? await auditRes.json() : { todayLogs: 0 };
+        const healthData = healthRes.ok ? await healthRes.json() : null;
 
         setStats({
           pendingUsers: usersData.total || 0,
           pendingDeletions: delData.total || 0,
           totalLogsToday: auditData.todayLogs || 0,
+          smtpConnected: !!healthData?.smtp?.connected,
+          smtpConfigured: !!healthData?.smtp?.configured,
         });
       } catch (err) {
         console.warn("Failed to load admin stats:", err);
@@ -66,18 +72,27 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         {/* Quick Stat Badges */}
-        <div className="flex items-center gap-3">
-          <div className="px-4 py-2.5 bg-card border border-border/70 rounded-xl shadow-xs text-center min-w-[100px]">
-            <div className="text-lg font-bold text-amber-500">{stats.pendingUsers}</div>
-            <div className="text-[11px] text-muted-foreground font-medium">Pending Users</div>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="px-3.5 py-2 bg-card border border-border/70 rounded-xl shadow-xs text-center min-w-[90px]">
+            <div className="text-base font-bold text-amber-500">{stats.pendingUsers}</div>
+            <div className="text-[10px] text-muted-foreground font-medium">Pending Users</div>
           </div>
-          <div className="px-4 py-2.5 bg-card border border-border/70 rounded-xl shadow-xs text-center min-w-[100px]">
-            <div className="text-lg font-bold text-destructive">{stats.pendingDeletions}</div>
-            <div className="text-[11px] text-muted-foreground font-medium">Pending Deletions</div>
+          <div className="px-3.5 py-2 bg-card border border-border/70 rounded-xl shadow-xs text-center min-w-[90px]">
+            <div className="text-base font-bold text-destructive">{stats.pendingDeletions}</div>
+            <div className="text-[10px] text-muted-foreground font-medium">Pending Deletions</div>
           </div>
-          <div className="px-4 py-2.5 bg-card border border-border/70 rounded-xl shadow-xs text-center min-w-[100px]">
-            <div className="text-lg font-bold text-primary">{stats.totalLogsToday}</div>
-            <div className="text-[11px] text-muted-foreground font-medium">Actions Today</div>
+          <div className="px-3.5 py-2 bg-card border border-border/70 rounded-xl shadow-xs text-center min-w-[90px]">
+            <div className="text-base font-bold text-primary">{stats.totalLogsToday}</div>
+            <div className="text-[10px] text-muted-foreground font-medium">Actions Today</div>
+          </div>
+          <div className="px-3.5 py-2 bg-card border border-border/70 rounded-xl shadow-xs text-center min-w-[95px]">
+            <div className="text-xs font-bold flex items-center justify-center gap-1.5 pt-1">
+              <span className={`w-2 h-2 rounded-full ${stats.smtpConnected ? "bg-emerald-500 animate-pulse" : stats.smtpConfigured ? "bg-destructive" : "bg-amber-500"}`} />
+              <span className={stats.smtpConnected ? "text-emerald-500" : stats.smtpConfigured ? "text-destructive" : "text-amber-500"}>
+                {stats.smtpConnected ? "Verified" : stats.smtpConfigured ? "Offline" : "Simulated"}
+              </span>
+            </div>
+            <div className="text-[10px] text-muted-foreground font-medium mt-0.5">SMTP Email</div>
           </div>
         </div>
       </div>

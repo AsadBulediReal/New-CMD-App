@@ -173,6 +173,50 @@ async function sendPasswordResetEmail(user, resetToken) {
   return sendMailSafe({ to: user.email, subject, html, text: `Password reset link: ${resetLink}` });
 }
 
+/**
+ * 7. Verify SMTP connection status
+ */
+async function verifySmtpConnection() {
+  if (!transporter) {
+    return {
+      configured: false,
+      connected: false,
+      status: "Not Configured",
+      mode: "Simulation Mode (Console Logs)",
+      host: process.env.SMTP_HOST || "None",
+      sender: FROM_EMAIL,
+    };
+  }
+
+  try {
+    const verifyPromise = transporter.verify();
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("Connection verification timeout (4s)")), 4000)
+    );
+    await Promise.race([verifyPromise, timeoutPromise]);
+
+    return {
+      configured: true,
+      connected: true,
+      status: "Connected & Verified",
+      mode: "Live SMTP Delivery",
+      host: process.env.SMTP_HOST || "Custom SMTP",
+      port: process.env.SMTP_PORT || 587,
+      sender: FROM_EMAIL,
+    };
+  } catch (error) {
+    return {
+      configured: true,
+      connected: false,
+      status: "Offline / Error",
+      mode: "Delivery Blocked",
+      host: process.env.SMTP_HOST || "Custom SMTP",
+      sender: FROM_EMAIL,
+      error: error.message,
+    };
+  }
+}
+
 module.exports = {
   sendMailSafe,
   sendAdminNewUserAlert,
@@ -181,4 +225,5 @@ module.exports = {
   sendAdminDeletionAlert,
   sendDeletionStatusEmail,
   sendPasswordResetEmail,
+  verifySmtpConnection,
 };
