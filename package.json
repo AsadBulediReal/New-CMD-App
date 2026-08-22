@@ -1,0 +1,10 @@
+{
+  "name": "new-cmd-app",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd frontend && npm run build",
+    "lint": "cd frontend && npm run lint",
+    "start": "node server/index.js"
+  }
+}
