@@ -14,13 +14,12 @@ interface UserItem {
 }
 
 export const PendingUsersTable: React.FC = () => {
-  const { authFetch } = useAuth();
+  const { authFetch, user: currentUser } = useAuth();
   const [users, setUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("pending");
   const [search, setSearch] = useState("");
 
-  // Rejection modal state
   const [rejectingUser, setRejectingUser] = useState<UserItem | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
@@ -28,10 +27,7 @@ export const PendingUsersTable: React.FC = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      const query = new URLSearchParams({
-        status: statusFilter,
-        search: search.trim(),
-      });
+      const query = new URLSearchParams({ status: statusFilter, search: search.trim() });
       const res = await authFetch(`/api/admin/users?${query.toString()}`);
       if (res.ok) {
         const data = await res.json();
@@ -46,10 +42,9 @@ export const PendingUsersTable: React.FC = () => {
 
   useEffect(() => {
     fetchUsers();
-    const interval = setInterval(fetchUsers, 10000); // 10s live poll
+    const interval = setInterval(fetchUsers, 10000);
     window.addEventListener("focus", fetchUsers);
     window.addEventListener("cmd:refresh-data", fetchUsers);
-
     return () => {
       clearInterval(interval);
       window.removeEventListener("focus", fetchUsers);
@@ -57,14 +52,12 @@ export const PendingUsersTable: React.FC = () => {
     };
   }, [statusFilter, search]);
 
-  const handleApprove = async (user: UserItem) => {
+  const handleApprove = async (u: UserItem) => {
     setActionLoading(true);
     try {
-      const res = await authFetch(`/api/admin/users/${user._id}/approve`, {
-        method: "POST",
-      });
+      const res = await authFetch(`/api/admin/users/${u._id}/approve`, { method: "POST" });
       if (res.ok) {
-        toast.success(`Approved ${user.name} successfully`);
+        toast.success(`Approved ${u.name} successfully`);
         fetchUsers();
       } else {
         toast.error("Failed to approve user");
@@ -76,10 +69,30 @@ export const PendingUsersTable: React.FC = () => {
     }
   };
 
+  const handleUpdateUser = async (userId: string, update: { role?: string; status?: string }) => {
+    setActionLoading(true);
+    try {
+      const res = await authFetch(`/api/admin/users/${userId}/role`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(update),
+      });
+      if (res.ok) {
+        toast.success("User updated successfully");
+        fetchUsers();
+      } else {
+        toast.error("Failed to update user");
+      }
+    } catch {
+      toast.error("Network error");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleRejectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!rejectingUser) return;
-
     setActionLoading(true);
     try {
       const res = await authFetch(`/api/admin/users/${rejectingUser._id}/reject`, {
@@ -87,7 +100,6 @@ export const PendingUsersTable: React.FC = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rejectionReason }),
       });
-
       if (res.ok) {
         toast.success(`Rejected registration for ${rejectingUser.name}`);
         setRejectingUser(null);
@@ -107,15 +119,13 @@ export const PendingUsersTable: React.FC = () => {
     <div className="space-y-4">
       {/* Controls */}
       <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
-        <div className="flex items-center gap-1.5 p-1 bg-muted/60 rounded-xl w-full sm:w-auto">
-          {["pending", "active", "rejected", "all"].map((st) => (
+        <div className="flex items-center gap-1.5 p-1 bg-muted/60 rounded-xl w-full sm:w-auto overflow-x-auto">
+          {["pending", "active", "rejected", "suspended", "all"].map((st) => (
             <button
               key={st}
               onClick={() => setStatusFilter(st)}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg capitalize transition-all cursor-pointer ${
-                statusFilter === st
-                  ? "bg-background text-foreground shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
+                statusFilter === st ? "bg-background text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {st}
@@ -138,13 +148,9 @@ export const PendingUsersTable: React.FC = () => {
       {/* Table */}
       <div className="bg-card border border-border/70 rounded-2xl overflow-hidden shadow-xs">
         {loading ? (
-          <div className="p-12 flex justify-center items-center">
-            <Loader2 className="w-6 h-6 animate-spin text-primary" />
-          </div>
+          <div className="p-12 flex justify-center items-center"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
         ) : users.length === 0 ? (
-          <div className="p-12 text-center text-muted-foreground text-sm">
-            No users found matching current filter.
-          </div>
+          <div className="p-12 text-center text-muted-foreground text-sm">No users found matching current filter.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
@@ -164,52 +170,61 @@ export const PendingUsersTable: React.FC = () => {
                     <td className="px-4 py-3 font-semibold text-foreground">{u.name}</td>
                     <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
                     <td className="px-4 py-3">
-                      <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary font-medium text-[11px]">
-                        {u.role}
-                      </span>
+                      <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary font-medium text-[11px] uppercase">{u.role}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`px-2 py-0.5 rounded-md font-medium text-[11px] capitalize ${
-                          u.status === "active"
-                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                            : u.status === "pending"
-                            ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                            : "bg-destructive/10 text-destructive"
-                        }`}
-                      >
-                        {u.status}
-                      </span>
+                      <span className={`px-2 py-0.5 rounded-md font-medium text-[11px] capitalize ${
+                        u.status === "active" ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" :
+                        u.status === "pending" ? "bg-amber-500/10 text-amber-600 dark:text-amber-400" :
+                        u.status === "suspended" ? "bg-rose-500/15 text-rose-500 font-bold" : "bg-destructive/10 text-destructive"
+                      }`}>{u.status}</span>
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {new Date(u.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-3 text-right space-x-2">
+                    <td className="px-4 py-3 text-muted-foreground">{new Date(u.createdAt).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-right space-x-1.5 whitespace-nowrap">
                       {u.status === "pending" && (
                         <>
-                          <button
-                            onClick={() => handleApprove(u)}
-                            disabled={actionLoading}
-                            className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 transition-colors inline-flex items-center gap-1 cursor-pointer"
-                            title="Approve User"
-                          >
-                            <Check className="w-3.5 h-3.5" />
-                            <span className="text-[11px] font-semibold pr-1">Approve</span>
+                          <button onClick={() => handleApprove(u)} disabled={actionLoading} className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 inline-flex items-center gap-1 cursor-pointer" title="Approve User">
+                            <Check className="w-3.5 h-3.5" /><span className="text-[11px] font-semibold pr-1">Approve</span>
                           </button>
-
-                          <button
-                            onClick={() => {
-                              setRejectingUser(u);
-                              setRejectionReason("");
-                            }}
-                            disabled={actionLoading}
-                            className="p-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors inline-flex items-center gap-1 cursor-pointer"
-                            title="Reject User"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                            <span className="text-[11px] font-semibold pr-1">Reject</span>
+                          <button onClick={() => { setRejectingUser(u); setRejectionReason(""); }} disabled={actionLoading} className="p-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 inline-flex items-center gap-1 cursor-pointer" title="Reject User">
+                            <X className="w-3.5 h-3.5" /><span className="text-[11px] font-semibold pr-1">Reject</span>
                           </button>
                         </>
+                      )}
+
+                      {u.status === "active" && (
+                        <>
+                          {currentUser?._id !== u._id && (
+                            <>
+                              <button onClick={() => handleUpdateUser(u._id, { role: u.role === "admin" ? "user" : "admin" })} disabled={actionLoading} className="px-2 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer text-[11px] font-semibold" title={u.role === "admin" ? "Demote to User" : "Promote to Admin"}>
+                                {u.role === "admin" ? "Demote" : "Make Admin"}
+                              </button>
+                              <button onClick={() => handleUpdateUser(u._id, { status: "suspended" })} disabled={actionLoading} className="px-2 py-1 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 cursor-pointer text-[11px] font-semibold" title="Suspend Account">
+                                Suspend
+                              </button>
+                            </>
+                          )}
+                          {currentUser?._id === u._id && (
+                            <span className="text-[11px] text-muted-foreground italic pr-2">Your Account</span>
+                          )}
+                        </>
+                      )}
+
+                      {u.status === "suspended" && (
+                        <button onClick={() => handleUpdateUser(u._id, { status: "active" })} disabled={actionLoading} className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 cursor-pointer text-[11px] font-semibold" title="Reactivate Account">
+                          Reactivate
+                        </button>
+                      )}
+
+                      {u.status === "rejected" && (
+                        <div className="inline-flex items-center gap-1.5">
+                          {u.rejectionReason && (
+                            <span className="text-[10px] text-muted-foreground italic max-w-[120px] truncate" title={`Reason: ${u.rejectionReason}`}>"{u.rejectionReason}"</span>
+                          )}
+                          <button onClick={() => handleApprove(u)} disabled={actionLoading} className="px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 cursor-pointer text-[11px] font-semibold" title="Re-Approve User">
+                            Re-Approve
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -229,8 +244,7 @@ export const PendingUsersTable: React.FC = () => {
               <span>Reject Registration: {rejectingUser.name}</span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Please enter the reason for rejection. This explanation will be automatically emailed to{" "}
-              <strong className="text-foreground">{rejectingUser.email}</strong>.
+              Please enter the reason for rejection. This explanation will be automatically emailed to <strong className="text-foreground">{rejectingUser.email}</strong>.
             </p>
             <form onSubmit={handleRejectSubmit} className="space-y-3">
               <textarea
@@ -242,18 +256,10 @@ export const PendingUsersTable: React.FC = () => {
                 className="w-full p-3 bg-background border border-border rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-destructive/30"
               />
               <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setRejectingUser(null)}
-                  className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground rounded-lg cursor-pointer"
-                >
+                <button type="button" onClick={() => setRejectingUser(null)} className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground rounded-lg cursor-pointer">
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  disabled={actionLoading}
-                  className="px-4 py-1.5 bg-destructive text-destructive-foreground text-xs font-semibold rounded-lg hover:opacity-90 transition-all cursor-pointer"
-                >
+                <button type="submit" disabled={actionLoading} className="px-4 py-1.5 bg-destructive text-destructive-foreground text-xs font-semibold rounded-lg hover:opacity-90 transition-all cursor-pointer">
                   Confirm Rejection & Send Email
                 </button>
               </div>
