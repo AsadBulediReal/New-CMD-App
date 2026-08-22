@@ -39,6 +39,9 @@ This documentation suite is organized into focused, modular specifications (each
 7. 🔐 **[Auth, RBAC, Audit & Guarded Deletion](file:///i:/Ideas%20and%20Projects/Final%20CMD%20App/docs/07-auth-rbac-and-audit-specification.md)**  
    *User registration approval lifecycle, rejection reason email dispatch, activity audit logging, and admin-guarded deletion workflows.*
 
+8. 🎬 **[Showcase & Media Generation Guide](file:///i:/Ideas%20and%20Projects/Final%20CMD%20App/docs/08-showcase-and-media-generation.md)**  
+   *Automated screenshot and Ultra-HD animated GIF generation pipeline for README and documentation.*
+
 ---
 
 ## 🤖 Instructions for AI Assistants & Next Developers

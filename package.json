@@ -5,6 +5,12 @@
   "scripts": {
     "build": "cd frontend && npm run build",
     "lint": "cd frontend && npm run lint",
-    "start": "node server/index.js"
+    "start": "node server/index.js",
+    "showcase": "node scripts/generate_showcase.js"
+  },
+  "devDependencies": {
+    "gif-encoder-2": "^1.0.5",
+    "pngjs": "^7.0.0",
+    "puppeteer-core": "^25.8.0"
   }
 }

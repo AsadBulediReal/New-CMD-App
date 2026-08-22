@@ -2,6 +2,40 @@
 
 A secure, enterprise-grade financial management platform designed for the Cash Management Division (CMD), University of Sindh. Features automated bank reconciliation, fee audit categorization, multi-sheet Excel analytics, encrypted document vault, RBAC approval lifecycle, and Google OAuth 2.0.
 
+
+---
+
+## 🌟 Application Showcase
+
+<div align="center">
+  <img src="./features/cmd_app_full_overview.gif" alt="CMD Finance Portal Product Tour" width="900" style="border-radius: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.12);" />
+</div>
+
+<br/>
+
+<table align="center">
+  <tr>
+    <td width="50%" align="center">
+      <b>📊 Core Financial Tools</b><br/>
+      <img src="./features/cmd_core_features.gif" alt="Financial Analytics & Reconciliation" width="440" style="border-radius: 8px;" />
+    </td>
+    <td width="50%" align="center">
+      <b>🛡️ Governance & Admin Hub</b><br/>
+      <img src="./features/cmd_admin_governance.gif" alt="RBAC & Audit Trail" width="440" style="border-radius: 8px;" />
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <b>📥 Smart Ingestion & Converters</b><br/>
+      <img src="./features/cmd_ingestion_tools.gif" alt="Excel, TXT & JSON Converters" width="440" style="border-radius: 8px;" />
+    </td>
+    <td width="50%" align="center">
+      <b>🔒 Document Vault</b><br/>
+      <img src="./features/03_saved_files_vault.png" alt="Saved Files Storage Vault" width="440" style="border-radius: 8px;" />
+    </td>
+  </tr>
+</table>
+
 ---
 
 ## 🚀 Quick Deployment Options

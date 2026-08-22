@@ -69,7 +69,10 @@
 - **Default "All" Selection**: `PendingUsersTable.tsx` and `DeletionRequestsTable.tsx` now default their filter views to `"all"` when visited directly, while supporting URL query deep links (e.g. `?tab=users&status=pending`).
 - **Notification Deep-Linking**: Clicking a user registration notification routes directly to `/admin?tab=users&status=pending`, and clicking a deletion request routes to `/admin?tab=deletions&status=pending`.
 - **Task Completion Lifecycle**: When user accounts or deletion requests are approved or rejected, related notifications are automatically marked `isCompleted: true` with a timestamp, rendering `"Task Completed"` with a green checkmark instead of `"View Details"`.
-- **24-Hour Auto-Disappearance**: In `notifications.js`, notifications that are both opened (`read: true`) and completed (`isCompleted: true`) for $\ge 24$ hours are automatically excluded from queries and asynchronously purged from the database.
+### Entry 13: Feature Showcase Automation & Ultra-HD GIF Generation Pipeline
+- **Headless Screenshot Pipeline**: Automated multi-route capture using `puppeteer-core` with system-installed Chrome/Edge across all application modules (`/login`, `/`, `/saved-files`, `/analytics`, `/reconcile`, `/audit`, `/upload`, `/upload-txt`, `/merge-json`, `/admin`, `/profile`).
+- **NeuQuant Ultra-HD GIF Encoding**: Integrated `gif-encoder-2` with NeuQuant neural network color quantization and anti-aliased area box filter downsampling, producing crisp UI GIFs for `README.md` without color banding or text blur.
+- **Unified Pipeline Script**: Consolidated screenshot capture and GIF generation into `scripts/generate_showcase.js` with flags (`--screenshots`, `--gifs`) and full documentation in `docs/08-showcase-and-media-generation.md`.
 
 ---
 
