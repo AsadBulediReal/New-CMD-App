@@ -78,6 +78,10 @@ Any AI coding assistant or developer working on this codebase **MUST** follow th
    - Prevent horizontal overflow by wrapping tables in scrollable containers (`overflow-x-auto min-w-0`).
    - Use mobile drawer sidebars with smooth backdrop dismissals.
 
+7. **Mandatory Terminal Verification & IDE Problems Auto-Check**:
+   - Before concluding any task, the AI assistant MUST execute terminal verification commands (e.g. `npm run build` or test runs) and inspect `@[current_problems]`.
+   - Any unused imports, dead variables, linter warnings, or TypeScript errors MUST be resolved immediately before handing work back to the user.
+
 ---
 
 *Last Updated: 2026-08-22 · Developed for Cash Management Division (CMD) · University of Sindh*
