@@ -74,6 +74,11 @@
 - **NeuQuant Ultra-HD GIF Encoding**: Integrated `gif-encoder-2` with NeuQuant neural network color quantization and anti-aliased area box filter downsampling, producing crisp UI GIFs for `README.md` without color banding or text blur.
 - **Unified Pipeline Script**: Consolidated screenshot capture and GIF generation into `scripts/generate_showcase.js` with flags (`--screenshots`, `--gifs`) and full documentation in `docs/08-showcase-and-media-generation.md`.
 
+### Entry 14: Deployment Method Walkthrough Video Suite
+- **Interactive Multi-Method Walkthroughs**: Created `scripts/generate_deployment_videos.js` and `scripts/deployment_templates.js` rendering high-definition, animated step-by-step terminal and browser deployments for Docker (`01_docker_one_click_deployment.gif`), Cloud Vercel/MongoDB Atlas (`02_cloud_vercel_atlas_deployment.gif`), and Standard Node.js (`03_standard_nodejs_deployment.gif`).
+- **Detailed ENV Configuration**: Illustrated `.env` secret key generation, MongoDB Atlas cluster URI setup, Vercel cloud environment variable mapping, and live browser previews.
+- **README & NPM Integration**: Embedded animated walkthroughs under each method section in `README.md` and added `npm run deployments` script.
+
 ---
 
 ## 2. AI Assistant & Developer Directives

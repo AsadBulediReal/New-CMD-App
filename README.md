@@ -48,11 +48,18 @@ Choose the deployment method that best fits your environment:
 | **[2. Cloud Hosting (Vercel/Render)](#-method-2-cloud-deployment-vercel--mongodb-atlas)** | Free public website hosting | Beginner | ~5 mins |
 | **[3. Standard Node.js](#-method-3-manual-local-development)** | Local testing & developers | Intermediate | ~3 mins |
 
+> [!TIP]
+> **🎮 Interactive Deployment Player**: Open **[`features/deployments/interactive_viewer.html`](./features/deployments/interactive_viewer.html)** in any browser to pause instructions, step through manually, and copy code snippets with 1 click.
+
 ---
 
 ## 🐳 Method 1: Docker (One-Click Deployment)
 
 The fastest and most reliable way to run the complete stack (Frontend, Backend, and Database) without installing programming tools.
+
+<div align="center">
+  <img src="./features/deployments/01_docker_one_click_deployment.gif" alt="Docker Deployment Walkthrough" width="850" style="border-radius: 8px; margin: 14px 0;" />
+</div>
 
 ### Step 1: Install Docker
 - Download and install **[Docker Desktop](https://www.docker.com/products/docker-desktop/)** (Windows / macOS / Linux).
@@ -89,6 +96,10 @@ To stop the portal at any time: `docker-compose down`
 ## ☁️ Method 2: Cloud Deployment (Vercel + MongoDB Atlas)
 
 Deploy a live production instance accessible to your entire university team.
+
+<div align="center">
+  <img src="./features/deployments/02_cloud_vercel_atlas_deployment.gif" alt="Cloud Vercel & Atlas Deployment Walkthrough" width="850" style="border-radius: 8px; margin: 14px 0;" />
+</div>
 
 ### Step 1: Free MongoDB Database (MongoDB Atlas)
 1. Sign up for free at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas).
@@ -130,6 +141,10 @@ Deploy a live production instance accessible to your entire university team.
 ---
 
 ## 💻 Method 3: Manual Local Development
+
+<div align="center">
+  <img src="./features/deployments/03_standard_nodejs_deployment.gif" alt="Node.js Local Development Walkthrough" width="850" style="border-radius: 8px; margin: 14px 0;" />
+</div>
 
 ### Prerequisites
 - [Node.js](https://nodejs.org/) (Version 18 or higher)

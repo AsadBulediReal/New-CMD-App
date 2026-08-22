@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CMD Portal — Interactive Deployment Guide & Player</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "JetBrains Mono", monospace; }
+    body { background: #0b0f19; color: #f3f4f6; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 30px 20px; }
+    .container { width: 100%; max-width: 1100px; display: flex; flex-direction: column; gap: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; border-bottom: 1px solid #1e293b; padding-bottom: 20px; }
+    .title-group { display: flex; align-items: center; gap: 14px; }
+    .badge { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #3b82f6, #6366f1); display: flex; align-items: center; justify-content: center; font-size: 22px; }
+    h1 { font-size: 22px; font-weight: 700; color: #fff; }
+    p.sub { font-size: 13px; color: #94a3b8; }
+    .tabs { display: flex; gap: 10px; background: #111827; padding: 6px; border-radius: 10px; border: 1px solid #1f2937; }
+    .tab-btn { padding: 8px 16px; border-radius: 8px; border: none; background: transparent; color: #9ca3af; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .tab-btn.active { background: #1e3a8a; color: #93c5fd; box-shadow: 0 2px 8px rgba(59,130,246,0.3); }
+    .main-card { background: #0f172a; border: 1px solid #1e293b; border-radius: 14px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.4); display: flex; flex-direction: column; }
+    .card-topbar { height: 44px; background: #1e293b; display: flex; align-items: center; padding: 0 16px; gap: 8px; border-bottom: 1px solid #334155; }
+    .dot { width: 11px; height: 11px; border-radius: 50%; }
+    .dot.red { background: #ef4444; } .dot.yellow { background: #f59e0b; } .dot.green { background: #10b981; }
+    .card-title { margin-left: 12px; font-size: 13px; color: #94a3b8; font-weight: 600; }
+    .step-navigator { display: flex; gap: 8px; padding: 16px 20px; background: #0b0f19; border-bottom: 1px solid #1e293b; overflow-x: auto; }
+    .step-item { flex: 1; min-width: 140px; padding: 10px 14px; border-radius: 8px; background: #1e293b; border: 1px solid #334155; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 10px; }
+    .step-item.active { background: #1e3a8a; border-color: #3b82f6; color: #fff; }
+    .step-num { width: 22px; height: 22px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+    .step-item.active .step-num { background: #3b82f6; }
+    .step-label { font-size: 12px; font-weight: 600; }
+    .content-body { padding: 24px; display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 24px; }
+    @media (max-width: 850px) { .content-body { grid-template-columns: 1fr; } }
+    .terminal-box { background: #050811; border: 1px solid #1e293b; border-radius: 10px; padding: 18px; font-family: "JetBrains Mono", monospace; font-size: 13px; line-height: 1.6; }
+    .prompt { color: #38bdf8; font-weight: 600; margin-bottom: 6px; }
+    .comment { color: #64748b; font-style: italic; margin-bottom: 6px; }
+    .code-block { background: #0f172a; border: 1px solid #1e293b; border-radius: 6px; padding: 12px; margin: 8px 0; color: #a7f3d0; white-space: pre-wrap; font-size: 12px; }
+    .copy-btn { margin-top: 10px; padding: 8px 16px; border-radius: 6px; border: 1px solid #3b82f6; background: rgba(59,130,246,0.15); color: #93c5fd; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+    .copy-btn:hover { background: #3b82f6; color: #fff; }
+    .info-pane { display: flex; flex-direction: column; gap: 14px; }
+    .info-card { background: #131d31; border: 1px solid #1e293b; border-radius: 10px; padding: 16px; }
+    .info-card h3 { font-size: 14px; color: #60a5fa; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .info-card p { font-size: 12px; color: #cbd5e1; line-height: 1.5; }
+    .controls-bar { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: #0b0f19; border-top: 1px solid #1e293b; }
+    .btn-group { display: flex; gap: 10px; }
+    .ctrl-btn { padding: 10px 20px; border-radius: 8px; border: 1px solid #374151; background: #1e293b; color: #e2e8f0; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .ctrl-btn:hover { background: #334155; }
+    .ctrl-btn.primary { background: #2563eb; border-color: #3b82f6; color: #fff; }
+    .ctrl-btn.primary:hover { background: #1d4ed8; }
+    .auto-play-toggle { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #94a3b8; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="title-group">
+        <div class="badge">🚀</div>
+        <div>
+          <h1>CMD System — Interactive Deployment Player</h1>
+          <p class="sub">Pause, step-through, and copy commands at your own pace</p>
+        </div>
+      </div>
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchMethod('docker')">🐳 Docker</button>
+        <button class="tab-btn" onclick="switchMethod('cloud')">☁️ Cloud (Vercel + Atlas)</button>
+        <button class="tab-btn" onclick="switchMethod('nodejs')">💻 Node.js Local</button>
+      </div>
+    </div>
+
+    <div class="main-card">
+      <div class="card-topbar">
+        <div class="dot red"></div><div class="dot yellow"></div><div class="dot green"></div>
+        <div class="card-title" id="card-title">Docker One-Click Deployment</div>
+      </div>
+
+      <div class="step-navigator" id="step-nav"></div>
+
+      <div class="content-body">
+        <div>
+          <div class="terminal-box" id="terminal-content"></div>
+          <button class="copy-btn" id="copy-btn" onclick="copyCurrentCode()">📋 Copy Snippet</button>
+        </div>
+        <div class="info-pane" id="info-pane"></div>
+      </div>
+
+      <div class="controls-bar">
+        <div class="btn-group">
+          <button class="ctrl-btn" onclick="prevStep()">◀ Previous</button>
+          <button class="ctrl-btn primary" onclick="nextStep()">Next Step ▶</button>
+        </div>
+        <label class="auto-play-toggle">
+          <input type="checkbox" id="autoplay-cb" onchange="toggleAutoplay(this.checked)"> Auto-advance (5s)
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const data = {
+      docker: {
+        title: "Docker One-Click Deployment",
+        steps: [
+          {
+            title: "Clone & Env",
+            cmd: "git clone https://github.com/AsadBulediReal/New-CMD-App.git\ncd New-CMD-App\ncp .env.example .env",
+            code: "git clone https://github.com/AsadBulediReal/New-CMD-App.git\ncd New-CMD-App\ncp .env.example .env",
+            explainTitle: "Step 1: Clone Repository & Create .env",
+            explain: "Downloads the full-stack repository and copies the environment template into an active .env configuration file."
+          },
+          {
+            title: "Configure Secrets",
+            cmd: "# Generate secure 256-bit JWT secret\nnode -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\"",
+            code: "MONGODB_URI=mongodb://db:27017/cmd_app\nJWT_SECRET=e7b4f2c90a1d835e9821af390d40c6a81289cf041b3...\nADMIN_EMAIL=admin@usindh.edu.pk\nPORT=5000\nFRONTEND_URL=http://localhost",
+            explainTitle: "Step 2: Environment Variables Setup",
+            explain: "Sets your secret signing token, connects to internal Docker container MongoDB (mongodb://db:27017), and defines the super admin email address."
+          },
+          {
+            title: "Compose Build",
+            cmd: "docker-compose up -d --build",
+            code: "docker-compose up -d --build",
+            explainTitle: "Step 3: Multi-Container Compilation",
+            explain: "Builds and launches all 3 interconnected services in the background: mongodb_cmd, server_cmd (Express API), and frontend_cmd (Nginx production bundle)."
+          },
+          {
+            title: "Live Operations",
+            cmd: "docker-compose ps\ncurl -I http://localhost:80",
+            code: "http://localhost:80",
+            explainTitle: "Step 4: Access Your Application",
+            explain: "Open http://localhost (port 80) in your browser. The initial registered user matching ADMIN_EMAIL is auto-approved as Administrator."
+          }
+        ]
+      },
+      cloud: {
+        title: "Cloud Deployment (Vercel + MongoDB Atlas)",
+        steps: [
+          {
+            title: "Atlas MongoDB",
+            cmd: "# In Atlas UI: Create free M0 cluster\n# IP Access: Allow 0.0.0.0/0\n# User: cmd_admin",
+            code: "mongodb+srv://cmd_admin:Password123@cluster0.mongodb.net/cmd_app?retryWrites=true&w=majority",
+            explainTitle: "Step 1: MongoDB Atlas Free Cluster",
+            explain: "Create a free MongoDB database on MongoDB Atlas. Ensure Network Access whitelist includes 0.0.0.0/0 so Vercel Serverless containers can connect seamlessly."
+          },
+          {
+            title: "Vercel Secrets",
+            cmd: "# Add project environment variables in Vercel Dashboard",
+            code: "MONGODB_URI=mongodb+srv://cmd_admin:...@cluster0.mongodb.net/cmd_app\nJWT_SECRET=64-char-random-secret-key\nADMIN_EMAIL=admin@usindh.edu.pk\nGOOGLE_CLIENT_ID=optional-google-client-id",
+            explainTitle: "Step 2: Vercel Environment Variables",
+            explain: "Configure the 3 required secrets (MONGODB_URI, JWT_SECRET, ADMIN_EMAIL) in your Vercel project settings under Settings -> Environment Variables."
+          },
+          {
+            title: "Deploy Production",
+            cmd: "vercel --prod",
+            code: "vercel --prod",
+            explainTitle: "Step 3: Serverless Edge Deployment",
+            explain: "Executes Vercel serverless build, routing API endpoints (/api/*) to serverless lambda functions and publishing the frontend to global CDN edges."
+          },
+          {
+            title: "Live Cloud URL",
+            cmd: "curl -I https://your-app.vercel.app",
+            code: "https://your-app.vercel.app",
+            explainTitle: "Step 4: Production Online",
+            explain: "Your enterprise finance portal is live 24/7 with automated HTTPS SSL encryption and zero server management overhead."
+          }
+        ]
+      },
+      nodejs: {
+        title: "Standard Node.js Local Development",
+        steps: [
+          {
+            title: "Install Deps",
+            cmd: "npm install\ncd frontend && npm install",
+            code: "npm install && cd frontend && npm install",
+            explainTitle: "Step 1: Install Node Dependencies",
+            explain: "Installs Express backend dependencies in root and Vite + React + Tailwind frontend dependencies in frontend/ directory."
+          },
+          {
+            title: "Local .env",
+            cmd: "cp .env.example .env",
+            code: "PORT=5000\nMONGODB_URI=mongodb://localhost:27017/cmd_app\nJWT_SECRET=dev-secret-key-32-chars-long\nADMIN_EMAIL=admin@usindh.edu.pk",
+            explainTitle: "Step 2: Local Environment Setup",
+            explain: "Defines local MongoDB URI (mongodb://localhost:27017) and local port 5000."
+          },
+          {
+            title: "Start Servers",
+            cmd: "# Terminal 1:\nnode server/index.js\n\n# Terminal 2:\nnpm --prefix frontend run dev",
+            code: "node server/index.js\nnpm --prefix frontend run dev",
+            explainTitle: "Step 3: Run Dual Development Processes",
+            explain: "Starts backend Express API on port 5000 and Vite Hot-Module Replacement server on port 5173."
+          },
+          {
+            title: "Local Testing",
+            cmd: "open http://localhost:5173",
+            code: "http://localhost:5173",
+            explainTitle: "Step 4: Active Development",
+            explain: "Ready for live development with instant hot reloading as you modify code."
+          }
+        ]
+      }
+    };
+
+    let currentMethod = 'docker';
+    let currentStepIdx = 0;
+    let autoplayTimer = null;
+
+    function render() {
+      const methodData = data[currentMethod];
+      document.getElementById('card-title').innerText = methodData.title;
+
+      // Nav
+      const navEl = document.getElementById('step-nav');
+      navEl.innerHTML = methodData.steps.map((st, i) => `
+        <div class="step-item ${i === currentStepIdx ? 'active' : ''}" onclick="goToStep(${i})">
+          <div class="step-num">${i + 1}</div>
+          <div class="step-label">${st.title}</div>
+        </div>
+      `).join('');
+
+      // Terminal
+      const step = methodData.steps[currentStepIdx];
+      const termEl = document.getElementById('terminal-content');
+      termEl.innerHTML = `
+        <div class="prompt">➜ Terminal / Configuration</div>
+        <div class="code-block">${step.code}</div>
+      `;
+
+      // Info Pane
+      const infoEl = document.getElementById('info-pane');
+      infoEl.innerHTML = `
+        <div class="info-card">
+          <h3>📌 ${step.explainTitle}</h3>
+          <p>${step.explain}</p>
+        </div>
+      `;
+    }
+
+    function switchMethod(method) {
+      currentMethod = method;
+      currentStepIdx = 0;
+      document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', (method === 'docker' && i === 0) || (method === 'cloud' && i === 1) || (method === 'nodejs' && i === 2));
+      });
+      render();
+    }
+
+    function goToStep(idx) {
+      currentStepIdx = idx;
+      render();
+    }
+
+    function nextStep() {
+      const max = data[currentMethod].steps.length - 1;
+      currentStepIdx = currentStepIdx < max ? currentStepIdx + 1 : 0;
+      render();
+    }
+
+    function prevStep() {
+      const max = data[currentMethod].steps.length - 1;
+      currentStepIdx = currentStepIdx > 0 ? currentStepIdx - 1 : max;
+      render();
+    }
+
+    function copyCurrentCode() {
+      const step = data[currentMethod].steps[currentStepIdx];
+      navigator.clipboard.writeText(step.code).then(() => {
+        const btn = document.getElementById('copy-btn');
+        btn.innerText = '✔ Copied to Clipboard!';
+        setTimeout(() => btn.innerText = '📋 Copy Snippet', 2000);
+      });
+    }
+
+    function toggleAutoplay(enable) {
+      if (autoplayTimer) clearInterval(autoplayTimer);
+      if (enable) {
+        autoplayTimer = setInterval(nextStep, 5000);
+      }
+    }
+
+    render();
+  </script>
+</body>
+</html>

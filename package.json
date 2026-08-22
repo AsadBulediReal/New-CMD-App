@@ -6,7 +6,8 @@
     "build": "cd frontend && npm run build",
     "lint": "cd frontend && npm run lint",
     "start": "node server/index.js",
-    "showcase": "node scripts/generate_showcase.js"
+    "showcase": "node scripts/generate_showcase.js",
+    "deployments": "node scripts/generate_deployment_videos.js"
   },
   "devDependencies": {
     "gif-encoder-2": "^1.0.5",
