@@ -1,18 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import {
-  MoreVertical,
-  Check,
-  X,
-  Shield,
-  ShieldAlert,
-  UserCheck,
-  RotateCcw,
-  UserX,
-  Search,
-  Loader2,
-} from "lucide-react";
+import { Search, Loader2 } from "lucide-react";
 import { UserActionsDropdown, type UserItem } from "./UserActionsDropdown";
 import { toast } from "sonner";
 import { RejectUserModal } from "./RejectUserModal";
