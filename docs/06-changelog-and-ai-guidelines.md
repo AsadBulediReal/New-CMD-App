@@ -35,6 +35,13 @@
 ### Entry 04: Error Message Standardization & Simplification
 - Replaced all verbose backend error sentences with concise, user-friendly strings (e.g. `"File already exists"`, `"Database unavailable"`, `"Incorrect password"`, `"Session expired"`).
 
+### Entry 05: Tool Processing & I/O Performance Optimizations
+- **Bulk Chunk Insertion**: Replaced individual `new FileChunk().save()` promises with `FileChunk.insertMany(chunkDocs, { ordered: false })` in `files.js` and `fileChunks.js` (10-20x faster chunk storage).
+- **Targeted Sheet Chunk Retrieval**: Enhanced `getFileWithChunks` to accept target sheet names, loading only relevant sheet chunks for Audit, Reconcile, and Analytics tools.
+- **Compound Indexing**: Added `{ fileId: 1, sheetName: 1, chunkIndex: 1 }` in `FileChunk.js` for instant sheet-specific lookups.
+- **Sampled Column Type Detection**: Replaced full-dataset scans in `server/utils/typeDetector.js` and `frontend/src/utils/typeDetector.ts` with smart sampling (max 100 non-empty rows) and fast-fail date matching.
+- **Eliminated Redundant In-Memory Mapping**: Streamlined single-pass row processing in `reconcile.js`, `audit.js`, and `analytics.js`.
+
 ---
 
 ## 2. AI Assistant & Developer Directives

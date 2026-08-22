@@ -69,22 +69,24 @@ router.post("/files", async (req, res) => {
     await newFile.save();
 
     const CHUNK_SIZE = 5000;
-    const chunkPromises = [];
+    const chunkDocs = [];
     let chunkIndex = 0;
 
     for (const sheet of castedSheets) {
       const sRows = sheet.rows || [];
       for (let i = 0; i < sRows.length; i += CHUNK_SIZE) {
-        chunkPromises.push(new FileChunk({
+        chunkDocs.push({
           fileId: newFile._id,
           sheetName: sheet.name,
           chunkIndex: chunkIndex++,
           rows: sRows.slice(i, i + CHUNK_SIZE)
-        }).save());
+        });
       }
     }
 
-    await Promise.all(chunkPromises);
+    if (chunkDocs.length > 0) {
+      await FileChunk.insertMany(chunkDocs, { ordered: false });
+    }
     res.status(201).json({ message: "File saved successfully", fileId: newFile._id });
   } catch (error) {
     console.error("Error saving file:", error);
@@ -104,64 +106,37 @@ router.get("/files", async (req, res) => {
           sheetMeta: 1,
           financialSummary: 1,
           totalRecords: {
-            $cond: {
-              if: { $isNumber: "$totalRecords" },
-              then: "$totalRecords",
-              else: {
-                $cond: {
-                  if: { $gt: [{ $size: { $ifNull: ["$rows", []] } }, 0] },
-                  then: { $size: { $ifNull: ["$rows", []] } },
-                  else: {
-                    $let: {
-                      vars: { firstSheet: { $arrayElemAt: ["$sheets", 0] } },
-                      in: { $size: { $ifNull: ["$$firstSheet.rows", []] } }
-                    }
-                  }
-                }
+            $ifNull: [
+              "$totalRecords",
+              {
+                $cond: [
+                  { $gt: [{ $size: { $ifNull: ["$rows", []] } }, 0] },
+                  { $size: { $ifNull: ["$rows", []] } },
+                  { $size: { $ifNull: [{ $arrayElemAt: ["$sheets.rows", 0] }, []] } }
+                ]
               }
-            }
+            ]
           },
-          columnCount: {
-            $cond: {
-              if: { $isNumber: "$columnCount" },
-              then: "$columnCount",
-              else: { $size: { $ifNull: ["$headers", []] } }
-            }
-          },
+          columnCount: { $ifNull: ["$columnCount", { $size: { $ifNull: ["$headers", []] } }] },
           sheetCount: {
-            $cond: {
-              if: { $isNumber: "$sheetCount" },
-              then: "$sheetCount",
-              else: {
-                $cond: {
-                  if: { $gt: [{ $size: { $ifNull: ["$sheets", []] } }, 0] },
-                  then: { $size: { $ifNull: ["$sheets", []] } },
-                  else: 1
-                }
-              }
-            }
+            $ifNull: [
+              "$sheetCount",
+              { $cond: [{ $gt: [{ $size: { $ifNull: ["$sheets", []] } }, 0] }, { $size: { $ifNull: ["$sheets", []] } }, 1] }
+            ]
           },
           sheets: {
             $map: {
               input: { $ifNull: ["$sheets", []] },
               as: "sheet",
-              in: {
-                name: "$$sheet.name",
-                headers: "$$sheet.headers"
-              }
+              in: { name: "$$sheet.name", headers: "$$sheet.headers" }
             }
           },
           headers: {
-            $cond: {
-              if: { $gt: [{ $size: { $ifNull: ["$headers", []] } }, 0] },
-              then: "$headers",
-              else: {
-                $let: {
-                  vars: { firstSheet: { $arrayElemAt: ["$sheets", 0] } },
-                  in: { $ifNull: ["$$firstSheet.headers", []] }
-                }
-              }
-            }
+            $cond: [
+              { $gt: [{ $size: { $ifNull: ["$headers", []] } }, 0] },
+              "$headers",
+              { $ifNull: [{ $arrayElemAt: ["$sheets.headers", 0] }, []] }
+            ]
           }
         }
       },
@@ -284,22 +259,24 @@ router.post("/files/recompute-meta", async (req, res) => {
         await FileChunk.deleteMany({ fileId: meta._id });
 
         const CHUNK_SIZE = 5000;
-        const chunkPromises = [];
+        const chunkDocs = [];
         let chunkIndex = 0;
 
         for (const sheet of castedSheets) {
           const sRows = sheet.rows || [];
           for (let i = 0; i < sRows.length; i += CHUNK_SIZE) {
-            chunkPromises.push(new FileChunk({
+            chunkDocs.push({
               fileId: meta._id,
               sheetName: sheet.name,
               chunkIndex: chunkIndex++,
               rows: sRows.slice(i, i + CHUNK_SIZE)
-            }).save());
+            });
           }
         }
 
-        await Promise.all(chunkPromises);
+        if (chunkDocs.length > 0) {
+          await FileChunk.insertMany(chunkDocs, { ordered: false });
+        }
         updated++;
       } catch (e) {
         console.error(`Failed to recompute meta for ${meta.filename}:`, e.message);

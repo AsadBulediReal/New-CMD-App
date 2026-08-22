@@ -14,7 +14,7 @@ router.post("/audit-saved-file", async (req, res) => {
     const { fileId, sheetName, fieldMap, categories, validationMode, dateFilter } = req.body;
     if (!fileId) return res.status(400).json({ error: "File ID required" });
 
-    const file = await getFileWithChunks(fileId);
+    const file = await getFileWithChunks(fileId, sheetName ? [sheetName, "Transactions"] : null);
     if (!file) return res.status(404).json({ error: "File not found" });
 
     const allSheets = file.sheets || [];
@@ -34,9 +34,10 @@ router.post("/audit-saved-file", async (req, res) => {
 
     const applyFieldMap = (rows, map, headers) => {
       if (!rows) return [];
+      const hasMap = map && Object.keys(map).length > 0;
       return rows.map(r => {
         const row = decompressRow(r, headers);
-        if (!map || Object.keys(map).length === 0) return row;
+        if (!hasMap) return row;
         for (const [requiredField, sourceField] of Object.entries(map)) {
           if (sourceField && sourceField !== requiredField) {
             row[requiredField] = row[sourceField];
@@ -72,9 +73,7 @@ router.post("/audit-saved-file", async (req, res) => {
 
     for (const [catName, catRows] of Object.entries(categoryData)) {
       if (catRows && catRows.length > 0) {
-        const keys = new Set();
-        catRows.forEach(r => Object.keys(r).forEach(k => keys.add(k)));
-        const catHeaders = Array.from(keys);
+        const catHeaders = catRows[0] ? Object.keys(catRows[0]) : headersData;
 
         resultingSheets.push({
           name: catName,
@@ -85,9 +84,7 @@ router.post("/audit-saved-file", async (req, res) => {
     }
 
     if (nullData.length > 0) {
-      const keys = new Set();
-      nullData.forEach(r => Object.keys(r).forEach(k => keys.add(k)));
-      const nullHeaders = Array.from(keys);
+      const nullHeaders = nullData[0] ? Object.keys(nullData[0]) : headersData;
 
       resultingSheets.push({
         name: "nullData",

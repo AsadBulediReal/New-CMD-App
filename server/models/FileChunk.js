@@ -21,7 +21,8 @@ const fileChunkSchema = new mongoose.Schema({
   }
 });
 
-// Index to speed up fragmented multi-chunk retrieval
+// Index to speed up fragmented multi-chunk retrieval and sheet queries
 fileChunkSchema.index({ fileId: 1, chunkIndex: 1 });
+fileChunkSchema.index({ fileId: 1, sheetName: 1, chunkIndex: 1 });
 
 module.exports = mongoose.model("FileChunk", fileChunkSchema);

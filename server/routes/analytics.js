@@ -12,9 +12,10 @@ const router = express.Router();
 router.post("/analyze-saved-file", async (req, res) => {
   try {
     const { fileId, fieldMap, sheetName, dateFilter } = req.body;
-    if (!fileId) return res.status(400).json({ error: "File ID required" });
-
-    const file = await getFileWithChunks(fileId);
+    const targetSheets = sheetName 
+      ? [sheetName, "Summary Details", "Header Details", "Transactions"]
+      : ["Transactions", "Summary Details", "Header Details"];
+    const file = await getFileWithChunks(fileId, targetSheets);
     if (!file) return res.status(404).json({ error: "File not found" });
 
     const allSheets = file.sheets || [];

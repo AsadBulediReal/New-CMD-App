@@ -136,22 +136,24 @@ router.post("/files/:id/finalize", async (req, res) => {
     await FileChunk.deleteMany({ fileId });
 
     const CHUNK_SIZE = 5000;
-    const chunkPromises = [];
+    const chunkDocs = [];
     let chunkIndex = 0;
 
     for (const sheet of castedSheets) {
       const sRows = sheet.rows || [];
       for (let i = 0; i < sRows.length; i += CHUNK_SIZE) {
-        chunkPromises.push(new FileChunk({
+        chunkDocs.push({
           fileId,
           sheetName: sheet.name,
           chunkIndex: chunkIndex++,
           rows: sRows.slice(i, i + CHUNK_SIZE)
-        }).save());
+        });
       }
     }
 
-    await Promise.all(chunkPromises);
+    if (chunkDocs.length > 0) {
+      await FileChunk.insertMany(chunkDocs, { ordered: false });
+    }
     res.status(200).json({ message: "File saved successfully", fileId });
   } catch (error) {
     console.error("Error finalizing file upload:", error);

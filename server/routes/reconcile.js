@@ -27,60 +27,47 @@ router.post("/reconcile-bs-mis", async (req, res) => {
     }
 
     const [bsFile, misFile] = await Promise.all([
-      getFileWithChunks(bsFileId),
-      getFileWithChunks(misFileId)
+      getFileWithChunks(bsFileId, bsSheetName ? [bsSheetName, "Transactions"] : null),
+      getFileWithChunks(misFileId, misSheetName ? [misSheetName, "Transactions"] : null)
     ]);
 
     if (!bsFile || !misFile) {
       return res.status(404).json({ error: "Files not found" });
     }
 
-    let bsTransactions = [];
+    let bsRawRows = [];
     let bsHeaders = bsFile.headers || [];
     if (bsFile.sheets && bsFile.sheets.length > 0) {
-      let ts;
-      if (bsSheetName) {
-        ts = bsFile.sheets.find(s => s.name === bsSheetName);
-      }
-      if (!ts) {
-        ts = bsFile.sheets.find(s => s.name === "Transactions") || bsFile.sheets[0];
-      }
+      const ts = (bsSheetName ? bsFile.sheets.find(s => s.name === bsSheetName) : null)
+        || bsFile.sheets.find(s => s.name === "Transactions")
+        || bsFile.sheets[0];
       bsHeaders = ts.headers || bsFile.headers || [];
-      bsTransactions = (ts.rows || []).map(r => decompressRow(r, bsHeaders));
+      bsRawRows = ts.rows || [];
     } else {
-      bsTransactions = (bsFile.rows || []).map(r => decompressRow(r, bsHeaders));
+      bsRawRows = bsFile.rows || [];
     }
 
-    let misTransactions = [];
+    let misRawRows = [];
     let misHeaders = misFile.headers || [];
     if (misFile.sheets && misFile.sheets.length > 0) {
-      let ts;
-      if (misSheetName) {
-        ts = misFile.sheets.find(s => s.name === misSheetName);
-      }
-      if (!ts) {
-        ts = misFile.sheets.find(s => s.name === "Transactions") || misFile.sheets[0];
-      }
+      const ts = (misSheetName ? misFile.sheets.find(s => s.name === misSheetName) : null)
+        || misFile.sheets.find(s => s.name === "Transactions")
+        || misFile.sheets[0];
       misHeaders = ts.headers || misFile.headers || [];
-      misTransactions = (ts.rows || []).map(r => decompressRow(r, misHeaders));
+      misRawRows = ts.rows || [];
     } else {
-      misTransactions = (misFile.rows || []).map(r => decompressRow(r, misHeaders));
+      misRawRows = misFile.rows || [];
     }
 
     if (bsDateFilter) {
-      bsTransactions = applyDateFilter(
-        bsTransactions.map(r => Object.values(r)),
-        bsHeaders,
-        bsDateFilter
-      ).map(r => decompressRow(r, bsHeaders));
+      bsRawRows = applyDateFilter(bsRawRows, bsHeaders, bsDateFilter);
     }
     if (misDateFilter) {
-      misTransactions = applyDateFilter(
-        misTransactions.map(r => Object.values(r)),
-        misHeaders,
-        misDateFilter
-      ).map(r => decompressRow(r, misHeaders));
+      misRawRows = applyDateFilter(misRawRows, misHeaders, misDateFilter);
     }
+
+    const bsTransactions = bsRawRows.map(r => decompressRow(r, bsHeaders));
+    const misTransactions = misRawRows.map(r => decompressRow(r, misHeaders));
 
     const {
       verified_mis,
