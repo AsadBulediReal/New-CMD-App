@@ -178,7 +178,6 @@ export default function MergeJson() {
         sources: m.sources.filter(s => selectedFileIds.includes(s.fileId))
       }))
     );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedFileIds]);
 
   const toggleFileSelection = (fileId: string, index: number, shiftKey: boolean) => {

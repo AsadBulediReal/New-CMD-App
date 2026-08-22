@@ -11,9 +11,7 @@ import {
   FileSpreadsheet,
   Building2,
   Shield,
-  Activity,
-  LogOut,
-  User
+  LogOut
 } from "lucide-react";
 
 interface SidebarProps {

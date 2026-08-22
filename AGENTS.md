@@ -29,5 +29,5 @@
    - Tables and complex data viewers MUST have `overflow-x-auto`, `min-w-0`, and adaptive spacing (`p-3 sm:p-6`) to prevent horizontal viewport clipping or overflow.
 
 7. **Mandatory Terminal Verification & Problem Checking**:
-   - Upon completing any implementation or refactor, the AI agent MUST automatically verify the build in the terminal (e.g. `npm run build` / tests) and check `@[current_problems]`.
+   - Upon completing any implementation or refactor, the AI agent MUST automatically verify the build in the terminal (e.g. `npm run build` / tests) and check `@current_problems`.
    - All unused imports, lint warnings, and TypeScript/runtime errors MUST be resolved before declaring a task complete.

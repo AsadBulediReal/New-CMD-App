@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { Button } from "./ui/button";
-import { ShieldAlert, Trash2, Clock, Loader2 } from "lucide-react";
+import { Trash2, Clock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface DeletionRequestModalProps {
