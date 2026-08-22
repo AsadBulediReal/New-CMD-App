@@ -57,6 +57,13 @@
 - **Disaster Recovery Snapshot Export**: `GET /api/admin/database/backup` allowing administrators to download a full JSON dump of database collections.
 - **Activity Log Inspector Modal**: `AuditLogDetailsModal` offering formatted JSON payload inspection, user-agent details, and clipboard copy directly from the live audit stream.
 
+### Entry 09: Google Sign-In & OAuth 2.0 Integration
+- **Google OAuth Backend Pipeline**: Implemented `POST /api/auth/google` in `server/routes/auth.js` and `server/utils/googleAuth.js`, validating Google ID tokens with Google's tokeninfo API, auto-linking accounts, and respecting approval statuses.
+- **Approval Lifecycle Integration**: New Google sign-ups follow standard RBAC approval (`pending` status with admin email/in-app notification alerts), while initial users or `ADMIN_EMAIL` auto-bootstrap to active admin.
+- **Responsive Frontend Component**: Created reusable `<GoogleLoginButton />` component in `frontend/src/components/Auth/GoogleLoginButton.tsx` with dynamic Google Identity Services (GIS) integration, custom branded fallback, and dark/light mode responsiveness.
+- **Context & Pages Integration**: Integrated Google sign-in into `AuthContext`, `Login.tsx`, and `Register.tsx`.
+
+
 ---
 
 ## 2. AI Assistant & Developer Directives

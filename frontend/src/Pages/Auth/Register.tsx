@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { UserPlus, Mail, Lock, User, Loader2, CheckCircle2, Clock } from "lucide-react";
 import { toast } from "sonner";
+import GoogleLoginButton from "../../components/Auth/GoogleLoginButton";
 
 export const Register: React.FC = () => {
   const [name, setName] = useState("");
@@ -12,7 +13,7 @@ export const Register: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [submittedStatus, setSubmittedStatus] = useState<"pending" | "active" | null>(null);
 
-  const { register } = useAuth();
+  const { register, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,6 +50,27 @@ export const Register: React.FC = () => {
     }
   };
 
+  const handleGoogleSuccess = async (credential: string) => {
+    setLoading(true);
+    const res = await loginWithGoogle(credential);
+    setLoading(false);
+
+    if (res.success) {
+      if (res.status === "active") {
+        toast.success("Administrator account initialized!");
+        navigate("/", { replace: true });
+      } else {
+        setSubmittedStatus("pending");
+      }
+    } else {
+      if (res.status === "pending") {
+        setSubmittedStatus("pending");
+      } else {
+        toast.error(res.error || "Google registration failed");
+      }
+    }
+  };
+
   if (submittedStatus === "pending") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4 py-12">
@@ -60,7 +82,7 @@ export const Register: React.FC = () => {
           <div className="space-y-2">
             <h2 className="text-xl font-bold text-foreground">Registration Submitted!</h2>
             <p className="text-sm text-muted-foreground">
-              Thank you for registering, <span className="font-semibold text-foreground">{name}</span>.
+              Thank you for registering{name ? `, ${name}` : ""}.
             </p>
           </div>
 
@@ -99,8 +121,24 @@ export const Register: React.FC = () => {
           <p className="text-sm text-muted-foreground">Register for Cash Management Division Portal access</p>
         </div>
 
-        {/* Registration Form */}
-        <div className="bg-card border border-border/70 rounded-2xl p-6 sm:p-8 shadow-sm">
+        {/* Registration Card */}
+        <div className="bg-card border border-border/70 rounded-2xl p-6 sm:p-8 shadow-sm space-y-5">
+          {/* Google Sign-up */}
+          <GoogleLoginButton
+            text="signup_with"
+            onSuccess={handleGoogleSuccess}
+            onError={(err) => toast.error(err)}
+          />
+
+          {/* Divider */}
+          <div className="relative flex items-center justify-center py-1">
+            <div className="flex-1 border-t border-border" />
+            <span className="shrink-0 px-3 text-xs text-muted-foreground uppercase tracking-wider font-semibold whitespace-nowrap">
+              Or sign up with email
+            </span>
+            <div className="flex-1 border-t border-border" />
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -186,7 +224,7 @@ export const Register: React.FC = () => {
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-border/70 text-center">
+          <div className="pt-2 border-t border-border/70 text-center">
             <p className="text-xs text-muted-foreground">
               Already registered?{" "}
               <Link to="/login" className="font-semibold text-primary hover:underline">

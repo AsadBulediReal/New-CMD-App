@@ -7,6 +7,9 @@ export interface UserProfile {
   role: "admin" | "user";
   status: "pending" | "active" | "rejected" | "suspended";
   rejectionReason?: string;
+  authProvider?: "local" | "google";
+  googleId?: string;
+  avatar?: string;
   registeredAt?: string;
   approvedAt?: string;
   lastLoginAt?: string;
@@ -19,6 +22,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isAdmin: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string; status?: string; rejectionReason?: string }>;
+  loginWithGoogle: (credential: string) => Promise<{ success: boolean; message?: string; error?: string; status?: string; rejectionReason?: string }>;
   register: (name: string, email: string, password: string) => Promise<{ success: boolean; message?: string; error?: string; status?: string }>;
   logout: () => void;
   refreshUser: () => Promise<void>;
@@ -120,6 +124,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithGoogle = async (credential: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/google`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        return {
+          success: false,
+          error: data.error || "Google authentication failed",
+          status: data.status,
+          rejectionReason: data.rejectionReason,
+        };
+      }
+
+      if (data.token && data.user) {
+        localStorage.setItem("cmd_token", data.token);
+        localStorage.setItem("cmd_user", JSON.stringify(data.user));
+        setToken(data.token);
+        setUser(data.user);
+        return { success: true, message: data.message, status: "active" };
+      }
+
+      return { success: true, message: data.message, status: data.status || "pending" };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Network error";
+      return { success: false, error: message };
+    }
+  };
+
   const register = async (name: string, email: string, password: string) => {
     try {
       const res = await fetch(`${API_BASE}/api/auth/register`, {
@@ -169,6 +207,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated,
         isAdmin,
         login,
+        loginWithGoogle,
         register,
         logout,
         refreshUser,

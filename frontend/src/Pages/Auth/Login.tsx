@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { Lock, Mail, Loader2, AlertCircle, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
+import GoogleLoginButton from "../../components/Auth/GoogleLoginButton";
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -10,7 +11,7 @@ export const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [errorInfo, setErrorInfo] = useState<{ message: string; status?: string; reason?: string } | null>(null);
 
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -47,6 +48,39 @@ export const Login: React.FC = () => {
       } else {
         setErrorInfo({
           message: res.error || "Invalid email or password",
+        });
+      }
+    }
+  };
+
+  const handleGoogleSuccess = async (credential: string) => {
+    setErrorInfo(null);
+    const res = await loginWithGoogle(credential);
+    if (res.success) {
+      if (res.status === "active") {
+        toast.success("Welcome back!");
+        navigate(from, { replace: true });
+      } else {
+        setErrorInfo({
+          message: res.message || "Your account is pending administrator approval.",
+          status: "pending",
+        });
+      }
+    } else {
+      if (res.status === "pending") {
+        setErrorInfo({
+          message: res.error || "Your account is awaiting administrator approval.",
+          status: "pending",
+        });
+      } else if (res.status === "rejected") {
+        setErrorInfo({
+          message: "Registration Rejected by Administrator",
+          status: "rejected",
+          reason: res.rejectionReason || "No specific reason provided.",
+        });
+      } else {
+        setErrorInfo({
+          message: res.error || "Google sign-in failed",
         });
       }
     }
@@ -99,8 +133,24 @@ export const Login: React.FC = () => {
           </div>
         )}
 
-        {/* Login Form */}
-        <div className="bg-card border border-border/70 rounded-2xl p-6 sm:p-8 shadow-sm">
+        {/* Login Container */}
+        <div className="bg-card border border-border/70 rounded-2xl p-6 sm:p-8 shadow-sm space-y-5">
+          {/* Google Sign-in */}
+          <GoogleLoginButton
+            text="signin_with"
+            onSuccess={handleGoogleSuccess}
+            onError={(err) => setErrorInfo({ message: err })}
+          />
+
+          {/* Divider */}
+          <div className="relative flex items-center justify-center py-1">
+            <div className="flex-1 border-t border-border" />
+            <span className="shrink-0 px-3 text-xs text-muted-foreground uppercase tracking-wider font-semibold whitespace-nowrap">
+              Or continue with
+            </span>
+            <div className="flex-1 border-t border-border" />
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -157,7 +207,7 @@ export const Login: React.FC = () => {
             </button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-border/70 text-center">
+          <div className="pt-2 border-t border-border/70 text-center">
             <p className="text-xs text-muted-foreground">
               Don't have an account?{" "}
               <Link to="/register" className="font-semibold text-primary hover:underline">

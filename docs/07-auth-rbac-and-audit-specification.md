@@ -49,7 +49,10 @@
 {
   name: { type: String, required: true, trim: true },
   email: { type: String, required: true, unique: true, lowercase: true },
-  password: { type: String, required: true }, // bcrypt hashed
+  password: { type: String, required: false }, // bcrypt hashed (optional for Google OAuth)
+  authProvider: { type: String, enum: ['local', 'google'], default: 'local' },
+  googleId: { type: String, default: null, index: true },
+  avatar: { type: String, default: null },
   role: { type: String, enum: ['admin', 'user'], default: 'user' },
   status: { type: String, enum: ['pending', 'active', 'rejected', 'suspended'], default: 'pending' },
   rejectionReason: { type: String, default: '' },
