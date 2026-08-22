@@ -47,6 +47,11 @@
 - **Guarded Deletion System**: Standard users cannot permanently delete files directly; delete actions submit a `DeletionRequest` for admin review and badge files as `isPendingDeletion`.
 - **Admin Management Hub**: Full frontend control center (`/admin`) for pending approvals, user statuses, deletion approval queue, and live audit logs.
 
+### Entry 07: In-App Notification Center, Password Recovery & File Access Control
+- **In-App Notification Center**: Added `Notification` schema, fail-safe `notify.js` dispatcher, modular `/api/notifications` endpoints, and interactive header Bell dropdown with unread badge counter.
+- **Password Reset & Recovery**: Added crypto-token password recovery via email (`/forgot-password`, `/reset-password`) and user profile management (`/profile`).
+- **File Ownership & Privacy**: Added `visibility: "team" | "private"` support to `StoredFile.js` with role-based aggregation matching and frontend scope tabs in the Document Vault.
+
 ---
 
 ## 2. AI Assistant & Developer Directives
