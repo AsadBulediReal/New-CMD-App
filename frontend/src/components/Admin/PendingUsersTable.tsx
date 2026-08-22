@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import {
   MoreVertical,
@@ -34,14 +35,23 @@ interface UserItem {
 
 export const PendingUsersTable: React.FC = () => {
   const { authFetch, user: currentUser } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlStatus = searchParams.get("status");
+
   const [users, setUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<string>("pending");
+  const [statusFilter, setStatusFilter] = useState<string>(urlStatus || "active");
   const [search, setSearch] = useState("");
 
   const [rejectingUser, setRejectingUser] = useState<UserItem | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+
+  useEffect(() => {
+    if (urlStatus && ["pending", "active", "rejected", "suspended", "all"].includes(urlStatus)) {
+      setStatusFilter(urlStatus);
+    }
+  }, [urlStatus]);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -70,6 +80,15 @@ export const PendingUsersTable: React.FC = () => {
       window.removeEventListener("cmd:refresh-data", fetchUsers);
     };
   }, [statusFilter, search]);
+
+  const handleFilterChange = (st: string) => {
+    setStatusFilter(st);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("status", st);
+      return next;
+    });
+  };
 
   const handleApprove = async (u: UserItem) => {
     setActionLoading(true);
@@ -139,10 +158,10 @@ export const PendingUsersTable: React.FC = () => {
       {/* Controls */}
       <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
         <div className="flex items-center gap-1.5 p-1 bg-muted/60 rounded-xl w-full sm:w-auto overflow-x-auto">
-          {["pending", "active", "rejected", "suspended", "all"].map((st) => (
+          {["active", "pending", "rejected", "suspended", "all"].map((st) => (
             <button
               key={st}
-              onClick={() => setStatusFilter(st)}
+              onClick={() => handleFilterChange(st)}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg capitalize transition-all cursor-pointer ${
                 statusFilter === st ? "bg-background text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
               }`}
