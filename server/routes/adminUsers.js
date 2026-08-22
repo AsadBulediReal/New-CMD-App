@@ -75,6 +75,15 @@ router.post("/admin/users/:id/approve", async (req, res) => {
       console.warn("Approval email error:", err.message)
     );
 
+    const { createNotification } = require("../utils/notify");
+    createNotification({
+      recipientId: user._id,
+      title: "Account Approved",
+      message: "Your CMD Portal account has been approved by the administrator.",
+      type: "user_approved",
+      link: "/",
+    }).catch(() => {});
+
     // Audit log
     await AuditLog.create({
       userId: req.user._id,
@@ -123,6 +132,14 @@ router.post("/admin/users/:id/reject", async (req, res) => {
     sendAccountRejectedEmail(user, reason).catch((err) =>
       console.warn("Rejection email error:", err.message)
     );
+
+    const { createNotification } = require("../utils/notify");
+    createNotification({
+      recipientId: user._id,
+      title: "Registration Rejected",
+      message: `Your registration request was rejected: ${reason}`,
+      type: "user_rejected",
+    }).catch(() => {});
 
     // Audit log
     await AuditLog.create({

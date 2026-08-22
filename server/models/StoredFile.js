@@ -78,6 +78,12 @@ const storedFileSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "DeletionRequest",
     default: null,
+  },
+  visibility: {
+    type: String,
+    enum: ["team", "private"],
+    default: "team",
+    index: true,
   }
 });
 

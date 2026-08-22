@@ -86,6 +86,15 @@ router.post("/admin/deletion-requests/:id/approve", async (req, res) => {
       ).catch((err) => console.warn("Deletion approval email error:", err.message));
     }
 
+    const { createNotification } = require("../utils/notify");
+    createNotification({
+      recipientId: delReq.requestedBy,
+      title: "Deletion Approved",
+      message: `Your request to delete "${delReq.targetName}" was approved.`,
+      type: "deletion_approved",
+      link: "/saved-files",
+    }).catch(() => {});
+
     // 4. Record audit log
     await logUserActivity({
       req,
@@ -147,6 +156,14 @@ router.post("/admin/deletion-requests/:id/reject", async (req, res) => {
         delReq.adminNote
       ).catch((err) => console.warn("Deletion rejection email error:", err.message));
     }
+
+    createNotification({
+      recipientId: delReq.requestedBy,
+      title: "Deletion Request Rejected",
+      message: `Your request to delete "${delReq.targetName}" was rejected: ${delReq.adminNote}`,
+      type: "deletion_rejected",
+      link: "/saved-files",
+    }).catch(() => {});
 
     // 4. Record audit log
     await logUserActivity({

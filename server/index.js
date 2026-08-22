@@ -4,6 +4,7 @@ const cors = require("cors");
 const { connectDB, dbMiddleware } = require("./utils/db");
 
 const filesRouter = require("./routes/files");
+const fileDeletionsRouter = require("./routes/fileDeletions");
 const fileChunksRouter = require("./routes/fileChunks");
 const decryptRouter = require("./routes/decrypt");
 const analyticsRouter = require("./routes/analytics");
@@ -15,6 +16,7 @@ const adminUsersRouter = require("./routes/adminUsers");
 const adminAuditRouter = require("./routes/adminAudit");
 const adminDeletionsRouter = require("./routes/adminDeletions");
 const passwordResetRouter = require("./routes/passwordReset");
+const notificationsRouter = require("./routes/notifications");
 
 const app = express();
 
@@ -59,7 +61,9 @@ app.use("/api", passwordResetRouter);
 app.use("/api", adminUsersRouter);
 app.use("/api", adminAuditRouter);
 app.use("/api", adminDeletionsRouter);
+app.use("/api", notificationsRouter);
 app.use("/api", filesRouter);
+app.use("/api", fileDeletionsRouter);
 app.use("/api", fileChunksRouter);
 app.use("/api", decryptRouter);
 app.use("/api", analyticsRouter);

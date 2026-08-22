@@ -77,6 +77,15 @@ router.post("/auth/register", async (req, res) => {
       console.warn("Admin alert email error:", err.message)
     );
 
+    const { createNotification } = require("../utils/notify");
+    createNotification({
+      recipientRole: "admin",
+      title: "New User Registration",
+      message: `${newUser.name} (${newUser.email}) has registered and is pending approval.`,
+      type: "user_registered",
+      link: "/admin",
+    }).catch(() => {});
+
     return res.status(201).json({
       message: "Registration submitted successfully. Your account is pending administrator approval.",
       status: "pending",

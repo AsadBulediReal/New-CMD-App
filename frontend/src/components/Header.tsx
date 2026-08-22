@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from "react-router";
 import { useEffect, useState } from "react";
 import { ModeToggle } from "./ModeToggle";
 import { BugReportDialog } from "./BugReportDialog";
+import { NotificationCenter } from "./NotificationCenter";
 import {
   Search,
   Clock,
@@ -140,6 +141,7 @@ export function Header({ onMobileMenuToggle }: HeaderProps) {
 
           <div className="h-4 w-px bg-border hidden md:block" />
 
+          <NotificationCenter />
           <BugReportDialog />
           <ModeToggle />
         </div>

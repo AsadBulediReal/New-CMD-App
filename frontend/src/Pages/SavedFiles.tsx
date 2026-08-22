@@ -37,8 +37,12 @@ import {
   ShieldCheck,
   Zap,
   Layers,
-  ArrowUpRight
+  ArrowUpRight,
+  Users,
+  Lock
 } from "lucide-react";
+import { toast } from "sonner";
+import { useAuth } from "../context/AuthContext";
 import { HelpDialog } from "../components/shared/help-dialog";
 import {
   downloadSingleSavedFile,
@@ -72,6 +76,9 @@ interface StoredFile {
   };
   isPendingDeletion?: boolean;
   deletionRequestId?: string;
+  visibility?: "team" | "private";
+  uploadedBy?: string;
+  uploadedByName?: string;
 }
 
 interface LoadedData {
@@ -166,12 +173,34 @@ export default function SavedFiles() {
   const [downloadProgress, setDownloadProgress] = useState<DownloadProgress | null>(null);
   const [page, setPage] = useState(1);
 
+  const { user, authFetch } = useAuth();
+
   // Date range filter (based on recordDateRange from records, not upload date)
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [visibilityFilter, setVisibilityFilter] = useState<"all" | "my" | "team" | "private">("all");
   const [showFilters, setShowFilters] = useState(false);
   const [rescanLoading, setRescanLoading] = useState(false);
   const [rescanMsg, setRescanMsg] = useState<string | null>(null);
+
+  const handleToggleVisibility = async (fileId: string, currentVis: string) => {
+    const nextVis = currentVis === "private" ? "team" : "private";
+    try {
+      const res = await authFetch(getApiUrl(`/api/files/${fileId}/visibility`), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visibility: nextVis }),
+      });
+      if (res.ok) {
+        setFiles(prev => prev.map(f => f._id === fileId ? { ...f, visibility: nextVis as "team" | "private" } : f));
+        toast.success(`File is now ${nextVis === "private" ? "Private (Only You)" : "Team Shared"}`);
+      } else {
+        toast.error("Failed to update visibility");
+      }
+    } catch {
+      toast.error("Network error");
+    }
+  };
 
   const handleSingleDownload = async (id: string, filename: string) => {
     try {
@@ -395,6 +424,15 @@ export default function SavedFiles() {
       });
     }
 
+    // Visibility tab filtering
+    if (visibilityFilter === "my") {
+      result = result.filter(f => f.uploadedBy === user?._id || f.uploadedByName === user?.name);
+    } else if (visibilityFilter === "team") {
+      result = result.filter(f => (f.visibility || "team") === "team");
+    } else if (visibilityFilter === "private") {
+      result = result.filter(f => f.visibility === "private");
+    }
+
     result.sort((a, b) => {
       let cmp = 0;
       if (sortField === "uploadDate") {
@@ -408,7 +446,7 @@ export default function SavedFiles() {
     });
 
     return result;
-  }, [files, search, sortField, sortDir, dateFrom, dateTo]);
+  }, [files, search, sortField, sortDir, dateFrom, dateTo, visibilityFilter, user]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(processedFiles.length / PAGE_SIZE));
@@ -493,6 +531,56 @@ export default function SavedFiles() {
 
         {/* ── Toolbar ── */}
         <div className="bg-card/40 backdrop-blur-xl rounded-2xl border border-border p-3.5 sm:p-4 mb-4 space-y-3 transition-all">
+          {/* Visibility Scope Tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 text-xs">
+            <span className="text-muted-foreground font-semibold text-[11px] uppercase tracking-wider mr-1 shrink-0">
+              Scope:
+            </span>
+            <button
+              onClick={() => setVisibilityFilter("all")}
+              className={`px-3 py-1.5 rounded-xl font-semibold transition-all shrink-0 cursor-pointer ${
+                visibilityFilter === "all"
+                  ? "bg-primary text-primary-foreground shadow-xs"
+                  : "bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              All Accessible ({files.length})
+            </button>
+            <button
+              onClick={() => setVisibilityFilter("my")}
+              className={`px-3 py-1.5 rounded-xl font-semibold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
+                visibilityFilter === "my"
+                  ? "bg-primary text-primary-foreground shadow-xs"
+                  : "bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Users className="w-3 h-3" />
+              <span>My Uploads</span>
+            </button>
+            <button
+              onClick={() => setVisibilityFilter("team")}
+              className={`px-3 py-1.5 rounded-xl font-semibold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
+                visibilityFilter === "team"
+                  ? "bg-primary text-primary-foreground shadow-xs"
+                  : "bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Users className="w-3 h-3" />
+              <span>Team Shared</span>
+            </button>
+            <button
+              onClick={() => setVisibilityFilter("private")}
+              className={`px-3 py-1.5 rounded-xl font-semibold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
+                visibilityFilter === "private"
+                  ? "bg-primary text-primary-foreground shadow-xs"
+                  : "bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Lock className="w-3 h-3" />
+              <span>Private</span>
+            </button>
+          </div>
+
           {/* Row 1: Search + View + Refresh */}
           <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
             <div className="relative flex-1 w-full">
@@ -740,14 +828,36 @@ export default function SavedFiles() {
                     <div className="absolute inset-0 rounded-2xl bg-blue-500/5 pointer-events-none" />
                   )}
 
-                  <div className="flex items-start gap-3 mb-5">
+                  <div className="flex items-start gap-3 mb-4">
                     <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
                       <FileSpreadsheet className="w-5 h-5 text-blue-500" />
                     </div>
-                    <div className="min-w-0 flex-1 pr-6">
+                    <div className="min-w-0 flex-1 pr-6 space-y-1">
                       <h3 className="text-sm font-bold text-foreground truncate group-hover:text-blue-500 transition-colors" title={file.filename}>
                         {file.filename}
                       </h3>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleVisibility(file._id, file.visibility || "team");
+                          }}
+                          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-all ${
+                            file.visibility === "private"
+                              ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 hover:bg-amber-500/25"
+                              : "bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20"
+                          }`}
+                          title="Click to toggle Team / Private"
+                        >
+                          {file.visibility === "private" ? <Lock className="w-2.5 h-2.5" /> : <Users className="w-2.5 h-2.5" />}
+                          <span className="capitalize">{file.visibility || "team"}</span>
+                        </button>
+                        {file.uploadedByName && (
+                          <span className="text-[10px] text-muted-foreground truncate max-w-[120px]" title={`Uploaded by ${file.uploadedByName}`}>
+                            by {file.uploadedByName}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -902,9 +1012,33 @@ export default function SavedFiles() {
                     <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center shrink-0">
                       <FileSpreadsheet className="w-4 h-4 text-blue-500" />
                     </div>
-                    <span className="text-sm font-semibold text-foreground truncate group-hover:text-blue-500 transition-colors" title={file.filename}>
-                      {file.filename}
-                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-foreground truncate group-hover:text-blue-500 transition-colors" title={file.filename}>
+                          {file.filename}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleVisibility(file._id, file.visibility || "team");
+                          }}
+                          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold cursor-pointer shrink-0 transition-all ${
+                            file.visibility === "private"
+                              ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30"
+                              : "bg-primary/10 text-primary border border-primary/20"
+                          }`}
+                          title="Click to toggle Team / Private"
+                        >
+                          {file.visibility === "private" ? <Lock className="w-2.5 h-2.5" /> : <Users className="w-2.5 h-2.5" />}
+                          <span className="capitalize">{file.visibility || "team"}</span>
+                        </button>
+                      </div>
+                      {file.uploadedByName && (
+                        <div className="text-[10px] text-muted-foreground truncate">
+                          Uploaded by {file.uploadedByName}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="w-32 text-[11px] text-muted-foreground hidden lg:block">{formatDate(file.uploadDate)}</div>
                   <div className="w-20 hidden sm:block">

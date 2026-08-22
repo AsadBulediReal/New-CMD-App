@@ -1,16 +1,14 @@
 const express = require("express");
 const StoredFile = require("../models/StoredFile");
 const FileChunk = require("../models/FileChunk");
-const DeletionRequest = require("../models/DeletionRequest");
 const { optionalAuth } = require("../utils/authMiddleware");
 const { logUserActivity } = require("../utils/logger");
-const { sendAdminDeletionAlert } = require("../utils/mailer");
 const {
   detectAndCastSheet,
   extractDateRange,
   extractMetadata,
   getFileWithChunks,
-  recomputeAllFilesMeta
+  recomputeAllFilesMeta,
 } = require("../utils/metaHelpers");
 
 const router = express.Router();
@@ -19,7 +17,7 @@ router.use(optionalAuth);
 // 1. Save uploaded file data
 router.post("/files", async (req, res) => {
   try {
-    const { filename, headers, rows, sheets, overwrite = false } = req.body;
+    const { filename, headers, rows, sheets, overwrite = false, visibility = "team" } = req.body;
     if (!filename || !filename.trim()) {
       return res.status(400).json({ error: "Filename is required" });
     }
@@ -37,22 +35,25 @@ router.post("/files", async (req, res) => {
 
     let primaryHeaders = headers || [];
     let primaryRows = rows || [];
-    let finalSheets = (sheets && sheets.length > 0) ? sheets : [];
+    let finalSheets = sheets && sheets.length > 0 ? sheets : [];
 
     if (finalSheets.length > 0) {
       if (primaryHeaders.length === 0) primaryHeaders = finalSheets[0].headers || [];
       if (primaryRows.length === 0) primaryRows = finalSheets[0].rows || [];
     } else if (primaryRows.length > 0) {
-      finalSheets = [{
-        name: "Transactions",
-        headers: primaryHeaders,
-        rows: primaryRows
-      }];
+      finalSheets = [
+        {
+          name: "Transactions",
+          headers: primaryHeaders,
+          rows: primaryRows,
+        },
+      ];
     }
 
-    const castedSheets = finalSheets.map(s => detectAndCastSheet(s));
+    const castedSheets = finalSheets.map((s) => detectAndCastSheet(s));
     const { start: minDate, end: maxDate } = extractDateRange(castedSheets);
-    const { totalRecords, columnCount, sheetCount, sheetMeta, financialSummary } = extractMetadata(castedSheets);
+    const { totalRecords, columnCount, sheetCount, sheetMeta, financialSummary } =
+      extractMetadata(castedSheets);
 
     const newFile = new StoredFile({
       filename: trimmedName,
@@ -64,14 +65,15 @@ router.post("/files", async (req, res) => {
       sheetCount,
       sheetMeta,
       financialSummary,
+      visibility: visibility === "private" ? "private" : "team",
       uploadedBy: req.user ? req.user._id : null,
       uploadedByName: req.user ? req.user.name : "System",
       rows: [],
-      sheets: castedSheets.map(s => ({
+      sheets: castedSheets.map((s) => ({
         name: s.name,
         headers: s.headers,
-        rows: []
-      }))
+        rows: [],
+      })),
     });
 
     await newFile.save();
@@ -87,7 +89,7 @@ router.post("/files", async (req, res) => {
           fileId: newFile._id,
           sheetName: sheet.name,
           chunkIndex: chunkIndex++,
-          rows: sRows.slice(i, i + CHUNK_SIZE)
+          rows: sRows.slice(i, i + CHUNK_SIZE),
         });
       }
     }
@@ -100,21 +102,41 @@ router.post("/files", async (req, res) => {
       req,
       action: "UPLOAD_FILE",
       resourceType: "StoredFile",
-      resourceId: newFile._id,
-      details: { filename: newFile.filename, totalRecords, sheetCount }
+      resourceId: newFile._id.toString(),
+      details: { filename: trimmedName, totalRecords, sheetCount, visibility: newFile.visibility },
     });
 
-    res.status(201).json({ message: "File saved successfully", fileId: newFile._id });
+    res.status(200).json({
+      message: "File and chunks saved successfully",
+      id: newFile._id,
+      file: newFile,
+    });
   } catch (error) {
     console.error("Error saving file:", error);
     res.status(500).json({ error: "Failed to save file" });
   }
 });
 
-// 2. Fetch all saved files metadata
+// 2. Fetch all saved files metadata (Respecting role and privacy visibility)
 router.get("/files", async (req, res) => {
   try {
-    const files = await StoredFile.aggregate([
+    const pipeline = [];
+
+    // Filter by visibility for regular authenticated users
+    if (req.user && req.user.role !== "admin") {
+      pipeline.push({
+        $match: {
+          $or: [
+            { visibility: "team" },
+            { visibility: { $exists: false } },
+            { visibility: null },
+            { uploadedBy: req.user._id },
+          ],
+        },
+      });
+    }
+
+    pipeline.push(
       {
         $project: {
           filename: 1,
@@ -126,6 +148,7 @@ router.get("/files", async (req, res) => {
           uploadedByName: 1,
           isPendingDeletion: 1,
           deletionRequestId: 1,
+          visibility: { $ifNull: ["$visibility", "team"] },
           totalRecords: {
             $ifNull: [
               "$totalRecords",
@@ -133,36 +156,44 @@ router.get("/files", async (req, res) => {
                 $cond: [
                   { $gt: [{ $size: { $ifNull: ["$rows", []] } }, 0] },
                   { $size: { $ifNull: ["$rows", []] } },
-                  { $size: { $ifNull: [{ $arrayElemAt: ["$sheets.rows", 0] }, []] } }
-                ]
-              }
-            ]
+                  { $size: { $ifNull: [{ $arrayElemAt: ["$sheets.rows", 0] }, []] } },
+                ],
+              },
+            ],
           },
           columnCount: { $ifNull: ["$columnCount", { $size: { $ifNull: ["$headers", []] } }] },
           sheetCount: {
             $ifNull: [
               "$sheetCount",
-              { $cond: [{ $gt: [{ $size: { $ifNull: ["$sheets", []] } }, 0] }, { $size: { $ifNull: ["$sheets", []] } }, 1] }
-            ]
+              {
+                $cond: [
+                  { $gt: [{ $size: { $ifNull: ["$sheets", []] } }, 0] },
+                  { $size: { $ifNull: ["$sheets", []] } },
+                  1,
+                ],
+              },
+            ],
           },
           sheets: {
             $map: {
               input: { $ifNull: ["$sheets", []] },
               as: "sheet",
-              in: { name: "$$sheet.name", headers: "$$sheet.headers" }
-            }
+              in: { name: "$$sheet.name", headers: "$$sheet.headers" },
+            },
           },
           headers: {
             $cond: [
               { $gt: [{ $size: { $ifNull: ["$headers", []] } }, 0] },
               "$headers",
-              { $ifNull: [{ $arrayElemAt: ["$sheets.headers", 0] }, []] }
-            ]
-          }
-        }
+              { $ifNull: [{ $arrayElemAt: ["$sheets.headers", 0] }, []] },
+            ],
+          },
+        },
       },
       { $sort: { uploadDate: -1 } }
-    ]);
+    );
+
+    const files = await StoredFile.aggregate(pipeline);
     res.status(200).json(files);
   } catch (error) {
     console.error("Error fetching files:", error);
@@ -181,7 +212,7 @@ router.get("/files/:id", async (req, res) => {
       action: "VIEW_FILE",
       resourceType: "StoredFile",
       resourceId: req.params.id,
-      details: { filename: file.filename }
+      details: { filename: file.filename },
     });
 
     res.status(200).json(file);
@@ -191,114 +222,36 @@ router.get("/files/:id", async (req, res) => {
   }
 });
 
-// 4. Delete a file (Admin = direct delete, User = guarded deletion request)
-router.delete("/files/:id", async (req, res) => {
+// 4. Update file visibility (Private vs Team)
+router.patch("/files/:id/visibility", async (req, res) => {
   try {
+    const { visibility } = req.body;
+    if (!["team", "private"].includes(visibility)) {
+      return res.status(400).json({ error: "Invalid visibility value" });
+    }
+
     const file = await StoredFile.findById(req.params.id);
     if (!file) return res.status(404).json({ error: "File not found" });
 
-    const isAdmin = req.user && req.user.role === "admin";
-
-    if (isAdmin) {
-      await StoredFile.findByIdAndDelete(req.params.id);
-      await FileChunk.deleteMany({ fileId: req.params.id });
-      if (file.deletionRequestId) {
-        await DeletionRequest.findByIdAndUpdate(file.deletionRequestId, {
-          status: "approved",
-          reviewedBy: req.user._id,
-          reviewedAt: new Date()
-        });
-      }
-
-      logUserActivity({
-        req,
-        action: "DELETE_FILE",
-        resourceType: "StoredFile",
-        resourceId: req.params.id,
-        details: { filename: file.filename }
-      });
-
-      return res.status(200).json({ message: "File permanently deleted" });
+    if (
+      req.user &&
+      req.user.role !== "admin" &&
+      file.uploadedBy &&
+      file.uploadedBy.toString() !== req.user._id.toString()
+    ) {
+      return res.status(403).json({ error: "You can only change visibility for your own files" });
     }
 
-    // Regular User: Guarded deletion request
-    if (file.isPendingDeletion) {
-      return res.status(400).json({ error: "File is already pending administrator deletion approval" });
-    }
-
-    const { reason = "User requested deletion" } = req.body;
-    const delReq = new DeletionRequest({
-      requestedBy: req.user ? req.user._id : file.uploadedBy,
-      requestedByName: req.user ? req.user.name : "User",
-      requestedByEmail: req.user ? req.user.email : "",
-      targetId: file._id,
-      targetName: file.filename,
-      reason: reason.trim()
-    });
-    await delReq.save();
-
-    file.isPendingDeletion = true;
-    file.deletionRequestId = delReq._id;
+    file.visibility = visibility;
     await file.save();
 
-    const adminEmail = process.env.ADMIN_EMAIL || "admin@usindh.edu.pk";
-    sendAdminDeletionAlert(adminEmail, delReq).catch((err) =>
-      console.warn("Deletion alert email error:", err.message)
-    );
-
-    logUserActivity({
-      req,
-      action: "REQUEST_DELETE",
-      resourceType: "StoredFile",
-      resourceId: file._id.toString(),
-      details: { filename: file.filename, reason: delReq.reason }
-    });
-
-    return res.status(202).json({
-      message: "Deletion request submitted. Awaiting administrator approval.",
-      isPendingDeletion: true,
-      requestId: delReq._id
-    });
+    return res.json({ message: "File visibility updated", visibility: file.visibility });
   } catch (error) {
-    console.error("Error in delete file:", error);
-    res.status(500).json({ error: "Delete failed" });
+    return res.status(500).json({ error: "Failed to update visibility" });
   }
 });
 
-// 4.1 Cancel a pending deletion request
-router.delete("/files/deletion-request/:id/cancel", async (req, res) => {
-  try {
-    const delReq = await DeletionRequest.findById(req.params.id);
-    if (!delReq) return res.status(404).json({ error: "Request not found" });
-
-    if (delReq.status !== "pending") {
-      return res.status(400).json({ error: "Request is no longer pending" });
-    }
-
-    delReq.status = "cancelled";
-    await delReq.save();
-
-    await StoredFile.findByIdAndUpdate(delReq.targetId, {
-      isPendingDeletion: false,
-      deletionRequestId: null
-    });
-
-    logUserActivity({
-      req,
-      action: "CANCEL_DELETE_REQUEST",
-      resourceType: "StoredFile",
-      resourceId: delReq.targetId.toString(),
-      details: { filename: delReq.targetName }
-    });
-
-    return res.status(200).json({ message: "Deletion request cancelled" });
-  } catch (error) {
-    console.error("Error cancelling deletion request:", error);
-    res.status(500).json({ error: "Cancel request failed" });
-  }
-});
-
-// 4.2 Rename a file
+// 5. Rename a file
 router.patch("/files/:id/rename", async (req, res) => {
   try {
     const { newFilename } = req.body;
@@ -310,7 +263,11 @@ router.patch("/files/:id/rename", async (req, res) => {
     const existingFile = await StoredFile.findOne({ filename: trimmedName });
     if (existingFile) return res.status(400).json({ error: "Filename already taken" });
 
-    const file = await StoredFile.findByIdAndUpdate(req.params.id, { filename: trimmedName }, { new: true });
+    const file = await StoredFile.findByIdAndUpdate(
+      req.params.id,
+      { filename: trimmedName },
+      { new: true }
+    );
     if (!file) return res.status(404).json({ error: "File not found" });
 
     logUserActivity({
@@ -318,7 +275,7 @@ router.patch("/files/:id/rename", async (req, res) => {
       action: "RENAME_FILE",
       resourceType: "StoredFile",
       resourceId: req.params.id,
-      details: { oldFilename: file.filename, newFilename: trimmedName }
+      details: { oldFilename: file.filename, newFilename: trimmedName },
     });
 
     res.status(200).json({ message: "File renamed", file });
@@ -328,13 +285,13 @@ router.patch("/files/:id/rename", async (req, res) => {
   }
 });
 
-// 4.3 Recompute meta for all files
+// 6. Recompute meta for all files
 router.post("/files/recompute-meta", async (req, res) => {
   try {
     const { all = false } = req.body;
     const result = await recomputeAllFilesMeta(all);
     res.status(200).json({
-      message: `Recomputed. Updated: ${result.updated}, Failed: ${result.failed}`
+      message: `Recomputed. Updated: ${result.updated}, Failed: ${result.failed}`,
     });
   } catch (error) {
     console.error("Error in recompute-meta:", error);
