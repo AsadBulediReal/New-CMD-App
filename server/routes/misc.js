@@ -54,7 +54,7 @@ router.post("/report-bug", async (req, res) => {
 
     const mailOptions = {
       from: process.env.SMTP_USER,
-      to: process.env.REPORT_RECIPIENT || "bulediasadjamil@gmail.com",
+      to: process.env.REPORT_RECIPIENT || process.env.ADMIN_EMAIL || "admin@usindh.edu.pk",
       subject: "New Bug Report - CMD System",
       text: `
 User Email: ${email || "Not provided"}

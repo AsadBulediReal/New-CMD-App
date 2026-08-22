@@ -112,7 +112,7 @@ export const Register: React.FC = () => {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Asad Buledi"
+                  placeholder="e.g. John Doe"
                   required
                   className="w-full pl-10 pr-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-colors"
                 />
