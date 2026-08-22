@@ -121,8 +121,14 @@ export const NotificationCenter: React.FC = () => {
     if (!item.read) {
       markAsRead(item._id);
     }
-    if (item.link) {
-      setIsOpen(false);
+    setIsOpen(false);
+    window.dispatchEvent(new CustomEvent("cmd:refresh-data"));
+
+    if (item.type === "user_registered") {
+      navigate("/admin?tab=users");
+    } else if (item.type === "deletion_requested") {
+      navigate("/admin?tab=deletions");
+    } else if (item.link) {
       navigate(item.link);
     }
   };

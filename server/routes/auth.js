@@ -83,7 +83,7 @@ router.post("/auth/register", async (req, res) => {
       title: "New User Registration",
       message: `${newUser.name} (${newUser.email}) has registered and is pending approval.`,
       type: "user_registered",
-      link: "/admin",
+      link: "/admin?tab=users",
     }).catch(() => {});
 
     return res.status(201).json({

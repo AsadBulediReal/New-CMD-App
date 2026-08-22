@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { PendingUsersTable } from "../../components/Admin/PendingUsersTable";
 import { DeletionRequestsTable } from "../../components/Admin/DeletionRequestsTable";
@@ -8,7 +9,13 @@ import { Shield, Users, Trash2, Activity, Server } from "lucide-react";
 
 export const AdminDashboard: React.FC = () => {
   const { authFetch } = useAuth();
-  const [activeTab, setActiveTab] = useState<"users" | "deletions" | "audit" | "health">("users");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const paramTab = searchParams.get("tab") as "users" | "deletions" | "audit" | "health" | null;
+  const activeTab = paramTab && ["users", "deletions", "audit", "health"].includes(paramTab) ? paramTab : "users";
+
+  const setActiveTab = (tab: "users" | "deletions" | "audit" | "health") => {
+    setSearchParams({ tab });
+  };
   const [stats, setStats] = useState({
     pendingUsers: 0,
     pendingDeletions: 0,
