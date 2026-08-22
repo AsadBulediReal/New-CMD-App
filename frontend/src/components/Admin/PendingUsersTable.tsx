@@ -1,6 +1,25 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { Check, X, UserX, Search, Loader2 } from "lucide-react";
+import {
+  MoreVertical,
+  Check,
+  X,
+  Shield,
+  ShieldAlert,
+  UserCheck,
+  RotateCcw,
+  UserX,
+  Search,
+  Loader2,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "../ui/dropdown-menu";
 import { toast } from "sonner";
 
 interface UserItem {
@@ -78,7 +97,7 @@ export const PendingUsersTable: React.FC = () => {
         body: JSON.stringify(update),
       });
       if (res.ok) {
-        toast.success("User updated successfully");
+        toast.success("User permissions updated");
         fetchUsers();
       } else {
         toast.error("Failed to update user");
@@ -180,52 +199,95 @@ export const PendingUsersTable: React.FC = () => {
                       }`}>{u.status}</span>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{new Date(u.createdAt).toLocaleDateString()}</td>
-                    <td className="px-4 py-3 text-right space-x-1.5 whitespace-nowrap">
-                      {u.status === "pending" && (
-                        <>
-                          <button onClick={() => handleApprove(u)} disabled={actionLoading} className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 inline-flex items-center gap-1 cursor-pointer" title="Approve User">
-                            <Check className="w-3.5 h-3.5" /><span className="text-[11px] font-semibold pr-1">Approve</span>
+                    <td className="px-4 py-3 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            disabled={actionLoading}
+                            className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer border border-border/60 shadow-2xs"
+                            title="Actions Menu"
+                          >
+                            <MoreVertical className="w-3.5 h-3.5" />
                           </button>
-                          <button onClick={() => { setRejectingUser(u); setRejectionReason(""); }} disabled={actionLoading} className="p-1.5 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 inline-flex items-center gap-1 cursor-pointer" title="Reject User">
-                            <X className="w-3.5 h-3.5" /><span className="text-[11px] font-semibold pr-1">Reject</span>
-                          </button>
-                        </>
-                      )}
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuLabel className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+                            User Management
+                          </DropdownMenuLabel>
+                          <DropdownMenuSeparator />
 
-                      {u.status === "active" && (
-                        <>
-                          {currentUser?._id !== u._id && (
+                          {u.status === "pending" && (
                             <>
-                              <button onClick={() => handleUpdateUser(u._id, { role: u.role === "admin" ? "user" : "admin" })} disabled={actionLoading} className="px-2 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer text-[11px] font-semibold" title={u.role === "admin" ? "Demote to User" : "Promote to Admin"}>
-                                {u.role === "admin" ? "Demote" : "Make Admin"}
-                              </button>
-                              <button onClick={() => handleUpdateUser(u._id, { status: "suspended" })} disabled={actionLoading} className="px-2 py-1 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 cursor-pointer text-[11px] font-semibold" title="Suspend Account">
-                                Suspend
-                              </button>
+                              <DropdownMenuItem
+                                onClick={() => handleApprove(u)}
+                                className="cursor-pointer text-emerald-600 dark:text-emerald-400 focus:text-emerald-600 focus:bg-emerald-500/10 font-medium text-xs flex items-center gap-2"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                                <span>Approve Account</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => { setRejectingUser(u); setRejectionReason(""); }}
+                                className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10 font-medium text-xs flex items-center gap-2"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                                <span>Reject Request...</span>
+                              </DropdownMenuItem>
                             </>
                           )}
-                          {currentUser?._id === u._id && (
-                            <span className="text-[11px] text-muted-foreground italic pr-2">Your Account</span>
-                          )}
-                        </>
-                      )}
 
-                      {u.status === "suspended" && (
-                        <button onClick={() => handleUpdateUser(u._id, { status: "active" })} disabled={actionLoading} className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 cursor-pointer text-[11px] font-semibold" title="Reactivate Account">
-                          Reactivate
-                        </button>
-                      )}
-
-                      {u.status === "rejected" && (
-                        <div className="inline-flex items-center gap-1.5">
-                          {u.rejectionReason && (
-                            <span className="text-[10px] text-muted-foreground italic max-w-[120px] truncate" title={`Reason: ${u.rejectionReason}`}>"{u.rejectionReason}"</span>
+                          {u.status === "active" && (
+                            <>
+                              {currentUser?._id !== u._id ? (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={() => handleUpdateUser(u._id, { role: u.role === "admin" ? "user" : "admin" })}
+                                    className="cursor-pointer font-medium text-xs flex items-center gap-2"
+                                  >
+                                    <Shield className="w-3.5 h-3.5 text-primary" />
+                                    <span>{u.role === "admin" ? "Demote to User" : "Promote to Admin"}</span>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleUpdateUser(u._id, { status: "suspended" })}
+                                    className="cursor-pointer text-amber-600 dark:text-amber-400 focus:text-amber-600 focus:bg-amber-500/10 font-medium text-xs flex items-center gap-2"
+                                  >
+                                    <ShieldAlert className="w-3.5 h-3.5" />
+                                    <span>Suspend Account</span>
+                                  </DropdownMenuItem>
+                                </>
+                              ) : (
+                                <div className="px-2 py-1.5 text-xs text-muted-foreground italic">Current Account (You)</div>
+                              )}
+                            </>
                           )}
-                          <button onClick={() => handleApprove(u)} disabled={actionLoading} className="px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 cursor-pointer text-[11px] font-semibold" title="Re-Approve User">
-                            Re-Approve
-                          </button>
-                        </div>
-                      )}
+
+                          {u.status === "suspended" && (
+                            <DropdownMenuItem
+                              onClick={() => handleUpdateUser(u._id, { status: "active" })}
+                              className="cursor-pointer text-emerald-600 dark:text-emerald-400 focus:text-emerald-600 focus:bg-emerald-500/10 font-medium text-xs flex items-center gap-2"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              <span>Reactivate Account</span>
+                            </DropdownMenuItem>
+                          )}
+
+                          {u.status === "rejected" && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => handleApprove(u)}
+                                className="cursor-pointer text-emerald-600 dark:text-emerald-400 focus:text-emerald-600 focus:bg-emerald-500/10 font-medium text-xs flex items-center gap-2"
+                              >
+                                <UserCheck className="w-3.5 h-3.5" />
+                                <span>Re-Approve User</span>
+                              </DropdownMenuItem>
+                              {u.rejectionReason && (
+                                <div className="px-2 py-1.5 text-[11px] text-muted-foreground italic border-t border-border/40">
+                                  "{u.rejectionReason}"
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                   </tr>
                 ))}
