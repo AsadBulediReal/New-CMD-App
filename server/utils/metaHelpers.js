@@ -10,6 +10,18 @@ const {
 } = require("./typeDetector");
 
 /**
+ * Decompresses an array-row into an object-row using provided headers.
+ */
+function decompressRow(row, headers) {
+  if (!Array.isArray(row)) return row;
+  const obj = {};
+  headers.forEach((h, i) => {
+    obj[h] = row[i] ?? "";
+  });
+  return obj;
+}
+
+/**
  * Extracts minimum and maximum dates across sheets.
  */
 function extractDateRange(sheets) {
