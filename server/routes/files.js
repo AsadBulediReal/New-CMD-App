@@ -1,8 +1,10 @@
 const express = require("express");
 const StoredFile = require("../models/StoredFile");
 const FileChunk = require("../models/FileChunk");
+const DeletionRequest = require("../models/DeletionRequest");
 const { optionalAuth } = require("../utils/authMiddleware");
 const { logUserActivity } = require("../utils/logger");
+const { sendAdminDeletionAlert } = require("../utils/mailer");
 const {
   detectAndCastSheet,
   extractDateRange,
@@ -14,7 +16,7 @@ const {
 const router = express.Router();
 router.use(optionalAuth);
 
-// 1. Save uploaded file data with a custom filename
+// 1. Save uploaded file data
 router.post("/files", async (req, res) => {
   try {
     const { filename, headers, rows, sheets, overwrite = false } = req.body;
@@ -94,7 +96,6 @@ router.post("/files", async (req, res) => {
       await FileChunk.insertMany(chunkDocs, { ordered: false });
     }
 
-    // Log upload activity
     logUserActivity({
       req,
       action: "UPLOAD_FILE",
@@ -190,29 +191,114 @@ router.get("/files/:id", async (req, res) => {
   }
 });
 
-// 4. Delete a specific file by ID (Direct Delete)
+// 4. Delete a file (Admin = direct delete, User = guarded deletion request)
 router.delete("/files/:id", async (req, res) => {
   try {
-    const file = await StoredFile.findByIdAndDelete(req.params.id);
+    const file = await StoredFile.findById(req.params.id);
     if (!file) return res.status(404).json({ error: "File not found" });
-    await FileChunk.deleteMany({ fileId: req.params.id });
+
+    const isAdmin = req.user && req.user.role === "admin";
+
+    if (isAdmin) {
+      await StoredFile.findByIdAndDelete(req.params.id);
+      await FileChunk.deleteMany({ fileId: req.params.id });
+      if (file.deletionRequestId) {
+        await DeletionRequest.findByIdAndUpdate(file.deletionRequestId, {
+          status: "approved",
+          reviewedBy: req.user._id,
+          reviewedAt: new Date()
+        });
+      }
+
+      logUserActivity({
+        req,
+        action: "DELETE_FILE",
+        resourceType: "StoredFile",
+        resourceId: req.params.id,
+        details: { filename: file.filename }
+      });
+
+      return res.status(200).json({ message: "File permanently deleted" });
+    }
+
+    // Regular User: Guarded deletion request
+    if (file.isPendingDeletion) {
+      return res.status(400).json({ error: "File is already pending administrator deletion approval" });
+    }
+
+    const { reason = "User requested deletion" } = req.body;
+    const delReq = new DeletionRequest({
+      requestedBy: req.user ? req.user._id : file.uploadedBy,
+      requestedByName: req.user ? req.user.name : "User",
+      requestedByEmail: req.user ? req.user.email : "",
+      targetId: file._id,
+      targetName: file.filename,
+      reason: reason.trim()
+    });
+    await delReq.save();
+
+    file.isPendingDeletion = true;
+    file.deletionRequestId = delReq._id;
+    await file.save();
+
+    const adminEmail = process.env.ADMIN_EMAIL || "admin@usindh.edu.pk";
+    sendAdminDeletionAlert(adminEmail, delReq).catch((err) =>
+      console.warn("Deletion alert email error:", err.message)
+    );
 
     logUserActivity({
       req,
-      action: "DELETE_FILE",
+      action: "REQUEST_DELETE",
       resourceType: "StoredFile",
-      resourceId: req.params.id,
-      details: { filename: file.filename }
+      resourceId: file._id.toString(),
+      details: { filename: file.filename, reason: delReq.reason }
     });
 
-    res.status(200).json({ message: "File deleted" });
+    return res.status(202).json({
+      message: "Deletion request submitted. Awaiting administrator approval.",
+      isPendingDeletion: true,
+      requestId: delReq._id
+    });
   } catch (error) {
-    console.error("Error deleting file:", error);
+    console.error("Error in delete file:", error);
     res.status(500).json({ error: "Delete failed" });
   }
 });
 
-// 4.1 Rename a specific file by ID
+// 4.1 Cancel a pending deletion request
+router.delete("/files/deletion-request/:id/cancel", async (req, res) => {
+  try {
+    const delReq = await DeletionRequest.findById(req.params.id);
+    if (!delReq) return res.status(404).json({ error: "Request not found" });
+
+    if (delReq.status !== "pending") {
+      return res.status(400).json({ error: "Request is no longer pending" });
+    }
+
+    delReq.status = "cancelled";
+    await delReq.save();
+
+    await StoredFile.findByIdAndUpdate(delReq.targetId, {
+      isPendingDeletion: false,
+      deletionRequestId: null
+    });
+
+    logUserActivity({
+      req,
+      action: "CANCEL_DELETE_REQUEST",
+      resourceType: "StoredFile",
+      resourceId: delReq.targetId.toString(),
+      details: { filename: delReq.targetName }
+    });
+
+    return res.status(200).json({ message: "Deletion request cancelled" });
+  } catch (error) {
+    console.error("Error cancelling deletion request:", error);
+    res.status(500).json({ error: "Cancel request failed" });
+  }
+});
+
+// 4.2 Rename a file
 router.patch("/files/:id/rename", async (req, res) => {
   try {
     const { newFilename } = req.body;
@@ -242,31 +328,7 @@ router.patch("/files/:id/rename", async (req, res) => {
   }
 });
 
-// 4.5 Bulk Delete files
-router.post("/files/bulk-delete", async (req, res) => {
-  try {
-    const { ids } = req.body;
-    if (!Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ error: "No files selected" });
-    }
-    await StoredFile.deleteMany({ _id: { $in: ids } });
-    await FileChunk.deleteMany({ fileId: { $in: ids } });
-
-    logUserActivity({
-      req,
-      action: "BULK_DELETE_FILES",
-      resourceType: "StoredFile",
-      details: { deletedCount: ids.length, ids }
-    });
-
-    res.status(200).json({ message: "Files deleted" });
-  } catch (error) {
-    console.error("Error in bulk delete:", error);
-    res.status(500).json({ error: "Delete failed" });
-  }
-});
-
-// 4.6 Recompute meta for all files
+// 4.3 Recompute meta for all files
 router.post("/files/recompute-meta", async (req, res) => {
   try {
     const { all = false } = req.body;

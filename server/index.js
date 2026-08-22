@@ -9,9 +9,11 @@ const decryptRouter = require("./routes/decrypt");
 const analyticsRouter = require("./routes/analytics");
 const reconcileRouter = require("./routes/reconcile");
 const auditRouter = require("./routes/audit");
+const miscRouter = require("./routes/misc");
 const authRouter = require("./routes/auth");
 const adminUsersRouter = require("./routes/adminUsers");
 const adminAuditRouter = require("./routes/adminAudit");
+const adminDeletionsRouter = require("./routes/adminDeletions");
 
 const app = express();
 
@@ -54,6 +56,7 @@ app.use(dbMiddleware);
 app.use("/api", authRouter);
 app.use("/api", adminUsersRouter);
 app.use("/api", adminAuditRouter);
+app.use("/api", adminDeletionsRouter);
 app.use("/api", filesRouter);
 app.use("/api", fileChunksRouter);
 app.use("/api", decryptRouter);
