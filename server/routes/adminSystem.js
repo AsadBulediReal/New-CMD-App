@@ -10,7 +10,7 @@ const { authenticateToken, requireAdmin } = require("../utils/authMiddleware");
 const { logUserActivity } = require("../utils/logger");
 
 const router = express.Router();
-router.use(authenticateToken, requireAdmin);
+router.use("/admin", authenticateToken, requireAdmin);
 
 /**
  * GET /api/admin/system-health

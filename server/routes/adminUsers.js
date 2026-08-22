@@ -9,8 +9,8 @@ const {
 
 const router = express.Router();
 
-// Apply auth & admin guard to all routes in this router
-router.use(authenticateToken, requireAdmin);
+// Apply auth & admin guard to all /admin routes in this router
+router.use("/admin", authenticateToken, requireAdmin);
 
 /**
  * GET /api/admin/users

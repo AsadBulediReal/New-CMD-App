@@ -4,8 +4,8 @@ const { authenticateToken, requireAdmin } = require("../utils/authMiddleware");
 
 const router = express.Router();
 
-// Enforce admin-only access
-router.use(authenticateToken, requireAdmin);
+// Enforce admin-only access on /admin routes
+router.use("/admin", authenticateToken, requireAdmin);
 
 /**
  * GET /api/admin/audit-logs
