@@ -52,6 +52,11 @@
 - **Password Reset & Recovery**: Added crypto-token password recovery via email (`/forgot-password`, `/reset-password`) and user profile management (`/profile`).
 - **File Ownership & Privacy**: Added `visibility: "team" | "private"` support to `StoredFile.js` with role-based aggregation matching and frontend scope tabs in the Document Vault.
 
+### Entry 08: Admin Infrastructure Diagnostics, Disaster Recovery Snapshots & Audit Inspector
+- **Infrastructure Diagnostics**: `GET /api/admin/system-health` providing real-time MongoDB cluster connectivity, ping latency, total document counts per collection, and Node memory usage.
+- **Disaster Recovery Snapshot Export**: `GET /api/admin/database/backup` allowing administrators to download a full JSON dump of database collections.
+- **Activity Log Inspector Modal**: `AuditLogDetailsModal` offering formatted JSON payload inspection, user-agent details, and clipboard copy directly from the live audit stream.
+
 ---
 
 ## 2. AI Assistant & Developer Directives
