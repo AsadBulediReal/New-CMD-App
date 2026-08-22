@@ -40,7 +40,12 @@
 - **Targeted Sheet Chunk Retrieval**: Enhanced `getFileWithChunks` to accept target sheet names, loading only relevant sheet chunks for Audit, Reconcile, and Analytics tools.
 - **Compound Indexing**: Added `{ fileId: 1, sheetName: 1, chunkIndex: 1 }` in `FileChunk.js` for instant sheet-specific lookups.
 - **Sampled Column Type Detection**: Replaced full-dataset scans in `server/utils/typeDetector.js` and `frontend/src/utils/typeDetector.ts` with smart sampling (max 100 non-empty rows) and fast-fail date matching.
-- **Eliminated Redundant In-Memory Mapping**: Streamlined single-pass row processing in `reconcile.js`, `audit.js`, and `analytics.js`.
+### Entry 06: User Authentication, RBAC, Activity Audit Engine & Guarded Deletion
+- **User Approval Lifecycle**: New user registrations require administrator approval. If rejected, an email containing the custom rejection reason is dispatched via `mailer.js`.
+- **First Admin Auto-Bootstrap**: The initial user (or `ADMIN_EMAIL`) is automatically granted active Administrator status.
+- **Activity Audit Trail**: Non-blocking `logUserActivity` tracks all sensitive operations (`LOGIN`, `UPLOAD_FILE`, `VIEW_FILE`, `RUN_RECONCILIATION`, `REQUEST_DELETE`, `APPROVE_USER`, etc.) to MongoDB.
+- **Guarded Deletion System**: Standard users cannot permanently delete files directly; delete actions submit a `DeletionRequest` for admin review and badge files as `isPendingDeletion`.
+- **Admin Management Hub**: Full frontend control center (`/admin`) for pending approvals, user statuses, deletion approval queue, and live audit logs.
 
 ---
 
