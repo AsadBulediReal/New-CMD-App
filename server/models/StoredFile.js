@@ -58,6 +58,26 @@ const storedFileSchema = new mongoose.Schema({
     debitCount:  { type: Number, default: null },
     creditCount: { type: Number, default: null },
     hasFinancialData: { type: Boolean, default: false },
+  },
+  // ── Ownership & Deletion Guard ─────────────────────────────────────────────
+  uploadedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    default: null,
+  },
+  uploadedByName: {
+    type: String,
+    default: "System",
+  },
+  isPendingDeletion: {
+    type: Boolean,
+    default: false,
+    index: true,
+  },
+  deletionRequestId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "DeletionRequest",
+    default: null,
   }
 });
 

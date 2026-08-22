@@ -36,6 +36,9 @@ This documentation suite is organized into focused, modular specifications (each
 6. 🤖 **[Refactor Changelog & AI Directives](file:///i:/Ideas%20and%20Projects/Final%20CMD%20App/docs/06-changelog-and-ai-guidelines.md)**  
    *Decomposition history of `server/index.js`, Vercel serverless DB reconnect solution, and rules for future AI pair-programmers.*
 
+7. 🔐 **[Auth, RBAC, Audit & Guarded Deletion](file:///i:/Ideas%20and%20Projects/Final%20CMD%20App/docs/07-auth-rbac-and-audit-specification.md)**  
+   *User registration approval lifecycle, rejection reason email dispatch, activity audit logging, and admin-guarded deletion workflows.*
+
 ---
 
 ## 🤖 Instructions for AI Assistants & Next Developers

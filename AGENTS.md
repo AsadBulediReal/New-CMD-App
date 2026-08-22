@@ -16,5 +16,9 @@
    - Preserve `global.mongoose` connection caching and IPv4 settings.
 
 4. **Documentation & Changelog**:
-   - Refer to and maintain `APP_DOCUMENTATION.md` and `docs/01` to `docs/06`.
+   - Refer to and maintain `APP_DOCUMENTATION.md` and `docs/01` to `docs/07`.
    - Log all architectural refactors in `docs/06-changelog-and-ai-guidelines.md`.
+
+5. **Auth, RBAC & Guarded Deletion Standards**:
+   - Refer to `docs/07-auth-rbac-and-audit-specification.md` for user approval lifecycle, rejection reason emails, action audit logging, and pending deletion workflows.
+   - Regular users must NEVER have direct permanent delete permissions. All deletions must go through the admin approval queue.
