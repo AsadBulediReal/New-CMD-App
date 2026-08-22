@@ -17,6 +17,15 @@ services:
     environment:
       - MONGODB_URI=mongodb://db:27017/cmd_app
       - PORT=5000
+      - JWT_SECRET=${JWT_SECRET:-cmd-secure-secret-key-change-in-prod}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@usindh.edu.pk}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - EMAIL_FROM=${EMAIL_FROM:-}
     ports:
       - "5000:5000"
 
