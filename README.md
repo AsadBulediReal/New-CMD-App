@@ -49,7 +49,7 @@ Choose the deployment method that best fits your environment:
 | **[3. Standard Node.js](#-method-3-manual-local-development)** | Local testing & developers | Intermediate | ~3 mins |
 
 > [!TIP]
-> **🎮 Interactive Deployment Player**: Open **[`features/deployments/interactive_viewer.html`](./features/deployments/interactive_viewer.html)** in any browser to pause instructions, step through manually, and copy code snippets with 1 click.
+> **🎮 Interactive Deployment Player**: Try the **[Online Interactive Player](https://htmlpreview.github.io/?https://github.com/AsadBulediReal/New-CMD-App/blob/main/features/deployments/interactive_viewer.html)** or open **[`features/deployments/interactive_viewer.html`](./features/deployments/interactive_viewer.html)** locally in any browser to pause instructions, step through manually, and copy code snippets with 1 click.
 
 ---
 
