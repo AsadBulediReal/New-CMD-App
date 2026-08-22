@@ -1,6 +1,6 @@
 import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
-import { Shield, User, Globe, Calendar, CheckCircle2, XCircle, Copy, Check } from "lucide-react";
+import { Shield, User, Globe, Calendar, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 
 interface AuditLogItem {
