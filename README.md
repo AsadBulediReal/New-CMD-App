@@ -65,13 +65,20 @@ git clone https://github.com/AsadBulediReal/New-CMD-App.git
 cd New-CMD-App
 ```
 
-### Step 3: Start the Application
+### Step 3: Configure Environment (Optional)
+Copy `.env.example` to `.env` to configure your administrator email, secure JWT key, and SMTP alerts:
+```bash
+cp .env.example .env
+```
+*(On Windows PowerShell: `Copy-Item .env.example .env`)*
+
+### Step 4: Start the Application
 Run this single command:
 ```bash
 docker-compose up -d --build
 ```
 
-### Step 4: Open in Your Browser
+### Step 5: Open in Your Browser
 - **Portal Interface**: Open [http://localhost](http://localhost) (or port `5173`)
 - **Backend API**: [http://localhost:5000](http://localhost:5000)
 
@@ -186,6 +193,7 @@ Detailed architecture specifications and API documentation:
 - [Database & Storage Architecture](docs/03-database-and-storage.md)
 - [API Reference](docs/04-api-reference.md)
 - [Auth, RBAC, Audit & Deletions](docs/07-auth-rbac-and-audit-specification.md)
+- [Showcase & Media Pipeline](docs/08-showcase-and-media-generation.md)
 - [Changelog & Guidelines](docs/06-changelog-and-ai-guidelines.md)
 
 ---
