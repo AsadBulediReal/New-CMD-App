@@ -43,6 +43,15 @@ export const DeletionRequestsTable: React.FC = () => {
 
   useEffect(() => {
     fetchRequests();
+    const interval = setInterval(fetchRequests, 10000); // 10s live poll
+    window.addEventListener("focus", fetchRequests);
+    window.addEventListener("cmd:refresh-data", fetchRequests);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", fetchRequests);
+      window.removeEventListener("cmd:refresh-data", fetchRequests);
+    };
   }, [statusFilter]);
 
   const handleApprove = async (reqItem: DeletionRequestItem) => {

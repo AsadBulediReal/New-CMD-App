@@ -41,8 +41,12 @@ export const NotificationCenter: React.FC = () => {
       const res = await authFetch("/api/notifications");
       if (res.ok) {
         const data = await res.json();
+        const newUnread = data.unreadCount || 0;
         setNotifications(data.notifications || []);
-        setUnreadCount(data.unreadCount || 0);
+        if (newUnread !== unreadCount) {
+          setUnreadCount(newUnread);
+          window.dispatchEvent(new CustomEvent("cmd:refresh-data"));
+        }
       }
     } catch {
       // silently fail on network poll
@@ -53,9 +57,9 @@ export const NotificationCenter: React.FC = () => {
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000); // 30s poll
+    const interval = setInterval(fetchNotifications, 10000); // 10s real-time poll
     return () => clearInterval(interval);
-  }, [user]);
+  }, [user, unreadCount]);
 
   // Close on outside click
   useEffect(() => {

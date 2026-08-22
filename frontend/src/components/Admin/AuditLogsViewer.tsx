@@ -53,6 +53,15 @@ export const AuditLogsViewer: React.FC = () => {
 
   useEffect(() => {
     fetchLogs();
+    const interval = setInterval(fetchLogs, 15000); // 15s live poll
+    window.addEventListener("focus", fetchLogs);
+    window.addEventListener("cmd:refresh-data", fetchLogs);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", fetchLogs);
+      window.removeEventListener("cmd:refresh-data", fetchLogs);
+    };
   }, [page, actionFilter, search]);
 
   const handleExport = async () => {

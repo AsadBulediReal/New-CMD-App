@@ -247,7 +247,18 @@ export default function SavedFiles() {
     }
   };
 
-  useEffect(() => { fetchFiles(); }, []);
+  useEffect(() => {
+    fetchFiles();
+    const interval = setInterval(fetchFiles, 15000); // 15s live poll
+    window.addEventListener("focus", fetchFiles);
+    window.addEventListener("cmd:refresh-data", fetchFiles);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", fetchFiles);
+      window.removeEventListener("cmd:refresh-data", fetchFiles);
+    };
+  }, []);
   // Reset page on search/filter change
   useEffect(() => { setPage(1); }, [search, sortField, sortDir, dateFrom, dateTo]);
 

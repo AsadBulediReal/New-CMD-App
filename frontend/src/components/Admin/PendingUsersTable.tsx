@@ -46,6 +46,15 @@ export const PendingUsersTable: React.FC = () => {
 
   useEffect(() => {
     fetchUsers();
+    const interval = setInterval(fetchUsers, 10000); // 10s live poll
+    window.addEventListener("focus", fetchUsers);
+    window.addEventListener("cmd:refresh-data", fetchUsers);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", fetchUsers);
+      window.removeEventListener("cmd:refresh-data", fetchUsers);
+    };
   }, [statusFilter, search]);
 
   const handleApprove = async (user: UserItem) => {
