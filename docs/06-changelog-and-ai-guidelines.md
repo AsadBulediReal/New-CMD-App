@@ -68,6 +68,16 @@ Any AI coding assistant or developer working on this codebase **MUST** follow th
 4. **Documentation Synchronization**:
    - When modifying modules, update both `APP_DOCUMENTATION.md` and the relevant `docs/0X-*.md` file.
 
+5. **Auth, RBAC & Guarded Deletion Standards**:
+   - Standard users cannot permanently delete files; all deletes must pass through the `DeletionRequest` lifecycle and admin approval queue.
+   - Refer to `docs/07-auth-rbac-and-audit-specification.md`.
+
+6. **Mobile-First & Touch-Friendly UI Standards**:
+   - All UI pages, modals, tables, and workbench tools MUST be completely responsive across mobile (<640px), tablet (640-1024px), and desktop (>1024px).
+   - Ensure touch targets are at least 44x44px.
+   - Prevent horizontal overflow by wrapping tables in scrollable containers (`overflow-x-auto min-w-0`).
+   - Use mobile drawer sidebars with smooth backdrop dismissals.
+
 ---
 
 *Last Updated: 2026-08-22 · Developed for Cash Management Division (CMD) · University of Sindh*

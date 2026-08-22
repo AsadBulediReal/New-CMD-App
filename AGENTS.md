@@ -22,3 +22,8 @@
 5. **Auth, RBAC & Guarded Deletion Standards**:
    - Refer to `docs/07-auth-rbac-and-audit-specification.md` for user approval lifecycle, rejection reason emails, action audit logging, and pending deletion workflows.
    - Regular users must NEVER have direct permanent delete permissions. All deletions must go through the admin approval queue.
+
+6. **Mobile-First & Responsive UI Standards**:
+   - Every UI component and page MUST be fully responsive and optimized for mobile devices, tablets, and desktops (`sm:`, `md:`, `lg:`).
+   - Use mobile drawer navigation, hamburger triggers, and touch-friendly interactive targets ($\ge 44\text{px}$).
+   - Tables and complex data viewers MUST have `overflow-x-auto`, `min-w-0`, and adaptive spacing (`p-3 sm:p-6`) to prevent horizontal viewport clipping or overflow.
