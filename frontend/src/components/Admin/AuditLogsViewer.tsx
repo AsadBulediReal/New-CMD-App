@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { Search, Download, RefreshCw, Loader2 } from "lucide-react";
+import { Search, Download, RefreshCw, Loader2, Eye } from "lucide-react";
 import { toast } from "sonner";
+import { AuditLogDetailsModal } from "./AuditLogDetailsModal";
 
 interface LogItem {
   _id: string;
@@ -11,15 +12,17 @@ interface LogItem {
   action: string;
   resourceType: string;
   resourceId?: string;
-  details?: Record<string, unknown>;
+  details?: any;
   ipAddress?: string;
-  status: "SUCCESS" | "FAILED" | "WARNING";
+  userAgent?: string;
+  status: "SUCCESS" | "FAILED";
   createdAt: string;
 }
 
 export const AuditLogsViewer: React.FC = () => {
   const { authFetch } = useAuth();
   const [logs, setLogs] = useState<LogItem[]>([]);
+  const [selectedLog, setSelectedLog] = useState<LogItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [actionFilter, setActionFilter] = useState("all");
@@ -150,11 +153,16 @@ export const AuditLogsViewer: React.FC = () => {
                   <th className="px-4 py-3">Target Resource</th>
                   <th className="px-4 py-3">Details</th>
                   <th className="px-4 py-3">IP Address</th>
+                  <th className="px-4 py-3 text-right">Inspect</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60 font-mono">
                 {logs.map((log) => (
-                  <tr key={log._id} className="hover:bg-muted/20 transition-colors">
+                  <tr
+                    key={log._id}
+                    onClick={() => setSelectedLog(log)}
+                    className="hover:bg-muted/30 transition-colors cursor-pointer group"
+                  >
                     <td className="px-4 py-2.5 text-muted-foreground font-sans whitespace-nowrap">
                       {new Date(log.createdAt).toLocaleString()}
                     </td>
@@ -175,6 +183,18 @@ export const AuditLogsViewer: React.FC = () => {
                     </td>
                     <td className="px-4 py-2.5 text-muted-foreground font-sans text-[11px]">
                       {log.ipAddress || "—"}
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedLog(log);
+                        }}
+                        className="p-1 rounded-md text-muted-foreground group-hover:text-primary hover:bg-primary/10 transition-colors"
+                        title="View Full Details"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -206,6 +226,9 @@ export const AuditLogsViewer: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Deep-Dive Record Inspector Modal */}
+      <AuditLogDetailsModal log={selectedLog} onClose={() => setSelectedLog(null)} />
     </div>
   );
 };

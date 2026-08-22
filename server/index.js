@@ -15,6 +15,7 @@ const authRouter = require("./routes/auth");
 const adminUsersRouter = require("./routes/adminUsers");
 const adminAuditRouter = require("./routes/adminAudit");
 const adminDeletionsRouter = require("./routes/adminDeletions");
+const adminSystemRouter = require("./routes/adminSystem");
 const passwordResetRouter = require("./routes/passwordReset");
 const notificationsRouter = require("./routes/notifications");
 
@@ -61,6 +62,7 @@ app.use("/api", passwordResetRouter);
 app.use("/api", adminUsersRouter);
 app.use("/api", adminAuditRouter);
 app.use("/api", adminDeletionsRouter);
+app.use("/api", adminSystemRouter);
 app.use("/api", notificationsRouter);
 app.use("/api", filesRouter);
 app.use("/api", fileDeletionsRouter);

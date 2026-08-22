@@ -3,11 +3,12 @@ import { useAuth } from "../../context/AuthContext";
 import { PendingUsersTable } from "../../components/Admin/PendingUsersTable";
 import { DeletionRequestsTable } from "../../components/Admin/DeletionRequestsTable";
 import { AuditLogsViewer } from "../../components/Admin/AuditLogsViewer";
-import { Shield, Users, Trash2, Activity } from "lucide-react";
+import { SystemHealthPanel } from "../../components/Admin/SystemHealthPanel";
+import { Shield, Users, Trash2, Activity, Server } from "lucide-react";
 
 export const AdminDashboard: React.FC = () => {
   const { authFetch } = useAuth();
-  const [activeTab, setActiveTab] = useState<"users" | "deletions" | "audit">("users");
+  const [activeTab, setActiveTab] = useState<"users" | "deletions" | "audit" | "health">("users");
   const [stats, setStats] = useState({
     pendingUsers: 0,
     pendingDeletions: 0,
@@ -72,17 +73,17 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex items-center gap-2 border-b border-border/70 pb-3">
+      <div className="flex items-center gap-2 border-b border-border/70 pb-3 overflow-x-auto">
         <button
           onClick={() => setActiveTab("users")}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
             activeTab === "users"
               ? "bg-primary text-primary-foreground shadow-xs"
               : "text-muted-foreground hover:text-foreground hover:bg-muted"
           }`}
         >
           <Users className="w-4 h-4" />
-          <span>User Approvals & Management</span>
+          <span>User Approvals</span>
           {stats.pendingUsers > 0 && (
             <span className="ml-1 px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold">
               {stats.pendingUsers}
@@ -92,14 +93,14 @@ export const AdminDashboard: React.FC = () => {
 
         <button
           onClick={() => setActiveTab("deletions")}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
             activeTab === "deletions"
               ? "bg-primary text-primary-foreground shadow-xs"
               : "text-muted-foreground hover:text-foreground hover:bg-muted"
           }`}
         >
           <Trash2 className="w-4 h-4" />
-          <span>Deletion Approval Queue</span>
+          <span>Deletion Queue</span>
           {stats.pendingDeletions > 0 && (
             <span className="ml-1 px-1.5 py-0.5 rounded-full bg-destructive text-white text-[10px] font-bold">
               {stats.pendingDeletions}
@@ -109,14 +110,26 @@ export const AdminDashboard: React.FC = () => {
 
         <button
           onClick={() => setActiveTab("audit")}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
             activeTab === "audit"
               ? "bg-primary text-primary-foreground shadow-xs"
               : "text-muted-foreground hover:text-foreground hover:bg-muted"
           }`}
         >
           <Activity className="w-4 h-4" />
-          <span>User Activity Audit Log</span>
+          <span>Audit Trail</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("health")}
+          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
+            activeTab === "health"
+              ? "bg-primary text-primary-foreground shadow-xs"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+          }`}
+        >
+          <Server className="w-4 h-4" />
+          <span>System Health & Backups</span>
         </button>
       </div>
 
@@ -125,6 +138,7 @@ export const AdminDashboard: React.FC = () => {
         {activeTab === "users" && <PendingUsersTable />}
         {activeTab === "deletions" && <DeletionRequestsTable />}
         {activeTab === "audit" && <AuditLogsViewer />}
+        {activeTab === "health" && <SystemHealthPanel />}
       </div>
     </div>
   );
