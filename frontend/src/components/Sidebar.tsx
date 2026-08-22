@@ -1,4 +1,5 @@
-import { Link, useLocation } from "react-router";
+import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import {
   LayoutDashboard,
   Database,
@@ -10,7 +11,9 @@ import {
   FileSpreadsheet,
   Building2,
   Shield,
-  Activity
+  Activity,
+  LogOut,
+  User
 } from "lucide-react";
 
 interface SidebarProps {
@@ -20,36 +23,43 @@ interface SidebarProps {
 
 export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
   const location = useLocation();
+  const { user, isAdmin, logout } = useAuth();
 
   const navigationGroups = [
     {
       title: "Main Workspace",
       items: [
-        { name: "Dashboard Overview", href: "/", icon: LayoutDashboard, tag: "HOME" as string | undefined, code: undefined as string | undefined },
-        { name: "Document Vault", href: "/saved-files", icon: Database, tag: "STORAGE" as string | undefined, code: undefined as string | undefined },
+        { name: "Dashboard Overview", href: "/", icon: LayoutDashboard, tag: "HOME" },
+        { name: "Document Vault", href: "/saved-files", icon: Database, tag: "STORAGE" },
       ],
     },
+    ...(isAdmin ? [{
+      title: "Administration",
+      items: [
+        { name: "Admin Control Hub", href: "/admin", icon: Shield, tag: "ADMIN" },
+      ],
+    }] : []),
     {
       title: "Data Processing Engines",
       items: [
-        { name: "TXT Statement Ingestion", href: "/upload-txt", icon: FileText, code: "MOD-01" as string | undefined, tag: undefined as string | undefined },
-        { name: "BS ↔ MIS Reconciliation", href: "/reconcile", icon: GitCompare, code: "MOD-02" as string | undefined, tag: undefined as string | undefined },
-        { name: "Report Consolidation", href: "/merge-json", icon: Combine, code: "MOD-03" as string | undefined, tag: undefined as string | undefined },
+        { name: "TXT Statement Ingestion", href: "/upload-txt", icon: FileText, code: "MOD-01" },
+        { name: "BS ↔ MIS Reconciliation", href: "/reconcile", icon: GitCompare, code: "MOD-02" },
+        { name: "Report Consolidation", href: "/merge-json", icon: Combine, code: "MOD-03" },
       ],
     },
     {
       title: "Analytics & Compliance",
       items: [
-        { name: "Financial Analytics", href: "/analytics", icon: BarChart3, code: "MOD-04" as string | undefined, tag: undefined as string | undefined },
-        { name: "Audit Categorizer", href: "/audit", icon: ShieldCheck, code: "MOD-05" as string | undefined, tag: undefined as string | undefined },
-        { name: "Excel Workbench", href: "/upload", icon: FileSpreadsheet, code: "MOD-06" as string | undefined, tag: undefined as string | undefined },
+        { name: "Financial Analytics", href: "/analytics", icon: BarChart3, code: "MOD-04" },
+        { name: "Audit Categorizer", href: "/audit", icon: ShieldCheck, code: "MOD-05" },
+        { name: "Excel Workbench", href: "/upload", icon: FileSpreadsheet, code: "MOD-06" },
       ],
     },
   ];
 
   const sidebarContent = (
     <aside className="w-full bg-sidebar border-r border-sidebar-border flex flex-col h-full select-none font-sans">
-      {/* ── Institutional Header Branding ── */}
+      {/* Institutional Branding */}
       <div className="p-4 border-b border-sidebar-border flex items-center justify-between gap-3">
         <Link
           to="/"
@@ -68,14 +78,11 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
             </span>
           </div>
         </Link>
-        {/* Mobile close button */}
         {onMobileClose && (
           <button
             onClick={onMobileClose}
             className="lg:hidden p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
-            title="Close navigation"
           >
-            <Activity className="w-4 h-4 hidden" />
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -83,7 +90,7 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
         )}
       </div>
 
-      {/* ── Navigation Menu Groups ── */}
+      {/* Navigation Groups */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
         {navigationGroups.map((group, idx) => (
           <div key={idx} className="space-y-1">
@@ -110,20 +117,16 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
                     <span className="truncate">{item.name}</span>
                   </div>
 
-                  {item.code && (
+                  {"code" in item && item.code && (
                     <span className={`text-[9px] font-mono font-medium px-1.5 py-0.5 rounded ${
-                      isActive 
-                        ? "bg-white/20 text-white" 
-                        : "bg-muted text-muted-foreground group-hover:bg-background"
+                      isActive ? "bg-white/20 text-white" : "bg-muted text-muted-foreground group-hover:bg-background"
                     }`}>
                       {item.code}
                     </span>
                   )}
-                  {item.tag && (
+                  {"tag" in item && item.tag && (
                     <span className={`text-[9px] font-extrabold tracking-wider px-1.5 py-0.5 rounded ${
-                      isActive 
-                        ? "bg-white/20 text-white" 
-                        : "bg-primary/10 text-primary"
+                      isActive ? "bg-white/20 text-white" : item.tag === "ADMIN" ? "bg-amber-500/20 text-amber-500 font-bold" : "bg-primary/10 text-primary"
                     }`}>
                       {item.tag}
                     </span>
@@ -135,38 +138,40 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
         ))}
       </div>
 
-      {/* ── System Status & Security Footer ── */}
-      <div className="p-3 border-t border-sidebar-border bg-sidebar-accent/50 space-y-2">
-        <div className="flex items-center justify-between text-[11px]">
-          <span className="flex items-center gap-1.5 text-emerald-500 font-bold uppercase tracking-wider text-[10px]">
-            <Activity className="w-3 h-3 animate-pulse" /> Node-01 Active
-          </span>
-          <span className="text-[10px] font-mono text-muted-foreground">v2.4</span>
+      {/* User Profile & Logout */}
+      {user && (
+        <div className="p-3 border-t border-sidebar-border bg-sidebar-accent/30 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold shrink-0">
+                {user.name.charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-bold text-foreground truncate">{user.name}</div>
+                <div className="text-[10px] text-muted-foreground truncate capitalize">{user.role}</div>
+              </div>
+            </div>
+            <button
+              onClick={logout}
+              title="Sign Out"
+              className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-medium">
-          <Shield className="w-3 h-3 text-primary shrink-0" />
-          <span>AES-256 Enterprise Encryption</span>
-        </div>
-      </div>
+      )}
     </aside>
   );
 
   return (
     <>
-      {/* Desktop Sidebar */}
       <div className="hidden lg:flex h-screen sticky top-0 z-40 shrink-0 w-64">
         {sidebarContent}
       </div>
-
-      {/* Mobile Drawer Overlay */}
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden flex">
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-background/80 backdrop-blur-sm transition-opacity"
-            onClick={onMobileClose}
-          />
-          {/* Drawer container */}
+          <div className="fixed inset-0 bg-background/80 backdrop-blur-sm transition-opacity" onClick={onMobileClose} />
           <div className="relative z-50 flex flex-col h-[100dvh] w-64 max-w-[80vw] shadow-2xl animate-in slide-in-from-left duration-200">
             {sidebarContent}
           </div>
@@ -175,4 +180,3 @@ export function Sidebar({ mobileOpen = false, onMobileClose }: SidebarProps) {
     </>
   );
 }
-

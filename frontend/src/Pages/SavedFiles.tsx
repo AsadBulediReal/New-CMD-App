@@ -46,6 +46,7 @@ import {
   type DownloadProgress
 } from "../utils/fileExporter";
 import { getApiUrl } from "../utils/api";
+import { DeletionRequestModal } from "../components/DeletionRequestModal";
 
 interface StoredFile {
   _id: string;
@@ -69,6 +70,8 @@ interface StoredFile {
     creditCount?: number;
     hasFinancialData?: boolean;
   };
+  isPendingDeletion?: boolean;
+  deletionRequestId?: string;
 }
 
 interface LoadedData {
@@ -1061,30 +1064,12 @@ export default function SavedFiles() {
         </DialogContent>
       </Dialog>
 
-      {/* ── Single Delete Modal ── */}
-      <Dialog open={!!fileToDelete} onOpenChange={open => !open && setFileToDelete(null)}>
-        <DialogContent className="max-w-md border-border bg-background shadow-2xl p-6">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-black text-foreground">Confirm Deletion</DialogTitle>
-          </DialogHeader>
-          <div className="py-6 space-y-4">
-            <p className="text-muted-foreground leading-relaxed">
-              You are about to permanently remove{" "}
-              <span className="text-foreground font-bold underline decoration-red-500/30 underline-offset-4">{fileToDelete?.filename}</span>{" "}
-              from the vault.
-            </p>
-            <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/10 text-red-600 dark:text-red-400 text-xs font-bold uppercase tracking-widest">
-              ⚠ This action cannot be reversed
-            </div>
-          </div>
-          <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t border-border">
-            <Button variant="ghost" className="font-bold flex-1 sm:flex-none" onClick={() => setFileToDelete(null)}>Cancel</Button>
-            <Button variant="destructive" className="font-bold flex-1 sm:flex-none bg-red-600 hover:bg-red-700 shadow-xl shadow-red-500/20" onClick={executeDelete}>
-              Purge File
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* ── Deletion Request / Purge Modal ── */}
+      <DeletionRequestModal
+        file={fileToDelete}
+        onClose={() => setFileToDelete(null)}
+        onSuccess={fetchFiles}
+      />
 
       {/* ── Bulk Delete Modal ── */}
       <Dialog open={bulkDeleteOpen} onOpenChange={open => !open && setBulkDeleteOpen(false)}>
