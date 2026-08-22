@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { getApiUrl } from "../utils/api";
 
 export interface UserProfile {
   _id: string;
@@ -31,8 +32,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const API_BASE = import.meta.env.VITE_API_URL || "";
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserProfile | null>(() => {
     const saved = localStorage.getItem("cmd_user");
@@ -49,14 +48,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Authenticated fetch wrapper that automatically injects Bearer token
+  // Authenticated fetch wrapper that automatically injects Bearer token and resolves API URLs
   const authFetch = useCallback(async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const headers = new Headers(init?.headers || {});
     const currentToken = localStorage.getItem("cmd_token");
     if (currentToken) {
       headers.set("Authorization", `Bearer ${currentToken}`);
     }
-    return fetch(input, { ...init, headers });
+    const resolvedInput = typeof input === "string" ? getApiUrl(input) : input;
+    return fetch(resolvedInput, { ...init, headers });
   }, []);
 
   const refreshUser = useCallback(async () => {
@@ -68,7 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
-      const res = await fetch(`${API_BASE}/api/auth/me`, {
+      const res = await fetch(getApiUrl("/api/auth/me"), {
         headers: { Authorization: `Bearer ${currentToken}` },
       });
 
@@ -96,7 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string) => {
     try {
-      const res = await fetch(`${API_BASE}/api/auth/login`, {
+      const res = await fetch(getApiUrl("/api/auth/login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -126,7 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithGoogle = async (credential: string) => {
     try {
-      const res = await fetch(`${API_BASE}/api/auth/google`, {
+      const res = await fetch(getApiUrl("/api/auth/google"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ credential }),
@@ -160,7 +160,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (name: string, email: string, password: string) => {
     try {
-      const res = await fetch(`${API_BASE}/api/auth/register`, {
+      const res = await fetch(getApiUrl("/api/auth/register"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),

@@ -22,6 +22,7 @@ import {
   DropdownMenuLabel,
 } from "../ui/dropdown-menu";
 import { toast } from "sonner";
+import { RejectUserModal } from "./RejectUserModal";
 
 interface UserItem {
   _id: string;
@@ -59,8 +60,14 @@ export const PendingUsersTable: React.FC = () => {
       const query = new URLSearchParams({ status: statusFilter, search: search.trim() });
       const res = await authFetch(`/api/admin/users?${query.toString()}`);
       if (res.ok) {
-        const data = await res.json();
-        setUsers(data.users || []);
+        const contentType = res.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          const data = await res.json();
+          setUsers(data.users || []);
+        }
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        toast.error(errData.error || "Failed to load users");
       }
     } catch {
       toast.error("Failed to load users");
@@ -317,37 +324,14 @@ export const PendingUsersTable: React.FC = () => {
       </div>
 
       {/* Rejection Modal */}
-      {rejectingUser && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
-            <div className="flex items-center gap-2 text-destructive font-semibold">
-              <UserX className="w-5 h-5" />
-              <span>Reject Registration: {rejectingUser.name}</span>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Please enter the reason for rejection. This explanation will be automatically emailed to <strong className="text-foreground">{rejectingUser.email}</strong>.
-            </p>
-            <form onSubmit={handleRejectSubmit} className="space-y-3">
-              <textarea
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                placeholder="e.g. Unverified employee ID or unauthorized department request..."
-                rows={3}
-                required
-                className="w-full p-3 bg-background border border-border rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-destructive/30"
-              />
-              <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setRejectingUser(null)} className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground rounded-lg cursor-pointer">
-                  Cancel
-                </button>
-                <button type="submit" disabled={actionLoading} className="px-4 py-1.5 bg-destructive text-destructive-foreground text-xs font-semibold rounded-lg hover:opacity-90 transition-all cursor-pointer">
-                  Confirm Rejection & Send Email
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <RejectUserModal
+        user={rejectingUser}
+        rejectionReason={rejectionReason}
+        actionLoading={actionLoading}
+        onReasonChange={setRejectionReason}
+        onClose={() => setRejectingUser(null)}
+        onSubmit={handleRejectSubmit}
+      />
     </div>
   );
 };

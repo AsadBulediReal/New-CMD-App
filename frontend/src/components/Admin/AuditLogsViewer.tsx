@@ -40,9 +40,12 @@ export const AuditLogsViewer: React.FC = () => {
       });
       const res = await authFetch(`/api/admin/audit-logs?${query.toString()}`);
       if (res.ok) {
-        const data = await res.json();
-        setLogs(data.logs || []);
-        setTotalPages(data.totalPages || 1);
+        const contentType = res.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          const data = await res.json();
+          setLogs(data.logs || []);
+          setTotalPages(data.totalPages || 1);
+        }
       }
     } catch {
       toast.error("Failed to load audit trail");

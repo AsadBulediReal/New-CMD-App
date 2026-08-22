@@ -31,8 +31,11 @@ export const DeletionRequestsTable: React.FC = () => {
     try {
       const res = await authFetch(`/api/admin/deletion-requests?status=${statusFilter}`);
       if (res.ok) {
-        const data = await res.json();
-        setRequests(data.requests || []);
+        const contentType = res.headers.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          const data = await res.json();
+          setRequests(data.requests || []);
+        }
       }
     } catch {
       toast.error("Failed to load deletion requests");

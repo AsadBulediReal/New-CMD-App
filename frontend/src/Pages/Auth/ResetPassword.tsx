@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Lock, Loader2, CheckCircle2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import { getApiUrl } from "../../utils/api";
 
 export const ResetPassword: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -35,7 +36,7 @@ export const ResetPassword: React.FC = () => {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/reset-password", {
+      const res = await fetch(getApiUrl("/api/auth/reset-password"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, token, newPassword }),

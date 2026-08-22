@@ -25,6 +25,17 @@ export const AdminDashboard: React.FC = () => {
   });
 
   useEffect(() => {
+    const safeJson = async (res: Response, fallback: any) => {
+      if (!res.ok) return fallback;
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("application/json")) return fallback;
+      try {
+        return await res.json();
+      } catch {
+        return fallback;
+      }
+    };
+
     const loadOverview = async () => {
       try {
         const [usersRes, delRes, auditRes, healthRes] = await Promise.all([
@@ -34,10 +45,10 @@ export const AdminDashboard: React.FC = () => {
           authFetch("/api/admin/system-health"),
         ]);
 
-        const usersData = usersRes.ok ? await usersRes.json() : { total: 0 };
-        const delData = delRes.ok ? await delRes.json() : { total: 0 };
-        const auditData = auditRes.ok ? await auditRes.json() : { todayLogs: 0 };
-        const healthData = healthRes.ok ? await healthRes.json() : null;
+        const usersData = await safeJson(usersRes, { total: 0 });
+        const delData = await safeJson(delRes, { total: 0 });
+        const auditData = await safeJson(auditRes, { todayLogs: 0 });
+        const healthData = await safeJson(healthRes, null);
 
         setStats({
           pendingUsers: usersData.total || 0,

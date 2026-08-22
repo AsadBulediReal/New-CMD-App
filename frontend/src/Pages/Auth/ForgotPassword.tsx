@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { KeyRound, Mail, Loader2, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { getApiUrl } from "../../utils/api";
 
 export const ForgotPassword: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -17,7 +18,7 @@ export const ForgotPassword: React.FC = () => {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/forgot-password", {
+      const res = await fetch(getApiUrl("/api/auth/forgot-password"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
