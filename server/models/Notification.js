@@ -44,6 +44,24 @@ const notificationSchema = new mongoose.Schema({
     default: false,
     index: true,
   },
+  readAt: {
+    type: Date,
+    default: null,
+  },
+  isCompleted: {
+    type: Boolean,
+    default: false,
+    index: true,
+  },
+  completedAt: {
+    type: Date,
+    default: null,
+  },
+  relatedId: {
+    type: mongoose.Schema.Types.ObjectId,
+    default: null,
+    index: true,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { Trash2, X, ShieldAlert, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -17,14 +18,23 @@ interface DeletionRequestItem {
 
 export const DeletionRequestsTable: React.FC = () => {
   const { authFetch } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlStatus = searchParams.get("status");
+
   const [requests, setRequests] = useState<DeletionRequestItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState("pending");
+  const [statusFilter, setStatusFilter] = useState<string>(urlStatus || "all");
 
   // Rejection modal
   const [rejectingReq, setRejectingReq] = useState<DeletionRequestItem | null>(null);
   const [adminNote, setAdminNote] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+
+  useEffect(() => {
+    if (urlStatus && ["all", "pending", "approved", "rejected"].includes(urlStatus)) {
+      setStatusFilter(urlStatus);
+    }
+  }, [urlStatus]);
 
   const fetchRequests = async () => {
     setLoading(true);
@@ -104,14 +114,23 @@ export const DeletionRequestsTable: React.FC = () => {
     }
   };
 
+  const handleFilterChange = (st: string) => {
+    setStatusFilter(st);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("status", st);
+      return next;
+    });
+  };
+
   return (
     <div className="space-y-4">
       {/* Filter Tabs */}
       <div className="flex items-center gap-1.5 p-1 bg-muted/60 rounded-xl w-fit">
-        {["pending", "approved", "rejected", "all"].map((st) => (
+        {["all", "pending", "approved", "rejected"].map((st) => (
           <button
             key={st}
-            onClick={() => setStatusFilter(st)}
+            onClick={() => handleFilterChange(st)}
             className={`px-3 py-1.5 text-xs font-semibold rounded-lg capitalize transition-all cursor-pointer ${
               statusFilter === st
                 ? "bg-background text-foreground shadow-xs"

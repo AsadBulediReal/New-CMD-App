@@ -82,7 +82,9 @@ router.post("/auth/register", async (req, res) => {
       title: "New User Registration",
       message: `${newUser.name} (${newUser.email}) has registered and is pending approval.`,
       type: "user_registered",
-      link: "/admin?tab=users",
+      link: "/admin?tab=users&status=pending",
+      relatedId: newUser._id,
+      isCompleted: false,
     }).catch(() => {});
 
     return res.status(201).json({
@@ -305,7 +307,9 @@ router.post("/auth/google", async (req, res) => {
       title: "New Google User Registration",
       message: `${newUser.name} (${newUser.email}) registered via Google and is pending approval.`,
       type: "user_registered",
-      link: "/admin?tab=users",
+      link: "/admin?tab=users&status=pending",
+      relatedId: newUser._id,
+      isCompleted: false,
     }).catch(() => {});
 
     return res.status(201).json({

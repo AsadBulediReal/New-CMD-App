@@ -7,6 +7,7 @@ const router = express.Router();
 /**
  * GET /api/notifications
  * Fetch notifications for current user (or admin broadcasts)
+ * Auto-filters and cleans up notifications that were opened & completed >24 hours ago
  */
 router.get("/notifications", authenticateToken, async (req, res) => {
   try {
@@ -15,15 +16,44 @@ router.get("/notifications", authenticateToken, async (req, res) => {
       ...(req.user.role === "admin" ? [{ recipientRole: "admin" }] : []),
     ];
 
-    const notifications = await Notification.find({ $or: userFilter })
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    // Filter out notifications that are both opened (read) and completed for over 24h
+    const query = {
+      $or: userFilter,
+      $nor: [
+        {
+          read: true,
+          isCompleted: true,
+          $or: [
+            { readAt: { $lt: twentyFourHoursAgo } },
+            { completedAt: { $lt: twentyFourHoursAgo } },
+            { createdAt: { $lt: twentyFourHoursAgo } },
+          ],
+        },
+      ],
+    };
+
+    const notifications = await Notification.find(query)
       .sort({ createdAt: -1 })
-      .limit(30)
+      .limit(40)
       .lean();
 
     const unreadCount = await Notification.countDocuments({
       $or: userFilter,
       read: false,
     });
+
+    // Background asynchronous non-blocking cleanup of stale completed & read notifications
+    Notification.deleteMany({
+      read: true,
+      isCompleted: true,
+      $or: [
+        { readAt: { $lt: twentyFourHoursAgo } },
+        { completedAt: { $lt: twentyFourHoursAgo } },
+        { createdAt: { $lt: twentyFourHoursAgo } },
+      ],
+    }).catch(() => {});
 
     return res.json({ notifications, unreadCount });
   } catch (error) {
@@ -44,6 +74,9 @@ router.patch("/notifications/:id/read", authenticateToken, async (req, res) => {
     }
 
     notification.read = true;
+    if (!notification.readAt) {
+      notification.readAt = new Date();
+    }
     await notification.save();
 
     return res.json({ message: "Notification marked as read" });
@@ -63,7 +96,10 @@ router.post("/notifications/read-all", authenticateToken, async (req, res) => {
       ...(req.user.role === "admin" ? [{ recipientRole: "admin" }] : []),
     ];
 
-    await Notification.updateMany({ $or: userFilter, read: false }, { $set: { read: true } });
+    await Notification.updateMany(
+      { $or: userFilter, read: false },
+      { $set: { read: true, readAt: new Date() } }
+    );
 
     return res.json({ message: "All notifications marked as read" });
   } catch (error) {

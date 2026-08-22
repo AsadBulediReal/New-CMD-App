@@ -75,7 +75,9 @@ router.delete("/files/:id", async (req, res) => {
       title: "File Deletion Request",
       message: `${req.user ? req.user.name : "A user"} requested deletion of "${file.filename}".`,
       type: "deletion_requested",
-      link: "/admin?tab=deletions",
+      link: "/admin?tab=deletions&status=pending",
+      relatedId: delReq._id,
+      isCompleted: false,
     }).catch(() => {});
 
     logUserActivity({

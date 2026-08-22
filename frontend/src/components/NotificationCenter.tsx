@@ -22,6 +22,10 @@ interface NotificationItem {
   type: string;
   link?: string | null;
   read: boolean;
+  readAt?: string | null;
+  isCompleted?: boolean;
+  completedAt?: string | null;
+  relatedId?: string | null;
   createdAt: string;
 }
 
@@ -138,12 +142,12 @@ export const NotificationCenter: React.FC = () => {
     setIsOpen(false);
     window.dispatchEvent(new CustomEvent("cmd:refresh-data"));
 
-    if (item.type === "user_registered") {
-      navigate("/admin?tab=users");
-    } else if (item.type === "deletion_requested") {
-      navigate("/admin?tab=deletions");
-    } else if (item.link) {
+    if (item.link) {
       navigate(item.link);
+    } else if (item.type === "user_registered") {
+      navigate("/admin?tab=users&status=pending");
+    } else if (item.type === "deletion_requested") {
+      navigate("/admin?tab=deletions&status=pending");
     }
   };
 
@@ -258,12 +262,17 @@ export const NotificationCenter: React.FC = () => {
                     <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
                       {item.message}
                     </p>
-                    {item.link && (
+                    {item.isCompleted ? (
+                      <div className="pt-1 flex items-center gap-1 text-[10px] text-emerald-500 font-semibold">
+                        <Check className="w-3 h-3" />
+                        <span>Task Completed</span>
+                      </div>
+                    ) : item.link ? (
                       <div className="pt-1 flex items-center gap-1 text-[10px] text-primary font-semibold">
                         <span>View Details</span>
                         <ExternalLink className="w-2.5 h-2.5" />
                       </div>
-                    )}
+                    ) : null}
                   </div>
 
                   <button

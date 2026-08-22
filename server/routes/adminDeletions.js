@@ -2,6 +2,7 @@ const express = require("express");
 const DeletionRequest = require("../models/DeletionRequest");
 const StoredFile = require("../models/StoredFile");
 const FileChunk = require("../models/FileChunk");
+const Notification = require("../models/Notification");
 const { authenticateToken, requireAdmin } = require("../utils/authMiddleware");
 const { logUserActivity } = require("../utils/logger");
 const { sendDeletionStatusEmail } = require("../utils/mailer");
@@ -86,6 +87,18 @@ router.post("/admin/deletion-requests/:id/approve", async (req, res) => {
       ).catch((err) => console.warn("Deletion approval email error:", err.message));
     }
 
+    // Mark pending deletion request notifications as completed
+    await Notification.updateMany(
+      {
+        $or: [
+          { relatedId: delReq._id },
+          { type: "deletion_requested", message: { $regex: delReq.targetName, $options: "i" } },
+        ],
+        isCompleted: false,
+      },
+      { $set: { isCompleted: true, completedAt: new Date() } }
+    ).catch(() => {});
+
     const { createNotification } = require("../utils/notify");
     createNotification({
       recipientId: delReq.requestedBy,
@@ -93,6 +106,8 @@ router.post("/admin/deletion-requests/:id/approve", async (req, res) => {
       message: `Your request to delete "${delReq.targetName}" was approved.`,
       type: "deletion_approved",
       link: "/saved-files",
+      relatedId: delReq._id,
+      isCompleted: true,
     }).catch(() => {});
 
     // 4. Record audit log
@@ -157,12 +172,26 @@ router.post("/admin/deletion-requests/:id/reject", async (req, res) => {
       ).catch((err) => console.warn("Deletion rejection email error:", err.message));
     }
 
+    // Mark pending deletion request notifications as completed
+    await Notification.updateMany(
+      {
+        $or: [
+          { relatedId: delReq._id },
+          { type: "deletion_requested", message: { $regex: delReq.targetName, $options: "i" } },
+        ],
+        isCompleted: false,
+      },
+      { $set: { isCompleted: true, completedAt: new Date() } }
+    ).catch(() => {});
+
     createNotification({
       recipientId: delReq.requestedBy,
       title: "Deletion Request Rejected",
       message: `Your request to delete "${delReq.targetName}" was rejected: ${delReq.adminNote}`,
       type: "deletion_rejected",
       link: "/saved-files",
+      relatedId: delReq._id,
+      isCompleted: true,
     }).catch(() => {});
 
     // 4. Record audit log

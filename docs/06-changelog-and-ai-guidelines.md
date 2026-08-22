@@ -65,12 +65,11 @@
   3. Added defensive Content-Type inspection (`safeJson` / `application/json` checks) across `AdminDashboard.tsx`, `PendingUsersTable.tsx`, `DeletionRequestsTable.tsx`, and `AuditLogsViewer.tsx`.
   4. Extracted `RejectUserModal.tsx` sub-component to ensure all admin components strictly adhere to the 300-row file limit.
 
-### Entry 11: Notification-Driven Admin Dashboard Updates
-- **Problem**: Admin dashboard components were continuously polling the backend via `setInterval` timers (10-15s) and window focus handlers, causing high unnecessary request traffic.
-- **Resolution**:
-  1. Removed periodic background timer polling and focus listeners across `AdminDashboard.tsx`, `PendingUsersTable.tsx`, `DeletionRequestsTable.tsx`, `AuditLogsViewer.tsx`, and `SystemHealthPanel.tsx`.
-  2. Enhanced `NotificationCenter.tsx` to detect newly arrived alerts and dispatch `cmd:refresh-data`.
-  3. Extracted `UserActionsDropdown.tsx` to keep `PendingUsersTable.tsx` modular and under the 300-row standard.
+### Entry 12: Admin Dashboard Default "All" Tab, Notification Deep-Linking & 24h Auto-Disappearance
+- **Default "All" Selection**: `PendingUsersTable.tsx` and `DeletionRequestsTable.tsx` now default their filter views to `"all"` when visited directly, while supporting URL query deep links (e.g. `?tab=users&status=pending`).
+- **Notification Deep-Linking**: Clicking a user registration notification routes directly to `/admin?tab=users&status=pending`, and clicking a deletion request routes to `/admin?tab=deletions&status=pending`.
+- **Task Completion Lifecycle**: When user accounts or deletion requests are approved or rejected, related notifications are automatically marked `isCompleted: true` with a timestamp, rendering `"Task Completed"` with a green checkmark instead of `"View Details"`.
+- **24-Hour Auto-Disappearance**: In `notifications.js`, notifications that are both opened (`read: true`) and completed (`isCompleted: true`) for $\ge 24$ hours are automatically excluded from queries and asynchronously purged from the database.
 
 ---
 

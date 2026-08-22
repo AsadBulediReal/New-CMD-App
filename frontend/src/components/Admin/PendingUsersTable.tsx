@@ -13,7 +13,7 @@ export const PendingUsersTable: React.FC = () => {
 
   const [users, setUsers] = useState<UserItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<string>(urlStatus || "active");
+  const [statusFilter, setStatusFilter] = useState<string>(urlStatus || "all");
   const [search, setSearch] = useState("");
 
   const [rejectingUser, setRejectingUser] = useState<UserItem | null>(null);
@@ -21,7 +21,7 @@ export const PendingUsersTable: React.FC = () => {
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
-    if (urlStatus && ["pending", "active", "rejected", "suspended", "all"].includes(urlStatus)) {
+    if (urlStatus && ["all", "pending", "active", "rejected", "suspended"].includes(urlStatus)) {
       setStatusFilter(urlStatus);
     }
   }, [urlStatus]);
@@ -133,7 +133,7 @@ export const PendingUsersTable: React.FC = () => {
       {/* Controls */}
       <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
         <div className="flex items-center gap-1.5 p-1 bg-muted/60 rounded-xl w-full sm:w-auto overflow-x-auto">
-          {["active", "pending", "rejected", "suspended", "all"].map((st) => (
+          {["all", "pending", "active", "rejected", "suspended"].map((st) => (
             <button
               key={st}
               onClick={() => handleFilterChange(st)}

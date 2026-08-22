@@ -1,6 +1,7 @@
 const express = require("express");
 const User = require("../models/User");
 const AuditLog = require("../models/AuditLog");
+const Notification = require("../models/Notification");
 const { authenticateToken, requireAdmin } = require("../utils/authMiddleware");
 const {
   sendAccountApprovedEmail,
@@ -75,6 +76,18 @@ router.post("/admin/users/:id/approve", async (req, res) => {
       console.warn("Approval email error:", err.message)
     );
 
+    // Mark pending user registration notifications as completed
+    await Notification.updateMany(
+      {
+        $or: [
+          { relatedId: user._id },
+          { type: "user_registered", message: { $regex: user.email, $options: "i" } },
+        ],
+        isCompleted: false,
+      },
+      { $set: { isCompleted: true, completedAt: new Date() } }
+    ).catch(() => {});
+
     const { createNotification } = require("../utils/notify");
     createNotification({
       recipientId: user._id,
@@ -82,6 +95,8 @@ router.post("/admin/users/:id/approve", async (req, res) => {
       message: "Your CMD Portal account has been approved by the administrator.",
       type: "user_approved",
       link: "/",
+      relatedId: user._id,
+      isCompleted: true,
     }).catch(() => {});
 
     // Audit log
@@ -133,12 +148,26 @@ router.post("/admin/users/:id/reject", async (req, res) => {
       console.warn("Rejection email error:", err.message)
     );
 
+    // Mark pending user registration notifications as completed
+    await Notification.updateMany(
+      {
+        $or: [
+          { relatedId: user._id },
+          { type: "user_registered", message: { $regex: user.email, $options: "i" } },
+        ],
+        isCompleted: false,
+      },
+      { $set: { isCompleted: true, completedAt: new Date() } }
+    ).catch(() => {});
+
     const { createNotification } = require("../utils/notify");
     createNotification({
       recipientId: user._id,
       title: "Registration Rejected",
       message: `Your registration request was rejected: ${reason}`,
       type: "user_rejected",
+      relatedId: user._id,
+      isCompleted: true,
     }).catch(() => {});
 
     // Audit log
