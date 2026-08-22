@@ -76,11 +76,9 @@ export const SystemHealthPanel: React.FC = () => {
 
   useEffect(() => {
     fetchHealth();
-    const interval = setInterval(fetchHealth, 15000);
-    window.addEventListener("focus", fetchHealth);
+    window.addEventListener("cmd:refresh-data", fetchHealth);
     return () => {
-      clearInterval(interval);
-      window.removeEventListener("focus", fetchHealth);
+      window.removeEventListener("cmd:refresh-data", fetchHealth);
     };
   }, []);
 

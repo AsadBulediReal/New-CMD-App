@@ -33,6 +33,8 @@ export const NotificationCenter: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const prevLatestIdRef = useRef<string | null>(null);
+  const prevUnreadRef = useRef<number | null>(null);
 
   const fetchNotifications = async () => {
     if (!user) return;
@@ -42,11 +44,23 @@ export const NotificationCenter: React.FC = () => {
       if (res.ok) {
         const data = await res.json();
         const newUnread = data.unreadCount || 0;
-        setNotifications(data.notifications || []);
-        if (newUnread !== unreadCount) {
-          setUnreadCount(newUnread);
+        const fetchedList: NotificationItem[] = data.notifications || [];
+        const latestId = fetchedList[0]?._id || null;
+
+        setNotifications(fetchedList);
+        setUnreadCount(newUnread);
+
+        const isInitialFetch = prevLatestIdRef.current === null && prevUnreadRef.current === null;
+        const hasNewNotification =
+          !isInitialFetch &&
+          ((latestId && latestId !== prevLatestIdRef.current) || newUnread > (prevUnreadRef.current ?? 0));
+
+        if (hasNewNotification) {
           window.dispatchEvent(new CustomEvent("cmd:refresh-data"));
         }
+
+        prevLatestIdRef.current = latestId;
+        prevUnreadRef.current = newUnread;
       }
     } catch {
       // silently fail on network poll
@@ -59,7 +73,7 @@ export const NotificationCenter: React.FC = () => {
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 10000); // 10s real-time poll
     return () => clearInterval(interval);
-  }, [user, unreadCount]);
+  }, [user]);
 
   // Close on outside click
   useEffect(() => {

@@ -63,13 +63,9 @@ export const AdminDashboard: React.FC = () => {
     };
 
     loadOverview();
-    const interval = setInterval(loadOverview, 10000); // 10s live auto-refresh
-    window.addEventListener("focus", loadOverview);
     window.addEventListener("cmd:refresh-data", loadOverview);
 
     return () => {
-      clearInterval(interval);
-      window.removeEventListener("focus", loadOverview);
       window.removeEventListener("cmd:refresh-data", loadOverview);
     };
   }, [activeTab]);

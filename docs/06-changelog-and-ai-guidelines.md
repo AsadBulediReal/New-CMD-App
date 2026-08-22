@@ -65,6 +65,13 @@
   3. Added defensive Content-Type inspection (`safeJson` / `application/json` checks) across `AdminDashboard.tsx`, `PendingUsersTable.tsx`, `DeletionRequestsTable.tsx`, and `AuditLogsViewer.tsx`.
   4. Extracted `RejectUserModal.tsx` sub-component to ensure all admin components strictly adhere to the 300-row file limit.
 
+### Entry 11: Notification-Driven Admin Dashboard Updates
+- **Problem**: Admin dashboard components were continuously polling the backend via `setInterval` timers (10-15s) and window focus handlers, causing high unnecessary request traffic.
+- **Resolution**:
+  1. Removed periodic background timer polling and focus listeners across `AdminDashboard.tsx`, `PendingUsersTable.tsx`, `DeletionRequestsTable.tsx`, `AuditLogsViewer.tsx`, and `SystemHealthPanel.tsx`.
+  2. Enhanced `NotificationCenter.tsx` to detect newly arrived alerts and dispatch `cmd:refresh-data`.
+  3. Extracted `UserActionsDropdown.tsx` to keep `PendingUsersTable.tsx` modular and under the 300-row standard.
+
 ---
 
 ## 2. AI Assistant & Developer Directives

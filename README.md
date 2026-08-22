@@ -72,11 +72,17 @@ Deploy a live production instance accessible to your entire university team.
 | Variable | Description | Example |
 | :--- | :--- | :--- |
 | `MONGODB_URI` | Your MongoDB connection string | `mongodb+srv://user:pass@cluster.mongodb.net/cmd` |
-| `JWT_SECRET` | Secret key for login sessions | `your-super-secret-key-32-chars` |
+| `JWT_SECRET` | Secret key for signing login tokens | `64-character random hex string` |
 | `ADMIN_EMAIL` | Super admin email (auto-activated) | `admin@usindh.edu.pk` |
 | `GOOGLE_CLIENT_ID` | Google OAuth Client ID | `xxxx.apps.googleusercontent.com` |
 | `VITE_GOOGLE_CLIENT_ID` | Google OAuth Client ID (Frontend) | `xxxx.apps.googleusercontent.com` |
 | `VITE_API_URL` | Live Backend URL (if separate) | `https://api.yourdomain.com` |
+
+> [!TIP]
+> **Generate a secure `JWT_SECRET`:** Run this command in your terminal to generate one instantly:
+> ```bash
+> node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+> ```
 
 5. Click **Deploy**. Your app is live!
 
