@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { Check, X, UserCheck, UserX, Shield, Clock, Search, AlertCircle, Loader2 } from "lucide-react";
+import { Check, X, UserX, Search, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface UserItem {

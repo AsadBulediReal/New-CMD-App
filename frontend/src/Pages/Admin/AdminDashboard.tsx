@@ -3,7 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import { PendingUsersTable } from "../../components/Admin/PendingUsersTable";
 import { DeletionRequestsTable } from "../../components/Admin/DeletionRequestsTable";
 import { AuditLogsViewer } from "../../components/Admin/AuditLogsViewer";
-import { Shield, Users, Trash2, Activity, Clock } from "lucide-react";
+import { Shield, Users, Trash2, Activity } from "lucide-react";
 
 export const AdminDashboard: React.FC = () => {
   const { authFetch } = useAuth();

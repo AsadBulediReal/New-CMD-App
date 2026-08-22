@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider, useAuth } from "./context/AuthContext";
+import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute, AdminRoute, PublicOnlyRoute } from "./components/Guards/ProtectedRoute";
 
 import Login from "./Pages/Auth/Login";

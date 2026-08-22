@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { Trash2, Check, X, ShieldAlert, FileText, Loader2, Search } from "lucide-react";
+import { Trash2, X, ShieldAlert, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface DeletionRequestItem {

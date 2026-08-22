@@ -300,19 +300,6 @@ export default function SavedFiles() {
     }
   };
 
-  const executeDelete = async () => {
-    if (!fileToDelete) return;
-    try {
-      const res = await fetch(getApiUrl(`/api/files/${fileToDelete.id}`), { method: "DELETE" });
-      if (!res.ok) throw new Error(`Failed to delete file`);
-      setFiles(files.filter(f => f._id !== fileToDelete.id));
-      setSelectedIds(prev => { const n = new Set(prev); n.delete(fileToDelete.id); return n; });
-      setFileToDelete(null);
-    } catch (error) {
-      console.error("Failed to delete file:", error);
-    }
-  };
-
   const executeBulkDelete = async () => {
     setBulkDeleting(true);
     try {

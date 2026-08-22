@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { Lock, Mail, Loader2, AlertCircle, ShieldAlert, CheckCircle2 } from "lucide-react";
+import { Lock, Mail, Loader2, AlertCircle, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 
 export const Login: React.FC = () => {
