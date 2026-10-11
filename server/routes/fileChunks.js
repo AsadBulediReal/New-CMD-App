@@ -154,6 +154,13 @@ router.post("/files/:id/finalize", async (req, res) => {
     if (chunkDocs.length > 0) {
       await FileChunk.insertMany(chunkDocs, { ordered: false });
     }
+
+    try {
+      const { emitSocketEvent } = require("../utils/socket");
+      emitSocketEvent("files:changed", { action: "create", fileId });
+      emitSocketEvent("data:refresh", { type: "files" });
+    } catch (e) {}
+
     res.status(200).json({ message: "File saved successfully", fileId });
   } catch (error) {
     console.error("Error finalizing file upload:", error);

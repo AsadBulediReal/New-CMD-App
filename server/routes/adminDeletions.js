@@ -120,6 +120,12 @@ router.post("/admin/deletion-requests/:id/approve", async (req, res) => {
       status: "SUCCESS",
     });
 
+    try {
+      const { emitSocketEvent } = require("../utils/socket");
+      emitSocketEvent("files:changed", { action: "delete", fileId: delReq.targetId });
+      emitSocketEvent("data:refresh", { type: "deletions" });
+    } catch (e) {}
+
     return res.json({
       message: "Deletion approved and resource permanently removed",
       request: delReq,
@@ -203,6 +209,12 @@ router.post("/admin/deletion-requests/:id/reject", async (req, res) => {
       details: { targetName: delReq.targetName, requestedBy: delReq.requestedByEmail, adminNote: delReq.adminNote },
       status: "SUCCESS",
     });
+
+    try {
+      const { emitSocketEvent } = require("../utils/socket");
+      emitSocketEvent("files:changed", { action: "restore", fileId: delReq.targetId });
+      emitSocketEvent("data:refresh", { type: "deletions" });
+    } catch (e) {}
 
     return res.json({
       message: "Deletion request rejected. Resource retained.",

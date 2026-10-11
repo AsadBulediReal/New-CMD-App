@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { Clock, RefreshCw, LogOut, ShieldCheck, Mail } from "lucide-react";
 import { toast } from "sonner";
@@ -6,6 +6,20 @@ import { toast } from "sonner";
 export const PendingApproval: React.FC = () => {
   const { user, refreshUser, logout } = useAuth();
   const [checking, setChecking] = useState(false);
+
+  useEffect(() => {
+    const handleStatusSync = async () => {
+      await refreshUser();
+    };
+
+    window.addEventListener("cmd:refresh-data", handleStatusSync);
+    window.addEventListener("cmd:notification-new", handleStatusSync);
+
+    return () => {
+      window.removeEventListener("cmd:refresh-data", handleStatusSync);
+      window.removeEventListener("cmd:notification-new", handleStatusSync);
+    };
+  }, [refreshUser]);
 
   const handleCheckStatus = async () => {
     setChecking(true);

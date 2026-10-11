@@ -73,11 +73,19 @@ app.use("/api", reconcileRouter);
 app.use("/api", auditRouter);
 app.use("/api", miscRouter);
 
+const http = require("http");
+const { initSocket } = require("./utils/socket");
+
+// Create HTTP server wrapper around Express app
+const server = http.createServer(app);
+initSocket(server, allowedOrigins);
+
 // Export for serverless / Vercel deployment
 module.exports = app;
 
 // Start Server in standalone mode
 if (process.env.NODE_ENV !== "test" && require.main === module) {
   const PORT = process.env.PORT || 5000;
-  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  server.listen(PORT, () => console.log(`Server & WebSockets running on port ${PORT}`));
 }
+

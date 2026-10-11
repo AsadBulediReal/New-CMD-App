@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { getApiUrl } from "../utils/api";
+import { registerSocketUser, disconnectSocket, getSocket } from "../utils/socket";
 
 export interface UserProfile {
   _id: string;
@@ -93,6 +94,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     refreshUser();
   }, [refreshUser]);
+
+  useEffect(() => {
+    if (user?._id) {
+      registerSocketUser(user._id, user.role);
+    } else {
+      getSocket();
+    }
+  }, [user]);
 
   const login = async (email: string, password: string) => {
     try {
@@ -193,6 +202,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem("cmd_user");
     setToken(null);
     setUser(null);
+    disconnectSocket();
   };
 
   const isAuthenticated = !!token && !!user && user.status === "active";

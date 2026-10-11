@@ -88,6 +88,12 @@ router.delete("/files/:id", async (req, res) => {
       details: { filename: file.filename, reason: delReq.reason },
     });
 
+    try {
+      const { emitSocketEvent } = require("../utils/socket");
+      emitSocketEvent("files:changed", { action: "pending_delete", fileId: file._id });
+      emitSocketEvent("data:refresh", { type: "deletions" });
+    } catch (e) {}
+
     return res.status(202).json({
       message: "Deletion request submitted. Awaiting administrator approval.",
       isPendingDeletion: true,

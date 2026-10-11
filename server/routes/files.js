@@ -106,6 +106,14 @@ router.post("/files", async (req, res) => {
       details: { filename: trimmedName, totalRecords, sheetCount, visibility: newFile.visibility },
     });
 
+    try {
+      const { emitSocketEvent } = require("../utils/socket");
+      emitSocketEvent("files:changed", { action: "create", file: newFile });
+      emitSocketEvent("data:refresh", { type: "files" });
+    } catch (e) {
+      // ignore
+    }
+
     res.status(200).json({
       message: "File and chunks saved successfully",
       id: newFile._id,
@@ -245,6 +253,12 @@ router.patch("/files/:id/visibility", async (req, res) => {
     file.visibility = visibility;
     await file.save();
 
+    try {
+      const { emitSocketEvent } = require("../utils/socket");
+      emitSocketEvent("files:changed", { action: "update", fileId: file._id, visibility: file.visibility });
+      emitSocketEvent("data:refresh", { type: "files" });
+    } catch (e) {}
+
     return res.json({ message: "File visibility updated", visibility: file.visibility });
   } catch (error) {
     return res.status(500).json({ error: "Failed to update visibility" });
@@ -278,6 +292,12 @@ router.patch("/files/:id/rename", async (req, res) => {
       details: { oldFilename: file.filename, newFilename: trimmedName },
     });
 
+    try {
+      const { emitSocketEvent } = require("../utils/socket");
+      emitSocketEvent("files:changed", { action: "rename", fileId: file._id, newFilename: trimmedName });
+      emitSocketEvent("data:refresh", { type: "files" });
+    } catch (e) {}
+
     res.status(200).json({ message: "File renamed", file });
   } catch (error) {
     console.error("Error renaming file:", error);
@@ -290,6 +310,13 @@ router.post("/files/recompute-meta", async (req, res) => {
   try {
     const { all = false } = req.body;
     const result = await recomputeAllFilesMeta(all);
+
+    try {
+      const { emitSocketEvent } = require("../utils/socket");
+      emitSocketEvent("files:changed", { action: "recompute" });
+      emitSocketEvent("data:refresh", { type: "files" });
+    } catch (e) {}
+
     res.status(200).json({
       message: `Recomputed. Updated: ${result.updated}, Failed: ${result.failed}`,
     });

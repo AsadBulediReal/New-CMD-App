@@ -75,8 +75,15 @@ export const NotificationCenter: React.FC = () => {
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 10000); // 10s real-time poll
-    return () => clearInterval(interval);
+    const handleRefresh = () => fetchNotifications();
+
+    window.addEventListener("cmd:notification-new", handleRefresh);
+    window.addEventListener("cmd:refresh-data", handleRefresh);
+
+    return () => {
+      window.removeEventListener("cmd:notification-new", handleRefresh);
+      window.removeEventListener("cmd:refresh-data", handleRefresh);
+    };
   }, [user]);
 
   // Close on outside click

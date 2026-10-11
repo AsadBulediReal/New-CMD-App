@@ -77,7 +77,14 @@
 ### Entry 14: Deployment Method Walkthrough Video Suite
 - **Interactive Multi-Method Walkthroughs**: Created `scripts/generate_deployment_videos.js` and `scripts/deployment_templates.js` rendering high-definition, animated step-by-step terminal and browser deployments for Docker (`01_docker_one_click_deployment.gif`), Cloud Vercel/MongoDB Atlas (`02_cloud_vercel_atlas_deployment.gif`), and Standard Node.js (`03_standard_nodejs_deployment.gif`).
 - **Detailed ENV Configuration**: Illustrated `.env` secret key generation, MongoDB Atlas cluster URI setup, Vercel cloud environment variable mapping, and live browser previews.
-- **README & NPM Integration**: Embedded animated walkthroughs under each method section in `README.md` and added `npm run deployments` script.
+### Entry 15: WebSocket Real-Time Architecture Migration (Replaced Manual & Polling Refreshes)
+- **Eliminated Manual Background Polling**: Removed 30-second interval polling from `SavedFiles.tsx` and 10-second polling from `NotificationCenter.tsx`.
+- **Pure WebSockets Integration**:
+  - `server/utils/socket.js`: Modular Socket.io server with user/role room joining and `emitSocketEvent` broadcast helper.
+  - `server/index.js`: Created HTTP server wrapper around Express app initializing WebSockets.
+  - `frontend/src/utils/socket.ts`: Socket client singleton automatically connecting to backend and converting incoming socket events (`data:refresh`, `files:changed`, `notification:new`) into reactive DOM events.
+  - Attached real-time event broadcasts to all file uploads, chunk uploads, renames, visibility changes, approvals, rejections, and notifications.
+  - Pages (`SavedFiles`, `Reconcile`, `MergeJson`, `AuditTool`, `Analytics`, `PendingApproval`, `NotificationCenter`, and `AdminDashboard`) now update instantly via WebSockets without manual page refresh.
 
 ---
 

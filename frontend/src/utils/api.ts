@@ -39,10 +39,16 @@ export async function saveFileToDatabase(payload: SaveFilePayload): Promise<{ me
   const jsonPayload = JSON.stringify(payload);
   const CHUNK_THRESHOLD = 2.5 * 1024 * 1024; // 2.5 MB threshold
 
+  const token = localStorage.getItem("cmd_token");
+  const authHeaders: Record<string, string> = { "Content-Type": "application/json" };
+  if (token) {
+    authHeaders["Authorization"] = `Bearer ${token}`;
+  }
+
   if (jsonPayload.length < CHUNK_THRESHOLD) {
     const res = await fetch(getApiUrl("/api/files"), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: authHeaders,
       body: jsonPayload,
     });
     if (!res.ok) {
@@ -60,7 +66,7 @@ export async function saveFileToDatabase(payload: SaveFilePayload): Promise<{ me
   // 1. Init file record
   const initRes = await fetch(getApiUrl("/api/files/init"), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders,
     body: JSON.stringify({
       filename: payload.filename,
       sheets: sheets.map(s => ({ name: s.name, headers: s.headers }))
@@ -87,7 +93,7 @@ export async function saveFileToDatabase(payload: SaveFilePayload): Promise<{ me
       chunkPromises.push(
         fetch(getApiUrl(`/api/files/${fileId}/chunk`), {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: authHeaders,
           body: JSON.stringify({
             sheetName: sheet.name,
             chunkIndex: cIndex,
@@ -108,7 +114,7 @@ export async function saveFileToDatabase(payload: SaveFilePayload): Promise<{ me
   // 3. Finalize file metadata and computation
   const finalizeRes = await fetch(getApiUrl(`/api/files/${fileId}/finalize`), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders,
   });
 
   if (!finalizeRes.ok) {

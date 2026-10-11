@@ -113,6 +113,12 @@ router.post("/admin/users/:id/approve", async (req, res) => {
       status: "SUCCESS",
     });
 
+    try {
+      const { emitSocketEvent } = require("../utils/socket");
+      emitSocketEvent("users:changed", { action: "approved", userId: user._id });
+      emitSocketEvent("data:refresh", { type: "users" });
+    } catch (e) {}
+
     return res.json({
       message: "User account approved successfully",
       user: user.toSafeObject(),
@@ -183,6 +189,12 @@ router.post("/admin/users/:id/reject", async (req, res) => {
       ipAddress: req.ip,
       status: "SUCCESS",
     });
+
+    try {
+      const { emitSocketEvent } = require("../utils/socket");
+      emitSocketEvent("users:changed", { action: "rejected", userId: user._id });
+      emitSocketEvent("data:refresh", { type: "users" });
+    } catch (e) {}
 
     return res.json({
       message: "User registration rejected and notification dispatched",

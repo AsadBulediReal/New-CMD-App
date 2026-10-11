@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { decompressSheetData } from "../utils/dataProcessing";
 import { Link } from "react-router";
 import { Button } from "../components/ui/button";
@@ -39,7 +39,8 @@ import {
   Layers,
   ArrowUpRight,
   Users,
-  Lock
+  Lock,
+  Sparkles
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../context/AuthContext";
@@ -124,6 +125,27 @@ function SkeletonRow() {
   );
 }
 
+// Persistent module-level cache for instant zero-flicker route transitions
+let cachedVaultFiles: StoredFile[] | null = null;
+let cachedKnownFileIds: Set<string> | null = null;
+
+function isSameFileList(a: StoredFile[] | null, b: StoredFile[]): boolean {
+  if (!a) return false;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (
+      a[i]._id !== b[i]._id ||
+      a[i].filename !== b[i].filename ||
+      a[i].visibility !== b[i].visibility ||
+      a[i].isPendingDeletion !== b[i].isPendingDeletion ||
+      a[i].totalRecords !== b[i].totalRecords
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export default function SavedFiles() {
   const [showHelp, setShowHelp] = useState(false);
 
@@ -154,13 +176,27 @@ export default function SavedFiles() {
       desc: "Download multiple reports or all filtered files simultaneously in a single compressed .zip package."
     }
   ];
-  const [files, setFiles] = useState<StoredFile[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [files, setFiles] = useState<StoredFile[]>(cachedVaultFiles || []);
+  const [loading, setLoading] = useState<boolean>(!cachedVaultFiles);
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
+  const [newFileIds, setNewFileIds] = useState<Set<string>>(new Set());
+  const knownFileIdsRef = useRef<Set<string> | null>(cachedKnownFileIds);
+  const isFetchingRef = useRef(false);
   const [search, setSearch] = useState("");
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [fileData, setFileData] = useState<LoadedData | null>(null);
   const [fileToDelete, setFileToDelete] = useState<{ id: string; filename: string } | null>(null);
+
+  const dismissNewHighlight = (id: string) => {
+    if (newFileIds.has(id)) {
+      setNewFileIds(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  };
 
   // Advanced controls
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
@@ -248,34 +284,78 @@ export default function SavedFiles() {
   };
 
   useEffect(() => {
-    fetchFiles();
-    const interval = setInterval(fetchFiles, 15000); // 15s live poll
-    window.addEventListener("focus", fetchFiles);
-    window.addEventListener("cmd:refresh-data", fetchFiles);
+    fetchFiles(!cachedVaultFiles);
+    const handleRefreshEvent = () => {
+      fetchFiles(false);
+    };
+
+    window.addEventListener("cmd:refresh-data", handleRefreshEvent);
+    window.addEventListener("cmd:files-changed", handleRefreshEvent);
 
     return () => {
-      clearInterval(interval);
-      window.removeEventListener("focus", fetchFiles);
-      window.removeEventListener("cmd:refresh-data", fetchFiles);
+      window.removeEventListener("cmd:refresh-data", handleRefreshEvent);
+      window.removeEventListener("cmd:files-changed", handleRefreshEvent);
     };
   }, []);
   // Reset page on search/filter change
   useEffect(() => { setPage(1); }, [search, sortField, sortDir, dateFrom, dateTo]);
 
-  const fetchFiles = async () => {
+  const fetchFiles = async (isInitial = false, isManual = false) => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     try {
-      setLoading(true);
-      setRescanMsg(null);
-      const res = await fetch(getApiUrl("/api/files"));
+      if (isManual) {
+        setIsManualRefreshing(true);
+      }
+      if ((isInitial && !cachedVaultFiles) || files.length === 0) {
+        setLoading(true);
+      }
+      const res = await authFetch("/api/files");
       if (!res.ok) throw new Error(`Failed to fetch files: ${res.statusText}`);
       const text = await res.text();
-      const data = text ? JSON.parse(text) : [];
-      setFiles(data);
-      setSelectedIds(new Set());
+      const data: StoredFile[] = text ? JSON.parse(text) : [];
+
+      // Detect newly created files
+      if (knownFileIdsRef.current === null) {
+        knownFileIdsRef.current = new Set(data.map(f => f._id));
+        cachedKnownFileIds = knownFileIdsRef.current;
+        const recent = data
+          .filter(f => f.uploadDate && (Date.now() - new Date(f.uploadDate).getTime()) < 180000)
+          .map(f => f._id);
+        if (recent.length > 0) {
+          setNewFileIds(new Set(recent));
+        }
+      } else {
+        const newlyAdded = data.filter(f => !knownFileIdsRef.current!.has(f._id)).map(f => f._id);
+        if (newlyAdded.length > 0) {
+          newlyAdded.forEach(id => knownFileIdsRef.current!.add(id));
+          cachedKnownFileIds = knownFileIdsRef.current;
+          setNewFileIds(prev => new Set([...prev, ...newlyAdded]));
+          setPage(1);
+          toast.success(`${newlyAdded.length} new file${newlyAdded.length > 1 ? "s" : ""} added to vault!`);
+        }
+      }
+
+      if (!isSameFileList(cachedVaultFiles, data)) {
+        cachedVaultFiles = data;
+        setFiles(data);
+      }
+      // Retain selectedIds that still exist in the updated data
+      setSelectedIds(prev => {
+        if (prev.size === 0) return prev;
+        const validIds = new Set(data.map(f => f._id));
+        const updated = new Set<string>();
+        prev.forEach(id => {
+          if (validIds.has(id)) updated.add(id);
+        });
+        return updated;
+      });
     } catch (error) {
       console.error("Failed to fetch files:", error);
     } finally {
       setLoading(false);
+      setIsManualRefreshing(false);
+      isFetchingRef.current = false;
     }
   };
 
@@ -350,7 +430,11 @@ export default function SavedFiles() {
         body: JSON.stringify({ ids }),
       });
       if (!res.ok) throw new Error("Bulk delete failed");
-      setFiles(prev => prev.filter(f => !selectedIds.has(f._id)));
+      setFiles(prev => {
+        const next = prev.filter(f => !selectedIds.has(f._id));
+        cachedVaultFiles = next;
+        return next;
+      });
       setSelectedIds(new Set());
       setBulkDeleteOpen(false);
     } catch (error) {
@@ -445,6 +529,12 @@ export default function SavedFiles() {
     }
 
     result.sort((a, b) => {
+      // Prioritize newly added files at the top of position 1
+      const aIsNew = newFileIds.has(a._id);
+      const bIsNew = newFileIds.has(b._id);
+      if (aIsNew && !bIsNew) return -1;
+      if (!aIsNew && bIsNew) return 1;
+
       let cmp = 0;
       if (sortField === "uploadDate") {
         cmp = new Date(a.uploadDate).getTime() - new Date(b.uploadDate).getTime();
@@ -643,11 +733,15 @@ export default function SavedFiles() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={fetchFiles}
+                onClick={async () => {
+                  await fetchFiles(false, true);
+                  toast.success("Vault refreshed");
+                }}
+                disabled={isManualRefreshing}
                 className="gap-2 border-border/60 hover:bg-muted text-foreground text-xs"
               >
-                <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-                <span className="hidden sm:inline">Refresh</span>
+                <RefreshCw className={`w-4 h-4 ${isManualRefreshing ? "animate-spin text-blue-500" : ""}`} />
+                <span className="hidden sm:inline">{isManualRefreshing ? "Refreshing…" : "Refresh"}</span>
               </Button>
               <Button
                 variant="outline"
@@ -810,22 +904,31 @@ export default function SavedFiles() {
             )}
             {pagedFiles.map(file => {
               const isSelected = selectedIds.has(file._id);
+              const isNew = newFileIds.has(file._id);
               return (
                 <div
                   key={file._id}
-                  onClick={(e) => toggleSelect(file._id, e)}
+                  onClick={(e) => {
+                    dismissNewHighlight(file._id);
+                    toggleSelect(file._id, e);
+                  }}
                   className={`group relative bg-card/40 backdrop-blur-xl border rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl cursor-pointer select-none ${
-                    isSelected
+                    isNew
+                      ? "border-emerald-500/80 ring-2 ring-emerald-500/30 bg-emerald-500/10 shadow-xl shadow-emerald-500/15 animate-in fade-in slide-in-from-top-4 duration-500"
+                      : isSelected
                       ? "border-blue-500/50 shadow-xl shadow-blue-500/10 bg-blue-500/5"
                       : "border-border hover:border-blue-500/30 hover:shadow-blue-500/5"
                   }`}
                 >
                   {/* Selection checkbox */}
                   <button
-                    onClick={(e) => toggleSelect(file._id, e)}
+                    onClick={(e) => {
+                      dismissNewHighlight(file._id);
+                      toggleSelect(file._id, e);
+                    }}
                     className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity z-10 p-1 rounded-md hover:bg-muted/50"
                     title="Click to select (Hold Shift for range select)"
-                    style={{ opacity: isSelected ? 1 : undefined }}
+                    style={{ opacity: isSelected || isNew ? 1 : undefined }}
                   >
                     {isSelected ? (
                       <CheckSquare className="w-5 h-5 text-blue-500" />
@@ -848,9 +951,19 @@ export default function SavedFiles() {
                         {file.filename}
                       </h3>
                       <div className="flex items-center gap-1.5 flex-wrap">
+                        {isNew && (
+                          <span
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 text-[10px] font-black tracking-wider uppercase animate-pulse shrink-0"
+                            title="Newly created file! Click card to dismiss."
+                          >
+                            <Sparkles className="w-3 h-3 text-emerald-500" />
+                            NEW FILE
+                          </span>
+                        )}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
+                            dismissNewHighlight(file._id);
                             handleToggleVisibility(file._id, file.visibility || "team");
                           }}
                           className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-all ${
@@ -933,7 +1046,11 @@ export default function SavedFiles() {
                   <div className="flex gap-2 pt-4 border-t border-border/50" onClick={(e) => e.stopPropagation()}>
                     <Button
                       className="flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs gap-2 py-2.5 h-auto transition-all shadow-lg shadow-blue-500/15"
-                      onClick={(e) => { e.stopPropagation(); handleLoadFile(file._id, file.filename); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        dismissNewHighlight(file._id);
+                        handleLoadFile(file._id, file.filename);
+                      }}
                       disabled={loadingId === file._id}
                     >
                       {loadingId === file._id ? (
@@ -946,7 +1063,11 @@ export default function SavedFiles() {
                     <Button
                       variant="outline"
                       className="aspect-square p-0 rounded-xl border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:border-emerald-500 hover:text-white transition-all duration-200"
-                      onClick={(e) => { e.stopPropagation(); handleSingleDownload(file._id, file.filename); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        dismissNewHighlight(file._id);
+                        handleSingleDownload(file._id, file.filename);
+                      }}
                       disabled={downloadingId === file._id}
                       title="Download Excel file"
                     >
@@ -955,7 +1076,11 @@ export default function SavedFiles() {
                     <Button
                       variant="outline"
                       className="aspect-square p-0 rounded-xl border-red-500/20 text-red-500 hover:bg-red-500 hover:border-red-500 hover:text-white transition-all duration-200"
-                      onClick={(e) => { e.stopPropagation(); setFileToDelete({ id: file._id, filename: file.filename }); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        dismissNewHighlight(file._id);
+                        setFileToDelete({ id: file._id, filename: file.filename });
+                      }}
                       title="Delete permanently"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -1000,16 +1125,27 @@ export default function SavedFiles() {
 
             {pagedFiles.map((file, idx) => {
               const isSelected = selectedIds.has(file._id);
+              const isNew = newFileIds.has(file._id);
               return (
                 <div
                   key={file._id}
-                  onClick={(e) => toggleSelect(file._id, e)}
-                  className={`flex items-center gap-4 px-5 py-4 transition-colors border-b border-border/30 last:border-b-0 group cursor-pointer select-none ${
-                    isSelected ? "bg-blue-500/5" : idx % 2 === 0 ? "bg-transparent" : "bg-muted/10"
+                  onClick={(e) => {
+                    dismissNewHighlight(file._id);
+                    toggleSelect(file._id, e);
+                  }}
+                  className={`flex items-center gap-4 px-5 py-4 transition-all duration-300 border-b border-border/30 last:border-b-0 group cursor-pointer select-none ${
+                    isNew
+                      ? "bg-emerald-500/15 border-l-4 border-l-emerald-500 animate-in fade-in slide-in-from-top-2 duration-300"
+                      : isSelected
+                      ? "bg-blue-500/5"
+                      : idx % 2 === 0 ? "bg-transparent" : "bg-muted/10"
                   } hover:bg-blue-500/5`}
                 >
                   <button
-                    onClick={(e) => toggleSelect(file._id, e)}
+                    onClick={(e) => {
+                      dismissNewHighlight(file._id);
+                      toggleSelect(file._id, e);
+                    }}
                     className="shrink-0 p-1 rounded-md hover:bg-muted/50"
                     title="Click to select (Hold Shift for range select)"
                   >
@@ -1024,10 +1160,16 @@ export default function SavedFiles() {
                       <FileSpreadsheet className="w-4 h-4 text-blue-500" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-semibold text-foreground truncate group-hover:text-blue-500 transition-colors" title={file.filename}>
                           {file.filename}
                         </span>
+                        {isNew && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 text-[10px] font-black tracking-wider uppercase animate-pulse shrink-0">
+                            <Sparkles className="w-3 h-3 text-emerald-500" />
+                            NEW
+                          </span>
+                        )}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();

@@ -25,7 +25,7 @@ async function createNotification({
 
     const completed = isCompleted !== null ? isCompleted : naturallyCompleted;
 
-    return await Notification.create({
+    const notif = await Notification.create({
       recipientId,
       recipientRole,
       title,
@@ -39,6 +39,24 @@ async function createNotification({
       readAt: null,
       createdAt: new Date(),
     });
+
+    try {
+      const { emitSocketEvent } = require("./socket");
+      // Broadcast general notification event
+      emitSocketEvent("notification:new", notif);
+      if (recipientId) {
+        emitSocketEvent("notification:new", notif, `user:${recipientId}`);
+      }
+      if (recipientRole) {
+        emitSocketEvent("notification:new", notif, `role:${recipientRole}`);
+      }
+      // Also broadcast refresh data signal
+      emitSocketEvent("data:refresh", { type, relatedId });
+    } catch (e) {
+      // ignore socket dispatch errors
+    }
+
+    return notif;
   } catch (error) {
     console.warn("Notification dispatch failed:", error.message);
     return null;

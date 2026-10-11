@@ -108,7 +108,16 @@ export default function AuditTool() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newFilename, setNewFilename] = useState("");
 
-  useEffect(() => { fetchFiles(); }, []);
+  useEffect(() => {
+    fetchFiles();
+    const handleRefresh = () => fetchFiles();
+    window.addEventListener("cmd:refresh-data", handleRefresh);
+    window.addEventListener("cmd:files-changed", handleRefresh);
+    return () => {
+      window.removeEventListener("cmd:refresh-data", handleRefresh);
+      window.removeEventListener("cmd:files-changed", handleRefresh);
+    };
+  }, []);
 
   const fetchFiles = async () => {
     try {
