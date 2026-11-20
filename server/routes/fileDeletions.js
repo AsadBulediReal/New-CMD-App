@@ -141,4 +141,123 @@ router.delete("/files/deletion-request/:id/cancel", async (req, res) => {
   }
 });
 
+/**
+ * POST /api/files/bulk-delete
+ * Delete multiple files simultaneously:
+ * - Admin: direct permanent deletion of files and chunks
+ * - Regular user: guarded deletion requests awaiting admin approval
+ */
+router.post("/files/bulk-delete", async (req, res) => {
+  try {
+    const { ids = [], reason = "User requested bulk deletion" } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: "No file IDs provided" });
+    }
+
+    const files = await StoredFile.find({ _id: { $in: ids } });
+    if (!files.length) {
+      return res.status(404).json({ error: "No matching files found" });
+    }
+
+    const isAdmin = req.user && req.user.role === "admin";
+
+    if (isAdmin) {
+      const foundIds = files.map((f) => f._id);
+      await StoredFile.deleteMany({ _id: { $in: foundIds } });
+      await FileChunk.deleteMany({ fileId: { $in: foundIds } });
+
+      await DeletionRequest.updateMany(
+        { targetId: { $in: foundIds }, status: "pending" },
+        {
+          status: "approved",
+          reviewedBy: req.user._id,
+          reviewedAt: new Date(),
+        }
+      );
+
+      logUserActivity({
+        req,
+        action: "BULK_DELETE_FILES",
+        resourceType: "StoredFile",
+        resourceId: foundIds.join(","),
+        details: { count: foundIds.length, filenames: files.map((f) => f.filename) },
+      });
+
+      try {
+        const { emitSocketEvent } = require("../utils/socket");
+        emitSocketEvent("files:changed", { action: "bulk_delete", ids: foundIds });
+        emitSocketEvent("data:refresh", { type: "files" });
+      } catch (e) {}
+
+      return res.status(200).json({
+        message: `${foundIds.length} file(s) permanently deleted`,
+        deletedCount: foundIds.length,
+      });
+    }
+
+    // Regular User: Guarded bulk deletion request
+    const toRequest = files.filter((f) => !f.isPendingDeletion);
+    if (toRequest.length === 0) {
+      return res.status(400).json({ error: "All selected files are already pending deletion approval" });
+    }
+
+    const createdRequests = [];
+    for (const file of toRequest) {
+      const delReq = new DeletionRequest({
+        requestedBy: req.user ? req.user._id : file.uploadedBy,
+        requestedByName: req.user ? req.user.name : "User",
+        requestedByEmail: req.user ? req.user.email : "",
+        targetId: file._id,
+        targetName: file.filename,
+        reason: reason.trim(),
+      });
+      await delReq.save();
+
+      file.isPendingDeletion = true;
+      file.deletionRequestId = delReq._id;
+      await file.save();
+      createdRequests.push(delReq);
+    }
+
+    const adminEmail = process.env.ADMIN_EMAIL || "admin@usindh.edu.pk";
+    if (createdRequests.length === 1) {
+      sendAdminDeletionAlert(adminEmail, createdRequests[0]).catch((err) =>
+        console.warn("Deletion alert email error:", err.message)
+      );
+    }
+
+    createNotification({
+      recipientRole: "admin",
+      title: "Bulk File Deletion Request",
+      message: `${req.user ? req.user.name : "A user"} requested deletion of ${createdRequests.length} file(s).`,
+      type: "deletion_requested",
+      link: "/admin?tab=deletions&status=pending",
+      isCompleted: false,
+    }).catch(() => {});
+
+    logUserActivity({
+      req,
+      action: "REQUEST_BULK_DELETE",
+      resourceType: "StoredFile",
+      resourceId: toRequest.map((f) => f._id).join(","),
+      details: { count: createdRequests.length, filenames: toRequest.map((f) => f.filename), reason },
+    });
+
+    try {
+      const { emitSocketEvent } = require("../utils/socket");
+      emitSocketEvent("files:changed", { action: "pending_delete_bulk" });
+      emitSocketEvent("data:refresh", { type: "deletions" });
+    } catch (e) {}
+
+    return res.status(202).json({
+      message: `${createdRequests.length} deletion request(s) submitted. Awaiting administrator approval.`,
+      requestedCount: createdRequests.length,
+      isPendingDeletion: true,
+    });
+  } catch (error) {
+    console.error("Error in bulk delete:", error);
+    res.status(500).json({ error: "Bulk delete failed" });
+  }
+});
+
 module.exports = router;

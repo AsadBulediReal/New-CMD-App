@@ -209,7 +209,7 @@ export default function SavedFiles() {
   const [downloadProgress, setDownloadProgress] = useState<DownloadProgress | null>(null);
   const [page, setPage] = useState(1);
 
-  const { user, authFetch } = useAuth();
+  const { user, authFetch, isAdmin } = useAuth();
 
   // Date range filter (based on recordDateRange from records, not upload date)
   const [dateFrom, setDateFrom] = useState("");
@@ -424,21 +424,30 @@ export default function SavedFiles() {
     setBulkDeleting(true);
     try {
       const ids = Array.from(selectedIds);
-      const res = await fetch(getApiUrl("/api/files/bulk-delete"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids }),
-      });
-      if (!res.ok) throw new Error("Bulk delete failed");
-      setFiles(prev => {
-        const next = prev.filter(f => !selectedIds.has(f._id));
-        cachedVaultFiles = next;
-        return next;
-      });
+        const res = await authFetch("/api/files/bulk-delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids }),
+        });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Bulk delete failed");
+
+      if (res.status === 202) {
+        toast.info(data.message || "Deletion request submitted. Awaiting administrator approval.");
+        fetchFiles();
+      } else {
+        toast.success(data.message || `${ids.length} file(s) permanently deleted`);
+        setFiles(prev => {
+          const next = prev.filter(f => !selectedIds.has(f._id));
+          cachedVaultFiles = next;
+          return next;
+        });
+      }
       setSelectedIds(new Set());
       setBulkDeleteOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Bulk delete error:", error);
+      toast.error(error.message || "Bulk delete failed");
     } finally {
       setBulkDeleting(false);
     }
@@ -556,9 +565,8 @@ export default function SavedFiles() {
   const SortButton = ({ field, label }: { field: SortField; label: string }) => (
     <button
       onClick={() => handleSort(field)}
-      className={`flex items-center gap-1 text-xs font-semibold transition-colors ${
-        sortField === field ? "text-blue-500" : "text-muted-foreground hover:text-foreground"
-      }`}
+      className={`flex items-center gap-1 text-xs font-semibold transition-colors ${sortField === field ? "text-blue-500" : "text-muted-foreground hover:text-foreground"
+        }`}
     >
       {label}
       {sortField === field ? (
@@ -606,10 +614,10 @@ export default function SavedFiles() {
             </p>
           </div>
           <div className="flex items-center gap-3 self-start md:self-auto">
-            <Button 
-               variant="outline" 
-               onClick={() => setShowHelp(true)}
-               className="border-border text-foreground hover:bg-muted gap-2 h-9 px-3.5 rounded-md font-semibold text-xs"
+            <Button
+              variant="outline"
+              onClick={() => setShowHelp(true)}
+              className="border-border text-foreground hover:bg-muted gap-2 h-9 px-3.5 rounded-md font-semibold text-xs"
             >
               <HelpCircle className="w-4 h-4 text-primary" />
               Vault Guidelines
@@ -622,7 +630,7 @@ export default function SavedFiles() {
           </div>
         </header>
 
-        <HelpDialog 
+        <HelpDialog
           isOpen={showHelp}
           onOpenChange={setShowHelp}
           title="Vault Guidelines"
@@ -639,43 +647,39 @@ export default function SavedFiles() {
             </span>
             <button
               onClick={() => setVisibilityFilter("all")}
-              className={`px-3 py-1.5 rounded-xl font-semibold transition-all shrink-0 cursor-pointer ${
-                visibilityFilter === "all"
+              className={`px-3 py-1.5 rounded-xl font-semibold transition-all shrink-0 cursor-pointer ${visibilityFilter === "all"
                   ? "bg-primary text-primary-foreground shadow-xs"
                   : "bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground"
-              }`}
+                }`}
             >
               All Accessible ({files.length})
             </button>
             <button
               onClick={() => setVisibilityFilter("my")}
-              className={`px-3 py-1.5 rounded-xl font-semibold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
-                visibilityFilter === "my"
+              className={`px-3 py-1.5 rounded-xl font-semibold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${visibilityFilter === "my"
                   ? "bg-primary text-primary-foreground shadow-xs"
                   : "bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground"
-              }`}
+                }`}
             >
               <Users className="w-3 h-3" />
               <span>My Uploads</span>
             </button>
             <button
               onClick={() => setVisibilityFilter("team")}
-              className={`px-3 py-1.5 rounded-xl font-semibold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
-                visibilityFilter === "team"
+              className={`px-3 py-1.5 rounded-xl font-semibold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${visibilityFilter === "team"
                   ? "bg-primary text-primary-foreground shadow-xs"
                   : "bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground"
-              }`}
+                }`}
             >
               <Users className="w-3 h-3" />
               <span>Team Shared</span>
             </button>
             <button
               onClick={() => setVisibilityFilter("private")}
-              className={`px-3 py-1.5 rounded-xl font-semibold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
-                visibilityFilter === "private"
+              className={`px-3 py-1.5 rounded-xl font-semibold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${visibilityFilter === "private"
                   ? "bg-primary text-primary-foreground shadow-xs"
                   : "bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground"
-              }`}
+                }`}
             >
               <Lock className="w-3 h-3" />
               <span>Private</span>
@@ -912,13 +916,12 @@ export default function SavedFiles() {
                     dismissNewHighlight(file._id);
                     toggleSelect(file._id, e);
                   }}
-                  className={`group relative bg-card/40 backdrop-blur-xl border rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl cursor-pointer select-none ${
-                    isNew
+                  className={`group relative bg-card/40 backdrop-blur-xl border rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl cursor-pointer select-none ${isNew
                       ? "border-emerald-500/80 ring-2 ring-emerald-500/30 bg-emerald-500/10 shadow-xl shadow-emerald-500/15 animate-in fade-in slide-in-from-top-4 duration-500"
                       : isSelected
-                      ? "border-blue-500/50 shadow-xl shadow-blue-500/10 bg-blue-500/5"
-                      : "border-border hover:border-blue-500/30 hover:shadow-blue-500/5"
-                  }`}
+                        ? "border-blue-500/50 shadow-xl shadow-blue-500/10 bg-blue-500/5"
+                        : "border-border hover:border-blue-500/30 hover:shadow-blue-500/5"
+                    }`}
                 >
                   {/* Selection checkbox */}
                   <button
@@ -966,11 +969,10 @@ export default function SavedFiles() {
                             dismissNewHighlight(file._id);
                             handleToggleVisibility(file._id, file.visibility || "team");
                           }}
-                          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-all ${
-                            file.visibility === "private"
+                          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold cursor-pointer transition-all ${file.visibility === "private"
                               ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 hover:bg-amber-500/25"
                               : "bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20"
-                          }`}
+                            }`}
                           title="Click to toggle Team / Private"
                         >
                           {file.visibility === "private" ? <Lock className="w-2.5 h-2.5" /> : <Users className="w-2.5 h-2.5" />}
@@ -1000,14 +1002,14 @@ export default function SavedFiles() {
                       </div>
                     )}
                     <div className="grid grid-cols-2 gap-2 pt-2">
-                       <div className="flex flex-col gap-1 p-2 bg-muted/30 rounded-lg border border-border/50">
-                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Database className="w-3 h-3 text-blue-400"/> Records</div>
-                         <span className="font-bold text-sm text-foreground">{file.totalRecords?.toLocaleString() ?? "—"}</span>
-                       </div>
-                       <div className="flex flex-col gap-1 p-2 bg-muted/30 rounded-lg border border-border/50">
-                         <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Layers className="w-3 h-3 text-emerald-400"/> Sheets / Cols</div>
-                         <span className="font-bold text-sm text-foreground">{file.sheetCount || 1} / {file.columnCount || (file.headers?.length || 0)}</span>
-                       </div>
+                      <div className="flex flex-col gap-1 p-2 bg-muted/30 rounded-lg border border-border/50">
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Database className="w-3 h-3 text-blue-400" /> Records</div>
+                        <span className="font-bold text-sm text-foreground">{file.totalRecords?.toLocaleString() ?? "—"}</span>
+                      </div>
+                      <div className="flex flex-col gap-1 p-2 bg-muted/30 rounded-lg border border-border/50">
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground"><Layers className="w-3 h-3 text-emerald-400" /> Sheets / Cols</div>
+                        <span className="font-bold text-sm text-foreground">{file.sheetCount || 1} / {file.columnCount || (file.headers?.length || 0)}</span>
+                      </div>
                     </div>
 
                     {file.sheetMeta && file.sheetMeta.length > 0 && (
@@ -1030,8 +1032,8 @@ export default function SavedFiles() {
                     {file.financialSummary?.hasFinancialData && (
                       <div className="flex flex-col gap-1.5 p-2 bg-blue-500/5 rounded-lg border border-blue-500/10 mt-2">
                         <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                          <span className="flex items-center gap-1"><ArrowDownRight className="w-3 h-3 text-red-400"/> Db: {(file.financialSummary.totalDebit || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-                          <span className="flex items-center gap-1"><ArrowUpRight className="w-3 h-3 text-green-400"/> Cr: {(file.financialSummary.totalCredit || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                          <span className="flex items-center gap-1"><ArrowDownRight className="w-3 h-3 text-red-400" /> Db: {(file.financialSummary.totalDebit || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                          <span className="flex items-center gap-1"><ArrowUpRight className="w-3 h-3 text-green-400" /> Cr: {(file.financialSummary.totalCredit || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                         </div>
                         <div className="flex items-center justify-between font-bold text-xs">
                           <span className="text-muted-foreground">Net Flow:</span>
@@ -1133,13 +1135,12 @@ export default function SavedFiles() {
                     dismissNewHighlight(file._id);
                     toggleSelect(file._id, e);
                   }}
-                  className={`flex items-center gap-4 px-5 py-4 transition-all duration-300 border-b border-border/30 last:border-b-0 group cursor-pointer select-none ${
-                    isNew
+                  className={`flex items-center gap-4 px-5 py-4 transition-all duration-300 border-b border-border/30 last:border-b-0 group cursor-pointer select-none ${isNew
                       ? "bg-emerald-500/15 border-l-4 border-l-emerald-500 animate-in fade-in slide-in-from-top-2 duration-300"
                       : isSelected
-                      ? "bg-blue-500/5"
-                      : idx % 2 === 0 ? "bg-transparent" : "bg-muted/10"
-                  } hover:bg-blue-500/5`}
+                        ? "bg-blue-500/5"
+                        : idx % 2 === 0 ? "bg-transparent" : "bg-muted/10"
+                    } hover:bg-blue-500/5`}
                 >
                   <button
                     onClick={(e) => {
@@ -1175,11 +1176,10 @@ export default function SavedFiles() {
                             e.stopPropagation();
                             handleToggleVisibility(file._id, file.visibility || "team");
                           }}
-                          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold cursor-pointer shrink-0 transition-all ${
-                            file.visibility === "private"
+                          className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold cursor-pointer shrink-0 transition-all ${file.visibility === "private"
                               ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30"
                               : "bg-primary/10 text-primary border border-primary/20"
-                          }`}
+                            }`}
                           title="Click to toggle Team / Private"
                         >
                           {file.visibility === "private" ? <Lock className="w-2.5 h-2.5" /> : <Users className="w-2.5 h-2.5" />}
@@ -1195,30 +1195,28 @@ export default function SavedFiles() {
                   </div>
                   <div className="w-32 text-[11px] text-muted-foreground hidden lg:block">{formatDate(file.uploadDate)}</div>
                   <div className="w-20 hidden sm:block">
-                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded-sm text-[11px] font-bold ${
-                      (file.totalRecords ?? 0) > 1000
+                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded-sm text-[11px] font-bold ${(file.totalRecords ?? 0) > 1000
                         ? "bg-amber-500/10 text-amber-500 border border-amber-500/20"
                         : "bg-blue-500/10 text-blue-500 border border-blue-500/20"
-                    }`}>
+                      }`}>
                       {file.totalRecords?.toLocaleString() ?? "—"}
                     </span>
                   </div>
-                  <div 
+                  <div
                     className="w-24 text-[11px] text-muted-foreground hidden lg:block"
                     title={file.sheetMeta?.map(s => `${s.name}: ${s.recordCount} rows`).join('\n') || "Sheet Breakdown"}
                   >
-                     {file.sheetCount || 1} Sheets / {file.columnCount || (file.headers?.length || 0)} Cols
+                    {file.sheetCount || 1} Sheets / {file.columnCount || (file.headers?.length || 0)} Cols
                   </div>
                   <div className="w-32 hidden xl:block">
-                     {file.financialSummary?.hasFinancialData ? (
-                       <span className={`text-[11px] font-bold ${
-                         (file.financialSummary.netFlow || 0) >= 0 ? "text-green-500" : "text-red-500"
-                       }`}>
-                         {(file.financialSummary.netFlow || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                       </span>
-                     ) : (
-                       <span className="text-[11px] text-muted-foreground">—</span>
-                     )}
+                    {file.financialSummary?.hasFinancialData ? (
+                      <span className={`text-[11px] font-bold ${(file.financialSummary.netFlow || 0) >= 0 ? "text-green-500" : "text-red-500"
+                        }`}>
+                        {(file.financialSummary.netFlow || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-muted-foreground">—</span>
+                    )}
                   </div>
                   <div className="w-32 hidden xl:block">
                     {file.recordDateRange?.start ? (
@@ -1292,11 +1290,10 @@ export default function SavedFiles() {
                     <button
                       key={p}
                       onClick={() => setPage(p as number)}
-                      className={`w-9 h-9 rounded-xl text-sm font-bold transition-all ${
-                        page === p
+                      className={`w-9 h-9 rounded-xl text-sm font-bold transition-all ${page === p
                           ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      }`}
+                        }`}
                     >
                       {p}
                     </button>
@@ -1349,32 +1346,54 @@ export default function SavedFiles() {
       <Dialog open={bulkDeleteOpen} onOpenChange={open => !open && setBulkDeleteOpen(false)}>
         <DialogContent className="max-w-md border-border bg-background shadow-2xl p-6">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-black text-foreground">Bulk Delete</DialogTitle>
+            <DialogTitle className="text-2xl font-black text-foreground">
+              {isAdmin ? "Bulk Delete" : "Bulk Deletion Request"}
+            </DialogTitle>
           </DialogHeader>
           <div className="py-6 space-y-4">
             <p className="text-muted-foreground leading-relaxed">
-              You are about to permanently delete{" "}
-              <span className="text-foreground font-bold">{selectedIds.size} file{selectedIds.size !== 1 ? "s" : ""}</span>{" "}
-              from the vault.
+              {isAdmin ? (
+                <>
+                  You are about to permanently delete{" "}
+                  <span className="text-foreground font-bold">{selectedIds.size} file{selectedIds.size !== 1 ? "s" : ""}</span>{" "}
+                  from the vault.
+                </>
+              ) : (
+                <>
+                  You are submitting a deletion request for{" "}
+                  <span className="text-foreground font-bold">{selectedIds.size} file{selectedIds.size !== 1 ? "s" : ""}</span>.
+                  An administrator will review and approve this action.
+                </>
+              )}
             </p>
-            <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/10 text-red-600 dark:text-red-400 text-xs font-bold uppercase tracking-widest">
-              ⚠ This action cannot be reversed
+              <div className={`p-4 rounded-xl border text-xs font-bold uppercase tracking-widest ${isAdmin
+                  ? "bg-red-500/5 border-red-500/10 text-red-600 dark:text-red-400"
+                  : "bg-amber-500/5 border-amber-500/10 text-amber-600 dark:text-amber-400"
+                }`}>
+                {isAdmin ? "⚠ This action cannot be reversed" : "ℹ Requires Administrator Approval"}
+              </div>
             </div>
-          </div>
-          <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t border-border">
-            <Button variant="ghost" className="font-bold flex-1 sm:flex-none" onClick={() => setBulkDeleteOpen(false)} disabled={bulkDeleting}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              className="font-bold flex-1 sm:flex-none bg-red-600 hover:bg-red-700 shadow-xl shadow-red-500/20 gap-2"
-              onClick={executeBulkDelete}
-              disabled={bulkDeleting}
-            >
-              {bulkDeleting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-              {bulkDeleting ? "Deleting…" : `Purge ${selectedIds.size} File${selectedIds.size !== 1 ? "s" : ""}`}
-            </Button>
-          </div>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t border-border">
+              <Button variant="ghost" className="font-bold flex-1 sm:flex-none" onClick={() => setBulkDeleteOpen(false)} disabled={bulkDeleting}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                className={`font-bold flex-1 sm:flex-none gap-2 ${isAdmin
+                    ? "bg-red-600 hover:bg-red-700 shadow-xl shadow-red-500/20"
+                    : "bg-amber-600 hover:bg-amber-700 shadow-xl shadow-amber-500/20"
+                  }`}
+                onClick={executeBulkDelete}
+                disabled={bulkDeleting}
+              >
+                {bulkDeleting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                {bulkDeleting
+                  ? "Processing…"
+                  : isAdmin
+                    ? `Purge ${selectedIds.size} File${selectedIds.size !== 1 ? "s" : ""}`
+                    : `Request Delete (${selectedIds.size})`}
+              </Button>
+            </div>
         </DialogContent>
       </Dialog>
 

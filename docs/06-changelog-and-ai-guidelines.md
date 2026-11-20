@@ -86,6 +86,13 @@
   - Attached real-time event broadcasts to all file uploads, chunk uploads, renames, visibility changes, approvals, rejections, and notifications.
   - Pages (`SavedFiles`, `Reconcile`, `MergeJson`, `AuditTool`, `Analytics`, `PendingApproval`, `NotificationCenter`, and `AdminDashboard`) now update instantly via WebSockets without manual page refresh.
 
+### Entry 16: Bulk File Deletion & RBAC Guarded Queue Endpoint
+- **Resolved 404 on Bulk Delete**: Implemented `POST /api/files/bulk-delete` in `server/routes/fileDeletions.js`.
+- **RBAC & Guarded Deletion Compliance**:
+  - Administrators execute immediate permanent deletion across `StoredFile` and `FileChunk` collections, resolve any associated deletion requests, and log audit entries.
+  - Non-admin users submit guarded `DeletionRequest` instances awaiting administrator review, preserving strict RBAC guarantees.
+- **Frontend Integration**: Updated `SavedFiles.tsx` to authenticate with `authFetch`, adapt modal messaging for user vs admin roles, and trigger real-time toast feedback and WebSocket refresh.
+
 ---
 
 ## 2. AI Assistant & Developer Directives
